@@ -41,6 +41,7 @@
 <symbol id="ic-chevron-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="ic-chevron-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="ic-arrow-right" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-download" viewBox="0 0 24 24"><path d="M12 4v10M8 10l4 4 4-4M5 19h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="ic-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 <symbol id="ic-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 <symbol id="ic-video" viewBox="0 0 24 24"><rect x="3" y="6.5" width="12.5" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M15.5 10l5-2.7v9.4l-5-2.7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
@@ -78,7 +79,9 @@
       <button data-page="ideas"><svg class="ic svgic"><use href="#ic-notebook"/></svg>ネタ帳</button>
       <button data-page="reply"><svg class="ic svgic"><use href="#ic-chat"/></svg>コメント返信</button>
       <button data-page="analytics"><svg class="ic svgic"><use href="#ic-chart"/></svg>分析</button>
-      <button data-page="settings"><svg class="ic svgic"><use href="#ic-sliders"/></svg>テンプレート</button>`n      <button data-page="export"><svg class="ic svgic"><use href="#ic-download"/></svg>エクスポート</button>`n      <button data-page="settings"><svg class="ic svgic"><use href="#ic-sliders"/></svg>設定</button>
+      <button data-page="template"><svg class="ic svgic"><use href="#ic-notebook"/></svg>テンプレート</button>
+      <button data-page="export"><svg class="ic svgic"><use href="#ic-download"/></svg>エクスポート</button>
+      <button data-page="settings"><svg class="ic svgic"><use href="#ic-sliders"/></svg>設定</button>
     </div>
     <div class="side-foot">
       <div class="side-ai-row">
@@ -126,6 +129,20 @@
           <div class="checklist-item" data-task="replied"><span class="checkbox"><svg class="svgic"><use href="#ic-check"/></svg></span><span class="txt">コメント返信</span></div>
         </div>
       </div>
+
+      <section class="daily-rabbit-card section-gap" id="dailyRabbitCard">
+        <div class="daily-rabbit-visual" aria-hidden="true">
+          <span class="rabbit-ear left"></span>
+          <span class="rabbit-ear right"></span>
+          <span class="rabbit-face"></span>
+        </div>
+        <div>
+          <p class="label-eyebrow">今日のうさぎ</p>
+          <h3 id="dailyRabbitName">今日のうさぎ</h3>
+          <p id="dailyRabbitDescription">日替わりでうさぎの種類を紹介します。</p>
+          <div class="daily-rabbit-tags" id="dailyRabbitTags"></div>
+        </div>
+      </section>
 
       <p class="label-eyebrow">今日のおすすめ</p>
       <div class="feature-card">
@@ -386,8 +403,6 @@
       </div>
     </section>
 
-    <footer class="appfoot">MofYla Studio SNS秘書 ・ モックアップ v2.0</footer>
-  
     <section class="page" id="page-template">
       <div class="page-head"><div><p class="eyebrow">Templates</p><h2>投稿テンプレート</h2><p>商品紹介、制作動画、イベント告知などを管理して、投稿文のたたき台を作れます。</p></div><button class="btn btn-primary" id="templateAddBtn"><svg class="icon-sm svgic"><use href="#ic-plus"/></svg><span class="btn-label">追加</span></button></div>
       <div class="panel section-gap"><div class="mini-field-grid"><div class="mini-field"><label>テンプレート名</label><input id="templateName" type="text" placeholder="商品紹介"></div><div class="mini-field"><label>ジャンル</label><input id="templateCategory" type="text" placeholder="商品紹介"></div></div><div class="mini-field"><label>本文</label><textarea id="templateBody" rows="5" placeholder="今日は {topic} を紹介します。\nこだわり: {point}\n#MofYla"></textarea></div><div class="mini-field-grid"><div class="mini-field"><label>話題</label><input id="templateTopic" type="text" placeholder="新作のうさぎ用アイテム"></div><div class="mini-field"><label>こだわり</label><input id="templatePoint" type="text" placeholder="やさしい丸みと洗いやすさ"></div></div><div class="toolbar"><button class="btn btn-sage" id="templateSaveBtn">保存</button><button class="btn btn-ghost" id="templateGenerateBtn">投稿へ生成</button></div></div>
@@ -398,6 +413,7 @@
       <div class="page-head"><div><p class="eyebrow">Backup</p><h2>エクスポート / 復元</h2><p>ローカル保存された秘書データをJSONで退避・復元できます。</p></div></div>
       <div class="panel section-gap"><div class="toolbar"><button class="btn btn-primary" id="backupJsonBtn">JSONバックアップ</button><button class="btn btn-sage" id="restoreJsonBtn">JSON復元</button><button class="btn btn-ghost" id="exportSettingsBtn">設定エクスポート</button><button class="btn btn-ghost" id="exportHistoryBtn">投稿履歴エクスポート</button></div><input type="file" id="restoreFileInput" accept="application/json" hidden><textarea id="exportPreview" class="result" rows="12" placeholder="ここにエクスポート内容が表示されます"></textarea></div>
     </section>
+    <footer class="appfoot">MofYla Studio SNS秘書 v2.0</footer>
   </main>
 </div>
 
