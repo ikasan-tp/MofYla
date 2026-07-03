@@ -105,11 +105,73 @@ const IDEAS = [
   {tag:"作業ログ", title:"『今日はここまで進んだ』の記録投稿", detail:"派手な内容がなくても、日々の積み重ねを見せるだけで応援したくなる人が増える。数字や進捗は正直に。", tags:["#今日の制作","#立ち上げ期"], difficulty:"かんたん", minutes:"約5分", reason:"書くことがない日でも成立する最短ネタ。", photo:"作業途中の一枚で十分", effect:"継続していることが伝わる"},
   {tag:"ブランドの話", title:"『MofYla』という名前の由来を紹介", detail:"名前やロゴ、パッケージへのこだわりは一度しか話せない貴重なネタ。まだ話していなければ早めに出しておく。", tags:["#ブランドストーリー","#MofYla"], difficulty:"ふつう", minutes:"約15分", reason:"一度しか話せない貴重なネタ。早めに出しておく。", photo:"ロゴやパッケージ", effect:"ブランドの世界観が伝わる"},
   {tag:"交流", title:"コメントやDMでもらった質問への回答まとめ", detail:"立ち上げ期の今だからこそできる距離の近さが強み。もらったやり取りを匿名で紹介し、感謝も添える。", tags:["#質問回答","#フォロワーとの交流"], difficulty:"ふつう", minutes:"約15分", reason:"距離の近さが伝わる、立ち上げ期ならではのネタ。", photo:"該当する製品の写真", effect:"フォロワーとの関係性が深まる"},
-  {tag:"展望", title:"これから挑戦したいこと・目標を語る", detail:"立ち上げ期は『成長を見せる』こと自体がコンテンツになる。等身大の目標を一つ言葉にする。", tags:["#立ち上げ期","#目標"], difficulty:"じっくり", minutes:"約20分", reason:"成長を見せること自体がコンテンツになる。", photo:"今の作業風景や試作品", effect:"応援したい気持ちを引き出せる"},
+  {tag:"制作紹介", title:"これから挑戦したいこと・目標を語る", detail:"立ち上げ期は『成長を見せる』こと自体がコンテンツになる。等身大の目標を一つ言葉にする。", tags:["#立ち上げ期","#目標"], difficulty:"じっくり", minutes:"約20分", reason:"成長を見せること自体がコンテンツになる。", photo:"今の作業風景や試作品", effect:"応援したい気持ちを引き出せる"},
   {tag:"制作工程", title:"試作段階のラフ（設計図・仮組み）を見せる", detail:"完成品だけでなく途中経過を見せることで、次の投稿への期待値を作れる。CADの画面キャプチャでもOK。", tags:["#設計","#試作段階"], difficulty:"ふつう", minutes:"約15分", reason:"完成品だけでなく過程を見せ期待値を作る。", photo:"CAD画面のキャプチャ", effect:"次の投稿への期待感を作れる"}
 ];
 const CATEGORY_LIST = [...new Set(IDEAS.map(i=>i.tag))];
 const dayIndex = Math.floor((now - new Date(now.getFullYear(),0,0)) / 86400000);
+const RABBIT_BREEDS = [
+  {name:'アメリカン', length:'約45〜55cm', weight:'約4.1〜5.4kg', features:['大型寄り','マンドリン型の体型','穏やかな気質']},
+  {name:'アメリカンチンチラ', length:'約45〜55cm', weight:'約4.1〜5.4kg', features:['チンチラカラー','がっしり体型','希少性が高い']},
+  {name:'アメリカンファジーロップ', length:'約30〜35cm', weight:'約1.4〜1.8kg', features:['垂れ耳','ふわふわの長毛','小柄で愛らしい']},
+  {name:'アメリカンセーブル', length:'約38〜45cm', weight:'約3.2〜4.5kg', features:['セーブル色','濃淡のある被毛','落ち着いた印象']},
+  {name:'アルジャンテブラン', length:'約40〜50cm', weight:'約3.6〜4.8kg', features:['銀がかったチョコレート色','短毛','カナダ由来']},
+  {name:'ベルジアンヘア', length:'約45〜55cm', weight:'約3.6〜4.3kg', features:['野うさぎ風の体型','長い脚','活動的']},
+  {name:'ベファレン', length:'約45〜55cm', weight:'約3.6〜5.4kg', features:['大きめの体','光沢のある被毛','青い目の白色も有名']},
+  {name:'ブランデホト', length:'約40〜50cm', weight:'約3.6〜5.0kg', features:['白い体','黒いアイバンド','上品な見た目']},
+  {name:'ブリタニアペティート', length:'約20〜28cm', weight:'約0.7〜1.1kg', features:['とても小柄','弓なりの体型','活発で機敏']},
+  {name:'カリフォルニアン', length:'約45〜55cm', weight:'約4.1〜4.8kg', features:['白地に黒いポイント','赤い目','しっかりした体']},
+  {name:'シャンパーニュダルジャン', length:'約45〜55cm', weight:'約4.1〜5.4kg', features:['銀色の被毛','生まれた時は黒っぽい','歴史ある品種']},
+  {name:'チェッカードジャイアント', length:'約60〜75cm', weight:'約5.0〜7.0kg以上', features:['大型','斑点模様','半アーチ体型']},
+  {name:'シナモン', length:'約45〜55cm', weight:'約4.5〜5.0kg', features:['シナモン色','商業型の体型','比較的新しい品種']},
+  {name:'クリームダルジャン', length:'約40〜50cm', weight:'約3.6〜5.0kg', features:['クリーム色','オレンジの下毛','希少品種']},
+  {name:'チェコフロスティ', length:'約32〜40cm', weight:'約2.5〜3.6kg', features:['霜がかった白い被毛','黒っぽい目元','コンパクト']},
+  {name:'ダッチ', length:'約30〜38cm', weight:'約1.6〜2.5kg', features:['特徴的な白黒模様','小〜中型','人に慣れやすい']},
+  {name:'ドワーフホト', length:'約22〜28cm', weight:'約0.9〜1.4kg', features:['黒いアイライン','小柄','白い体']},
+  {name:'ドワーフパピヨン', length:'約25〜32cm', weight:'約1.4〜2.0kg', features:['蝶のような鼻模様','斑点模様','小型のスポット系']},
+  {name:'イングリッシュアンゴラ', length:'約30〜38cm', weight:'約2.3〜3.4kg', features:['顔まわりまで長毛','羊毛のような被毛','こまめな手入れが必要']},
+  {name:'イングリッシュロップ', length:'約45〜60cm', weight:'約4.5kg以上', features:['非常に長い垂れ耳','歴史あるロップ','ゆったりした印象']},
+  {name:'イングリッシュスポット', length:'約38〜48cm', weight:'約2.3〜3.6kg', features:['スポット模様','すらっとした体型','活発']},
+  {name:'フレミッシュジャイアント', length:'約60〜75cm', weight:'約6.0〜10.0kg以上', features:['超大型','温厚','広い飼育スペースが必要']},
+  {name:'フロリダホワイト', length:'約35〜42cm', weight:'約1.8〜2.7kg', features:['白い短毛','赤い目','コンパクトで丸い体']},
+  {name:'フレンチアンゴラ', length:'約40〜50cm', weight:'約3.4〜4.8kg', features:['長毛','顔まわりは比較的すっきり','毛質が豊か']},
+  {name:'フレンチロップ', length:'約55〜70cm', weight:'約4.5kg以上', features:['大型の垂れ耳','重量感のある体','穏やか']},
+  {name:'ジャイアントアンゴラ', length:'約50〜65cm', weight:'約4.3kg以上', features:['大型の長毛種','白い被毛が代表的','毛量が多い']},
+  {name:'ジャイアントチンチラ', length:'約55〜70cm', weight:'約5.4〜7.3kg', features:['大型','チンチラカラー','がっしりした体']},
+  {name:'ハーレクイン', length:'約38〜48cm', weight:'約2.9〜4.3kg', features:['左右で分かれる模様','個性的な配色','ショー映えする']},
+  {name:'ハバナ', length:'約30〜38cm', weight:'約2.0〜2.9kg', features:['光沢のある被毛','コンパクト','丸みのある体']},
+  {name:'ヒマラヤン', length:'約30〜40cm', weight:'約1.1〜2.0kg', features:['ポイントカラー','細長い体型','落ち着いた雰囲気']},
+  {name:'ホーランドロップ', length:'約30〜35cm', weight:'約1.3〜1.8kg', features:['垂れ耳','丸い顔','穏やかで人懐っこい']},
+  {name:'ジャージーウーリー', length:'約25〜30cm', weight:'約1.0〜1.6kg', features:['小型の長毛種','丸い体','おだやか']},
+  {name:'ライラック', length:'約35〜45cm', weight:'約2.5〜3.6kg', features:['淡いラベンダー色','中型','やわらかな印象']},
+  {name:'ライオンヘッド', length:'約25〜35cm', weight:'約1.2〜1.7kg', features:['たてがみ状の毛','小型','個性的な見た目']},
+  {name:'ミニロップ', length:'約35〜45cm', weight:'約2.0〜3.0kg', features:['垂れ耳','丸くがっしりした体','親しみやすい']},
+  {name:'ミニレッキス', length:'約30〜35cm', weight:'約1.4〜2.0kg', features:['ベルベットのような毛質','短毛','小柄']},
+  {name:'ミニサテン', length:'約30〜38cm', weight:'約1.4〜2.2kg', features:['光沢のある被毛','小型','なめらかな手触り']},
+  {name:'ネザーランドドワーフ', length:'約20〜28cm', weight:'約0.8〜1.2kg', features:['小柄','短い耳','活発で好奇心旺盛']},
+  {name:'ニュージーランド', length:'約45〜60cm', weight:'約4.0〜5.4kg', features:['大型寄り','しっかりした体','白色が代表的']},
+  {name:'パロミノ', length:'約40〜50cm', weight:'約3.6〜5.0kg', features:['黄金色またはリンクス色','中〜大型','穏やか']},
+  {name:'ポーリッシュ', length:'約22〜30cm', weight:'約1.1〜1.6kg', features:['小型','短い耳','丸い頭']},
+  {name:'レッキス', length:'約40〜50cm', weight:'約3.0〜4.8kg', features:['ベルベット状の被毛','中型','毛並みが特徴的']},
+  {name:'ラインランダー', length:'約40〜50cm', weight:'約2.9〜4.5kg', features:['蝶模様とスポット','白地に色柄','アーチ体型']},
+  {name:'サテン', length:'約40〜50cm', weight:'約3.6〜5.0kg', features:['強い光沢の被毛','なめらか','中〜大型']},
+  {name:'サテンアンゴラ', length:'約38〜50cm', weight:'約3.0〜4.5kg', features:['光沢のある長毛','絹のような質感','手入れが重要']},
+  {name:'シルバー', length:'約32〜42cm', weight:'約1.8〜3.2kg', features:['銀差しの被毛','古い歴史','希少性が高い']},
+  {name:'シルバーフォックス', length:'約45〜55cm', weight:'約4.1〜5.4kg', features:['銀毛の入る被毛','大型寄り','毛が立ちやすい']},
+  {name:'シルバーマーチン', length:'約32〜42cm', weight:'約2.7〜4.3kg', features:['黒やチョコに白い差し毛','コントラストが強い','中型']},
+  {name:'スタンダードチンチラ', length:'約35〜45cm', weight:'約2.3〜3.4kg', features:['チンチラカラー','中型','丸みのある体']},
+  {name:'タン', length:'約30〜38cm', weight:'約1.8〜2.7kg', features:['黒や青にタン模様','小〜中型','活発']},
+  {name:'トリアンタ', length:'約30〜38cm', weight:'約2.0〜2.7kg', features:['鮮やかな赤茶色','コンパクト','温かみのある色']},
+];function renderDailyRabbit(){
+  const rabbit = RABBIT_BREEDS[dayIndex % RABBIT_BREEDS.length];
+  const nameEl = document.getElementById('dailyRabbitName');
+  const descEl = document.getElementById('dailyRabbitDescription');
+  const tagsEl = document.getElementById('dailyRabbitTags');
+  if(!nameEl || !descEl || !tagsEl) return;
+  nameEl.textContent = rabbit.name;
+  descEl.textContent = '平均体長: ' + rabbit.length + ' / 平均体重: ' + rabbit.weight;
+  tagsEl.innerHTML = rabbit.features.map(feature => '<span>' + feature + '</span>').join('');
+}
 let recentIdeaTitles = [];
 
 function getRecentCategories(limit){
@@ -270,7 +332,6 @@ document.querySelectorAll('.checklist-item').forEach(el=>{
 ================================================================== */
 const ACTIVITY_TYPES = {
   post:    {label:'投稿',       icon:'ic-pencil'},
-  reply:   {label:'コメント返信', icon:'ic-chat'},
   video:   {label:'制作動画',   icon:'ic-video'},
   release: {label:'商品公開',   icon:'ic-gift'},
   event:   {label:'イベント',   icon:'ic-flag'}
@@ -288,10 +349,12 @@ async function loadPostedDays(){
     postedDays = new Set(keys.map(k => k.replace('postedday:', '')));
   }catch(e){ postedDays = new Set(); }
 }
-async function markPostedToday(){
-  const key = todayKey();
+async function markPostedDate(key){
   postedDays.add(key);
   try{ await window.storage.set('postedday:' + key, 'true', false); }catch(e){}
+}
+async function markPostedToday(){
+  await markPostedDate(todayKey());
 }
 async function loadActivityLog(){
   const map = new Map();
@@ -303,8 +366,10 @@ async function loadActivityLog(){
         const res = await window.storage.get(key, false);
         if(res && res.value){
           const item = JSON.parse(res.value);
+          if(item.type === 'reply') continue;
           if(!map.has(item.date)) map.set(item.date, []);
           map.get(item.date).push(item);
+          if(item.type === 'post' && item.status !== 'planned') await markPostedDate(item.date);
         }
       }catch(e){ /* skip unreadable entry */ }
     }
@@ -314,6 +379,7 @@ async function loadActivityLog(){
 async function saveActivity(item){
   try{ await window.storage.set('activity:' + item.id, JSON.stringify(item), false); }
   catch(e){ toast('保存に失敗しました'); }
+  if(item.type === 'post' && item.status !== 'planned' && item.date) await markPostedDate(item.date);
   await loadActivityLog();
 }
 async function deleteActivity(id){
@@ -349,17 +415,16 @@ function computeMonthRate(){
 function computeMonthlyStats(){
   const now2 = new Date();
   const prefix = now2.getFullYear() + '-' + String(now2.getMonth()+1).padStart(2,'0');
-  let posts=0, replies=0, videos=0;
+  let posts=0, videos=0;
   activityLog.forEach((arr, date)=>{
     if(!date.startsWith(prefix)) return;
     arr.forEach(a=>{
       if(a.status === 'planned') return;
       if(a.type==='post') posts++;
-      if(a.type==='reply') replies++;
       if(a.videoUsed || a.type==='video') videos++;
     });
   });
-  return {posts, replies, videos};
+  return {posts, videos};
 }
 const MONTH_LABEL_FMT = (y,m)=> y + '年' + (m+1) + '月';
 let fullCalDate = new Date();
@@ -371,7 +436,7 @@ function buildMonthGrid(containerId, year, month){
   const firstDow = new Date(year, month, 1).getDay();
   const numDays = new Date(year, month+1, 0).getDate();
   const streakLen = computeStreak();
-  const iconMap = {post:'ic-pencil', reply:'ic-chat', video:'ic-video', release:'ic-gift', event:'ic-flag'};
+  const iconMap = {post:'ic-pencil', video:'ic-video', release:'ic-gift', event:'ic-flag'};
 
   for(let i=0;i<firstDow;i++){
     const pad = document.createElement('div');
@@ -402,7 +467,6 @@ function buildMonthGrid(containerId, year, month){
     acts.forEach(a=>{
       if(a.status==='planned') return;
       if(a.type==='post') iconTypes.add('post');
-      if(a.type==='reply') iconTypes.add('reply');
       if(a.videoUsed || a.type==='video') iconTypes.add('video');
       if(a.type==='release') iconTypes.add('release');
       if(a.type==='event') iconTypes.add('event');
@@ -431,10 +495,9 @@ function buildWeekStrip(){
     const isPosted = postedDays.has(key) || acts.some(a=>a.type==='post' && a.status!=='planned');
     const cell = document.createElement('div');
     cell.className = 'week-cell' + (isPosted?' posted':'') + (d.getTime()===today.getTime()?' today':'');
-    const hasReply = acts.some(a=>a.type==='reply');
     const hasVideo = acts.some(a=>a.videoUsed || a.type==='video');
     cell.innerHTML = '<span class="wd">'+wdNames[i]+'</span><span class="dn">'+d.getDate()+'</span>'
-      + '<span class="dotwrap">' + (hasReply?'<span></span>':'') + (hasVideo?'<span></span>':'') + '</span>';
+      + '<span class="dotwrap">' + (hasVideo?'<span></span>':'') + '</span>';
     cell.addEventListener('click', ()=> goPage('calendar'));
     wrap.appendChild(cell);
   }
@@ -448,12 +511,9 @@ function renderPlanAdvice(){
   if(planned.length===0){ el.textContent = '予定を登録すると、投稿の組み立て方を提案します。'; return; }
   const xCount = planned.filter(p=>p.platform==='X').length;
   const igCount = planned.filter(p=>p.platform==='Instagram').length;
-  const postCount = planned.filter(p=>p.type==='post').length;
-  const replyCount = planned.filter(p=>p.type==='reply').length;
   let msg;
   if(igCount >= 3 && xCount === 0) msg = 'Instagram向けの予定が続いています。Xにも1件追加すると、両プラットフォームのバランスが取れます。';
   else if(xCount >= 3 && igCount === 0) msg = 'X向けの予定が続いています。Instagramにも1件追加してみましょう。';
-  else if(postCount >= 3 && replyCount === 0) msg = '投稿の予定が続いています。合間にコメント返信の時間も確保すると、フォロワーとの関係づくりに役立ちます。';
   else msg = planned.length + '件の予定が登録されています。順調に組み立てられています。';
   el.textContent = msg;
 }
@@ -512,7 +572,6 @@ function renderCalendars(){
   const stats = computeMonthlyStats();
   document.getElementById('postsThisMonthNum').textContent = stats.posts;
   document.getElementById('postsThisMonthNumFull').textContent = stats.posts;
-  document.getElementById('repliesThisMonthNum').textContent = stats.replies;
   document.getElementById('videosThisMonthNum').textContent = stats.videos;
   document.getElementById('ideaStockNum').textContent = IDEAS.length + (window.refNoteCount||0);
 
@@ -1177,15 +1236,8 @@ async function runReplyGenerate(){
     }
     setLoading(replyLoader, replyGenerateBtn, false, '返信文を考える', '');
   }
-  markChecklist('replied', true, true);
   const item = {id: Date.now(), createdAt: Date.now(), comment, reply: replyText, favorite:false};
   try{ await window.storage.set('reply:' + item.id, JSON.stringify(item), false); }catch(e){}
-  await saveActivity({
-    id: item.id, date: todayKey(), type:'reply',
-    title: comment.slice(0,40), platform:'-', category:'交流',
-    likes:0, saves:0, comments:0, memo: replyText.slice(0,60), videoUsed:false, status:'posted'
-  });
-  renderCalendars();
   loadReplies();
 }
 replyGenerateBtn.addEventListener('click', runReplyGenerate);
@@ -1267,6 +1319,7 @@ document.getElementById('resetAllBtn').addEventListener('click', async ()=>{
     await Promise.all([loadHistory(), loadRefNotes(), loadReplies(), loadPostedDays(), loadChecklist(), loadActivityLog(), loadMonthlyGoal()]);
     renderCalendars();
     pickAndRenderTodayIdea();
+    renderDailyRabbit();
   }catch(e){ toast('削除に失敗しました'); }
 });
 
@@ -1286,6 +1339,7 @@ async function initApp(){
   ]);
   renderCalendars();
   pickAndRenderTodayIdea();
+  renderDailyRabbit();
 }
 initApp();
 
@@ -1433,7 +1487,7 @@ function enhanceAnalytics(){
   const panel = document.createElement('div');
   panel.className = 'panel section-gap';
   panel.id = 'v2Dashboard';
-  panel.innerHTML = `<div class="page-head"><div><p class="eyebrow">Dashboard</p><h2>週別・月別分析</h2></div></div><div class="dashboard-grid"><div class="metric"><b id="v2PostCount">0</b><span>投稿数</span></div><div class="metric"><b id="v2ReplyCount">0</b><span>返信数</span></div><div class="metric"><b id="v2VideoCount">0</b><span>動画投稿数</span></div><div class="metric"><b id="v2PopularCount">0</b><span>人気投稿数</span></div></div><div class="chart-bars" id="categoryChart"></div><div class="ai-note section-gap" id="aiAnalysisText"></div>`;
+  panel.innerHTML = `<div class="page-head"><div><p class="eyebrow">Dashboard</p><h2>週別・月別分析</h2></div></div><div class="dashboard-grid"><div class="metric"><b id="v2PostCount">0</b><span>投稿数</span></div><div class="metric"><b id="v2VideoCount">0</b><span>動画投稿数</span></div><div class="metric"><b id="v2PopularCount">0</b><span>人気投稿数</span></div></div><div class="chart-bars" id="categoryChart"></div><div class="ai-note section-gap" id="aiAnalysisText"></div>`;
   page.appendChild(panel);
   refreshAnalytics();
 }
@@ -1442,7 +1496,6 @@ function refreshAnalytics(){
   const analysis = analyzeActivities(safeActivities());
   const set = (id, value) => { const el = document.getElementById(id); if(el) el.textContent = value; };
   set('v2PostCount', analysis.posts.length);
-  set('v2ReplyCount', analysis.replies);
   set('v2VideoCount', analysis.videoCount);
   set('v2PopularCount', analysis.popular);
   renderBars(document.getElementById('categoryChart'), analysis.byCategory);
@@ -1583,3 +1636,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   wireUndoRedo();
   setInterval(() => { renderAssistantInsight(); refreshAnalytics(); }, 3000);
 });
+
+
+
+
+
+

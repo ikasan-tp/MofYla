@@ -1,8 +1,6 @@
 ﻿export const SNS_PROFILES = {
   X: { label: 'X', max: 280, tagCount: 4, breaks: 'compact' },
-  Instagram: { label: 'Instagram', max: 2200, tagCount: 8, breaks: 'spacious' },
-  Threads: { label: 'Threads', max: 500, tagCount: 4, breaks: 'natural' },
-  Bluesky: { label: 'Bluesky', max: 300, tagCount: 3, breaks: 'compact' }
+  Instagram: { label: 'Instagram', max: 2200, tagCount: 8, breaks: 'spacious' }
 };
 
 export function optimizeForSns(text, sns = 'X', tags = ['#MofYla']){
