@@ -408,7 +408,21 @@
 
     <section class="page" id="page-export">
       <div class="page-head"><div><p class="eyebrow">Backup</p><h2>エクスポート / 復元</h2><p>ローカル保存された秘書データをJSONで退避・復元できます。</p></div></div>
-      <div class="panel section-gap"><div class="toolbar"><button class="btn btn-primary" id="backupJsonBtn">JSONバックアップ</button><button class="btn btn-sage" id="restoreJsonBtn">JSON復元</button><button class="btn btn-ghost" id="exportSettingsBtn">設定エクスポート</button><button class="btn btn-ghost" id="exportHistoryBtn">投稿履歴エクスポート</button></div><input type="file" id="restoreFileInput" accept="application/json" hidden><textarea id="exportPreview" class="result" rows="12" placeholder="ここにエクスポート内容が表示されます"></textarea></div>
+            <div class="panel section-gap">
+        <div class="toolbar"><button class="btn btn-primary" id="backupJsonBtn">JSONバックアップ</button><button class="btn btn-sage" id="restoreJsonBtn">JSON復元</button><button class="btn btn-ghost" id="exportSettingsBtn">設定エクスポート</button><button class="btn btn-ghost" id="exportHistoryBtn">投稿履歴エクスポート</button></div>
+        <input type="file" id="restoreFileInput" accept="application/json" hidden>
+        <textarea id="exportPreview" class="result" rows="12" placeholder="ここにエクスポート内容が表示されます"></textarea>
+      </div>
+      <div class="panel section-gap">
+        <div class="page-head"><div><p class="eyebrow">Cloud Sync</p><h2>半自動共有</h2><p>Google Apps Script経由でJSONをクラウド保存し、別デバイスへ復元できます。</p></div></div>
+        <div class="mini-field-grid">
+          <div class="mini-field"><label>Apps Script URL</label><input id="cloudSyncUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec"></div>
+          <div class="mini-field"><label>同期キー</label><input id="cloudSyncKey" type="password" placeholder="自分だけの合言葉"></div>
+        </div>
+        <label class="metric-check" style="margin:8px 0 12px;"><input type="checkbox" id="cloudAutoUploadToggle"> 入力変更後に自動アップロード</label>
+        <div class="toolbar"><button class="btn btn-primary" id="cloudUploadBtn">クラウドに保存</button><button class="btn btn-sage" id="cloudDownloadBtn">クラウドから取得</button><button class="btn btn-ghost" id="cloudInstallBtn">取得データをインストール</button></div>
+        <p class="hint" id="cloudSyncStatus">未設定です。Apps Script URLと同期キーを入力してください。</p>
+      </div>
     </section>
     <footer class="appfoot">MofYla Studio SNSmanager v2.0</footer>
   </main>
@@ -431,5 +445,6 @@
 <script type="module" src="./src/app.js"></script>
 </body>
 </html>
+
 
 

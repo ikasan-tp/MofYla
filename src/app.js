@@ -164,7 +164,8 @@ const RABBIT_BREEDS = [
   {name:'スタンダードチンチラ', length:'約35〜45cm', weight:'約2.3〜3.4kg', features:['チンチラカラー','中型','丸みのある体']},
   {name:'タン', length:'約30〜38cm', weight:'約1.8〜2.7kg', features:['黒や青にタン模様','小〜中型','活発']},
   {name:'トリアンタ', length:'約30〜38cm', weight:'約2.0〜2.7kg', features:['鮮やかな赤茶色','コンパクト','温かみのある色']},
-];function renderDailyRabbit(){
+];
+function renderDailyRabbit(){
   const rabbit = RABBIT_BREEDS[dayIndex % RABBIT_BREEDS.length];
   const nameEl = document.getElementById('dailyRabbitName');
   const descEl = document.getElementById('dailyRabbitDescription');
@@ -1570,11 +1571,100 @@ function generateFromTemplate(item){
 
 function wireExport(){
   const preview = document.getElementById('exportPreview');
+  const cloudUrlInput = document.getElementById('cloudSyncUrl');
+  const cloudKeyInput = document.getElementById('cloudSyncKey');
+  const cloudAutoToggle = document.getElementById('cloudAutoUploadToggle');
+  const cloudStatus = document.getElementById('cloudSyncStatus');
+  const syncPrefixes = ['post:','refnote:','reply:','postedday:','checklist:','setting:','activity:','draft:','calendar:','ideas:','templates:','analytics:','app:'];
+  let downloadedCloudData = null;
+  let cloudAutoTimer = null;
+
   async function collect(prefix = ''){
     const listed = await Storage.list(prefix);
-    return Object.fromEntries(listed.values.map(item => [item.key, item.value]));
+    const entries = listed.values.filter(item => !item.key.startsWith('setting:cloud'));
+    return Object.fromEntries(entries.map(item => [item.key, item.value]));
   }
   async function show(data){ preview.value = JSON.stringify(data, null, 2); await navigator.clipboard?.writeText(preview.value).catch(() => {}); }
+  function setCloudStatus(message){ if(cloudStatus) cloudStatus.textContent = message; }
+  function cloudConfig(){
+    return {
+      url: (cloudUrlInput?.value || '').trim(),
+      key: (cloudKeyInput?.value || '').trim()
+    };
+  }
+  function ensureCloudConfig(){
+    const cfg = cloudConfig();
+    if(!cfg.url || !cfg.key){ showToast('Apps Script URLと同期キーを入力してください'); return null; }
+    return cfg;
+  }
+  async function saveCloudSettings(){
+    if(cloudUrlInput) await Storage.set('setting:cloudSyncUrl', cloudUrlInput.value.trim());
+    if(cloudKeyInput) await Storage.set('setting:cloudSyncKey', cloudKeyInput.value.trim());
+    if(cloudAutoToggle) await Storage.set('setting:cloudAutoUpload', String(cloudAutoToggle.checked));
+  }
+  async function loadCloudSettings(){
+    if(cloudUrlInput) cloudUrlInput.value = await Storage.get('setting:cloudSyncUrl', '');
+    if(cloudKeyInput) cloudKeyInput.value = await Storage.get('setting:cloudSyncKey', '');
+    if(cloudAutoToggle) cloudAutoToggle.checked = await Storage.get('setting:cloudAutoUpload', 'false') === 'true';
+    const uploadedAt = await Storage.get('setting:cloudLastUpload', '');
+    const installedAt = await Storage.get('setting:cloudLastInstall', '');
+    setCloudStatus(uploadedAt || installedAt ? `最終保存: ${uploadedAt || '-'} / 最終インストール: ${installedAt || '-'}` : '未同期です。Upload/Downloadで別デバイスと共有できます。');
+  }
+  async function uploadCloud(silent = false){
+    const cfg = ensureCloudConfig();
+    if(!cfg) return false;
+    await saveCloudSettings();
+    const data = await collect('');
+    const body = new URLSearchParams();
+    body.set('action', 'upload');
+    body.set('key', cfg.key);
+    body.set('payload', JSON.stringify({ app:'MofYla', version:1, savedAt:new Date().toISOString(), data }));
+    const res = await fetch(cfg.url, { method:'POST', body });
+    const json = await res.json();
+    if(!json.ok) throw new Error(json.error || 'upload failed');
+    const stamp = new Date().toLocaleString('ja-JP');
+    await Storage.set('setting:cloudLastUpload', stamp);
+    setCloudStatus(`クラウドに保存しました: ${stamp}`);
+    if(!silent) showToast('クラウドに保存しました');
+    return true;
+  }
+  async function downloadCloud(){
+    const cfg = ensureCloudConfig();
+    if(!cfg) return;
+    await saveCloudSettings();
+    const url = new URL(cfg.url);
+    url.searchParams.set('action', 'download');
+    url.searchParams.set('key', cfg.key);
+    const res = await fetch(url.toString());
+    const json = await res.json();
+    if(!json.ok) throw new Error(json.error || 'download failed');
+    downloadedCloudData = json.payload?.data || json.payload || {};
+    await show(downloadedCloudData);
+    setCloudStatus(`クラウドから取得しました: ${new Date().toLocaleString('ja-JP')}。内容を確認してからインストールしてください。`);
+    showToast('クラウドから取得しました');
+  }
+  async function installData(data){
+    for(const prefix of syncPrefixes){
+      const listed = await Storage.list(prefix);
+      for(const item of listed.values){
+        if(!item.key.startsWith('setting:cloud')) await Storage.remove(item.key);
+      }
+    }
+    for(const [key, value] of Object.entries(data)){
+      if(!key.startsWith('setting:cloud')) await Storage.set(key, value);
+    }
+    const stamp = new Date().toLocaleString('ja-JP');
+    await Storage.set('setting:cloudLastInstall', stamp);
+    showToast('クラウドデータをインストールしました');
+    setCloudStatus(`インストールしました: ${stamp}`);
+    setTimeout(() => location.reload(), 600);
+  }
+  function scheduleCloudAutoUpload(){
+    if(!cloudAutoToggle?.checked) return;
+    clearTimeout(cloudAutoTimer);
+    cloudAutoTimer = setTimeout(() => uploadCloud(true).catch(() => setCloudStatus('自動アップロードに失敗しました。URLと同期キーを確認してください。')), 30000);
+  }
+
   document.getElementById('backupJsonBtn')?.addEventListener('click', async () => show(await collect('')));
   document.getElementById('exportSettingsBtn')?.addEventListener('click', async () => show(await collect('settings')));
   document.getElementById('exportHistoryBtn')?.addEventListener('click', async () => show(await collect('activity:')));
@@ -1583,9 +1673,24 @@ function wireExport(){
     const file = event.target.files[0];
     if(!file) return;
     const data = JSON.parse(await file.text());
-    for(const [key, value] of Object.entries(data)) await Storage.set(key, value);
-    showToast('JSONを復元しました');
+    await installData(data.data || data);
   });
+  document.getElementById('cloudUploadBtn')?.addEventListener('click', () => uploadCloud(false).catch(err => { showToast('クラウド保存に失敗しました'); setCloudStatus(err.message); }));
+  document.getElementById('cloudDownloadBtn')?.addEventListener('click', () => downloadCloud().catch(err => { showToast('クラウド取得に失敗しました'); setCloudStatus(err.message); }));
+  document.getElementById('cloudInstallBtn')?.addEventListener('click', async () => {
+    let data = downloadedCloudData;
+    if(!data && preview.value.trim()){
+      const parsed = JSON.parse(preview.value);
+      data = parsed.data || parsed;
+    }
+    if(!data){ showToast('先にクラウドから取得してください'); return; }
+    if(!confirm('取得したクラウドデータをこの端末にインストールします。現在のローカルデータは上書きされます。よろしいですか？')) return;
+    await installData(data);
+  });
+  [cloudUrlInput, cloudKeyInput, cloudAutoToggle].forEach(el => el?.addEventListener('change', saveCloudSettings));
+  document.addEventListener('change', event => { if(!event.target.closest('#page-export')) scheduleCloudAutoUpload(); });
+  document.addEventListener('input', event => { if(!event.target.closest('#page-export')) scheduleCloudAutoUpload(); });
+  loadCloudSettings();
 }
 
 const undoStack = [];
@@ -1638,6 +1743,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   wireUndoRedo();
   setInterval(() => { renderAssistantInsight(); refreshAnalytics(); }, 3000);
 });
+
 
 
 
