@@ -1610,6 +1610,18 @@ function wireExport(){
     const installedAt = await Storage.get('setting:cloudLastInstall', '');
     setCloudStatus(uploadedAt || installedAt ? `最終保存: ${uploadedAt || '-'} / 最終インストール: ${installedAt || '-'}` : '未同期です。Upload/Downloadで別デバイスと共有できます。');
   }
+  function jsonpCloud(url){
+    return new Promise((resolve, reject) => {
+      const callback = 'mofylaCloud_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+      const script = document.createElement('script');
+      const cleanup = () => { delete window[callback]; script.remove(); };
+      window[callback] = data => { cleanup(); resolve(data); };
+      script.onerror = () => { cleanup(); reject(new Error('download failed')); };
+      url.searchParams.set('callback', callback);
+      script.src = url.toString();
+      document.body.appendChild(script);
+    });
+  }
   async function uploadCloud(silent = false){
     const cfg = ensureCloudConfig();
     if(!cfg) return false;
@@ -1619,13 +1631,11 @@ function wireExport(){
     body.set('action', 'upload');
     body.set('key', cfg.key);
     body.set('payload', JSON.stringify({ app:'MofYla', version:1, savedAt:new Date().toISOString(), data }));
-    const res = await fetch(cfg.url, { method:'POST', body });
-    const json = await res.json();
-    if(!json.ok) throw new Error(json.error || 'upload failed');
+    await fetch(cfg.url, { method:'POST', mode:'no-cors', body });
     const stamp = new Date().toLocaleString('ja-JP');
     await Storage.set('setting:cloudLastUpload', stamp);
-    setCloudStatus(`クラウドに保存しました: ${stamp}`);
-    if(!silent) showToast('クラウドに保存しました');
+    setCloudStatus(`クラウドへ送信しました: ${stamp}。別端末で取得できるか確認してください。`);
+    if(!silent) showToast('クラウドへ送信しました');
     return true;
   }
   async function downloadCloud(){
@@ -1635,8 +1645,7 @@ function wireExport(){
     const url = new URL(cfg.url);
     url.searchParams.set('action', 'download');
     url.searchParams.set('key', cfg.key);
-    const res = await fetch(url.toString());
-    const json = await res.json();
+    const json = await jsonpCloud(url);
     if(!json.ok) throw new Error(json.error || 'download failed');
     downloadedCloudData = json.payload?.data || json.payload || {};
     await show(downloadedCloudData);
@@ -1743,6 +1752,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   wireUndoRedo();
   setInterval(() => { renderAssistantInsight(); refreshAnalytics(); }, 3000);
 });
+
 
 
 
