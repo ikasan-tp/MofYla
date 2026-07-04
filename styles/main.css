@@ -55,13 +55,7 @@ body::before{
   position:sticky;top:0;height:100vh;
 }
 .side-brand{display:flex;align-items:center;gap:10px;padding:0 8px 20px;}
-.side-earmark{width:26px;height:26px;position:relative;flex:none;}
-.side-earmark::before,.side-earmark::after{
-  content:"";position:absolute;bottom:1px;width:9px;height:20px;
-  border-radius:50% 50% 42% 42%/60% 60% 40% 40%;
-}
-.side-earmark::before{left:1px;background:var(--clay);transform:rotate(-12deg);}
-.side-earmark::after{right:1px;background:var(--sage);transform:rotate(12deg);}
+.side-logo{width:32px;height:32px;object-fit:contain;display:block;flex:none;}
 .side-brand h1{font-size:1.08rem;font-weight:600;margin:0;letter-spacing:0.01em;}
 .side-brand span{display:block;font-size:0.66rem;color:var(--ink-soft);letter-spacing:0.04em;}
 
@@ -496,4 +490,6 @@ footer.appfoot{text-align:center;color:var(--ink-faint);font-size:0.72rem;margin
 .checklist-item.done .checkbox svg{color:#fff;}
 .fav-star svg{width:17px;height:17px;color:var(--ink-faint);transition:color .15s ease;}
 .fav-star.active svg{color:var(--honey);fill:var(--honey);}
+
+
 
