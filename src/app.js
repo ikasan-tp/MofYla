@@ -1622,19 +1622,44 @@ function wireExport(){
       document.body.appendChild(script);
     });
   }
+  function postCloudForm(cfg, payload){
+    return new Promise(resolve => {
+      const frameName = 'mofylaCloudUploadFrame';
+      let frame = document.querySelector('iframe[name="' + frameName + '"]');
+      if(!frame){
+        frame = document.createElement('iframe');
+        frame.name = frameName;
+        frame.style.display = 'none';
+        document.body.appendChild(frame);
+      }
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = cfg.url;
+      form.target = frameName;
+      form.style.display = 'none';
+      const fields = { action:'upload', key:cfg.key, payload };
+      Object.entries(fields).forEach(([name, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+      setTimeout(() => { form.remove(); resolve(); }, 1200);
+    });
+  }
   async function uploadCloud(silent = false){
     const cfg = ensureCloudConfig();
     if(!cfg) return false;
     await saveCloudSettings();
     const data = await collect('');
-    const body = new URLSearchParams();
-    body.set('action', 'upload');
-    body.set('key', cfg.key);
-    body.set('payload', JSON.stringify({ app:'MofYla', version:1, savedAt:new Date().toISOString(), data }));
-    await fetch(cfg.url, { method:'POST', mode:'no-cors', body });
+    const payload = JSON.stringify({ app:'MofYla', version:1, savedAt:new Date().toISOString(), data });
+    await postCloudForm(cfg, payload);
     const stamp = new Date().toLocaleString('ja-JP');
     await Storage.set('setting:cloudLastUpload', stamp);
-    setCloudStatus(`クラウドへ送信しました: ${stamp}。別端末で取得できるか確認してください。`);
+    setCloudStatus(`クラウドへ送信しました: ${stamp}。クラウドから取得で保存結果を確認できます。`);
     if(!silent) showToast('クラウドへ送信しました');
     return true;
   }
@@ -1752,6 +1777,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   wireUndoRedo();
   setInterval(() => { renderAssistantInsight(); refreshAnalytics(); }, 3000);
 });
+
 
 
 
