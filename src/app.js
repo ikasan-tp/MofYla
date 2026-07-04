@@ -119,6 +119,7 @@ const RABBIT_BREEDS = [
   {name:'ベルジアンヘア', length:'約45〜55cm', weight:'約3.6〜4.3kg', features:['野うさぎ風の体型','長い脚','活動的']},
   {name:'ベファレン', length:'約45〜55cm', weight:'約3.6〜5.4kg', features:['大きめの体','光沢のある被毛','青い目の白色も有名']},
   {name:'ブランデホト', length:'約40〜50cm', weight:'約3.6〜5.0kg', features:['白い体','黒いアイバンド','上品な見た目']},
+  {name:'ブルーホリサー', length:'約35〜45cm', weight:'約2.5〜3.3kg', features:['スチールブルーの被毛','円筒型の体型','2023年にARBA公認']},
   {name:'ブリタニアペティート', length:'約20〜28cm', weight:'約0.7〜1.1kg', features:['とても小柄','弓なりの体型','活発で機敏']},
   {name:'カリフォルニアン', length:'約45〜55cm', weight:'約4.1〜4.8kg', features:['白地に黒いポイント','赤い目','しっかりした体']},
   {name:'シャンパーニュダルジャン', length:'約45〜55cm', weight:'約4.1〜5.4kg', features:['銀色の被毛','生まれた時は黒っぽい','歴史ある品種']},
@@ -145,6 +146,7 @@ const RABBIT_BREEDS = [
   {name:'ジャージーウーリー', length:'約25〜30cm', weight:'約1.0〜1.6kg', features:['小型の長毛種','丸い体','おだやか']},
   {name:'ライラック', length:'約35〜45cm', weight:'約2.5〜3.6kg', features:['淡いラベンダー色','中型','やわらかな印象']},
   {name:'ライオンヘッド', length:'約25〜35cm', weight:'約1.2〜1.7kg', features:['たてがみ状の毛','小型','個性的な見た目']},
+  {name:'ミニカリフォルニアン', length:'約35〜45cm', weight:'約2.7kg以下', features:['カリフォルニアンの小型版','白地にポイントカラー','ARBA第53番目の公認品種']},
   {name:'ミニロップ', length:'約35〜45cm', weight:'約2.0〜3.0kg', features:['垂れ耳','丸くがっしりした体','親しみやすい']},
   {name:'ミニレッキス', length:'約30〜35cm', weight:'約1.4〜2.0kg', features:['ベルベットのような毛質','短毛','小柄']},
   {name:'ミニサテン', length:'約30〜38cm', weight:'約1.4〜2.2kg', features:['光沢のある被毛','小型','なめらかな手触り']},
@@ -1636,6 +1638,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   wireUndoRedo();
   setInterval(() => { renderAssistantInsight(); refreshAnalytics(); }, 3000);
 });
+
 
 
 
