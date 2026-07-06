@@ -2,10 +2,11 @@ import { Storage } from './storage.js';
 import { showToast } from './components/toast.js';
 
 const STORE_KEY = 'brand:data';
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 const todayKey = () => new Date().toISOString().slice(0, 10);
 const CUSTOMER_STATUSES = ['お問い合わせ','見積り','デザイン確認','制作中','印刷','塗装','梱包','発送','完了'];
 const LEAD_STATUSES = ['未調査','調査済','DM送信','返信待ち','商談中','サンプル送付','導入済','見送り'];
+const LEAD_POTENTIALS = ['未設定','高','中','低'];
 const CATEGORIES = ['ネームプレート','コースター','キーホルダー','その他'];
 const TASK_FILTERS = ['今日','期限近い','マルシェ関連','制作','SNS','事務作業','完了済み'];
 const DAILY_TASKS = [
@@ -74,10 +75,16 @@ function ensureShape(){
 async function load(){
   state = await Storage.get(STORE_KEY, null);
   if(!state) state = emptyState();
+  const savedVersion = state.schemaVersion;
   ensureShape();
-  const changed = stripDemoData();
+  let changed = stripDemoData();
   state.markets = state.markets.map(normalizeMarket);
-  if(changed || state.schemaVersion !== SCHEMA_VERSION) await save(false);
+  state.leads = state.leads.map(lead => {
+    if(lead.potential) return lead;
+    changed = true;
+    return { ...lead, potential:'未設定' };
+  });
+  if(changed || savedVersion !== SCHEMA_VERSION) await save(false);
 }
 async function save(notify = true){
   await Storage.set(STORE_KEY, state);
@@ -114,6 +121,13 @@ function dueCustomers(){ return state.customers.filter(item => item.status !== '
 function todayLeads(){ return state.leads.filter(lead => lead.nextContactDate && lead.nextContactDate <= todayKey() && !['導入済','見送り'].includes(lead.status)).sort((a,b)=>a.nextContactDate.localeCompare(b.nextContactDate)).slice(0, 4); }
 function customerCounts(){ return CUSTOMER_STATUSES.reduce((acc, status) => ({ ...acc, [status]:state.customers.filter(item => item.status === status).length }), {}); }
 function leadCounts(){ return LEAD_STATUSES.reduce((acc, status) => ({ ...acc, [status]:state.leads.filter(item => item.status === status).length }), {}); }
+function archiveDetails(title, items, renderer){
+  if(!items.length) return '';
+  return `<details class="brand-archive">
+    <summary><span>${title}</span><b>${items.length}件</b></summary>
+    <div class="brand-archive-body">${items.map(renderer).join('')}</div>
+  </details>`;
+}
 
 function defaultMarketChecklist(){
   return ['商品数を決める','商品を制作する','値札を作る','POPを作る','ショップカードを用意する','什器を確認する','机を確認する','椅子を確認する','テントを確認する','搬入時間・搬出時間を確認する','持ち運び方法を確認する','備品を確認する','お釣りを用意する','SNSで告知する','搬入物を確認する']
@@ -190,11 +204,12 @@ function customerCard(customer){
 }
 function leadCard(lead){
   return `<div class="brand-item">
-    <div class="brand-row"><strong>${escapeHtml(lead.shopName || '店舗名未設定')}</strong><span class="brand-chip">${escapeHtml(lead.status || '未調査')}</span></div>
+    <div class="brand-row"><strong>${escapeHtml(lead.shopName || '店舗名未設定')}</strong><span class="brand-chip ${potentialClass(lead.potential)}">見込み ${escapeHtml(lead.potential || '未設定')}</span></div>
     <div class="brand-meter"><span>営業進捗 ${leadProgress(lead)}%</span>${progressBar(leadProgress(lead))}</div>
     <p class="brand-note">${escapeHtml(lead.nextAction || '')} / ${lead.nextContactDate || '-'}</p>
   </div>`;
 }
+function potentialClass(value){ return value === '高' ? 'hot' : value === '中' ? 'warm' : value === '低' ? 'cool' : ''; }
 
 function renderHome(){
   const root = document.getElementById('brandHome');
@@ -212,19 +227,19 @@ function renderHome(){
       ${task ? taskItem(task, true) : ''}
       <div class="brand-row" style="margin-top:14px;"><button class="btn btn-primary" data-action="focus-next">次にやる</button><div class="brand-row"><span class="brand-timer" id="brandTimer">15:00</span><button class="btn btn-sage" data-action="start-timer">15分だけやる</button><button class="btn btn-ghost" data-action="reset-timer">リセット</button></div></div>
     </div>
-    <div class="brand-layout">
-      <div class="brand-home-lists">
+    <div class="brand-home-grid">
         <div class="brand-card"><div class="brand-mini-head"><h3>今日のタスク</h3><span class="brand-chip">最大5件</span></div><div class="brand-list">${todayTasks().map(task => taskItem(task, true)).join('') || empty('今日必須のタスクはありません。')}</div></div>
-        <div class="brand-card"><div class="brand-mini-head"><h3>期限が近いもの</h3></div><div class="brand-list">${dueSoonTasks().map(task => taskItem(task, true)).join('') || empty('近い期限はありません。')}</div></div>
-        <div class="brand-card"><div class="brand-mini-head"><h3>納期が近い注文</h3></div><div class="brand-list">${dueCustomers().map(customerCard).join('') || empty('近い納期の注文はありません。')}</div></div>
-        <div class="brand-card"><div class="brand-mini-head"><h3>今日連絡する営業先</h3></div><div class="brand-list">${todayLeads().map(leadCard).join('') || empty('今日連絡予定の営業先はありません。')}</div></div>
-      </div>
       <div class="brand-card">
         <h3>次のマルシェ</h3>
         ${market ? `<p class="brand-title">${escapeHtml(market.name)}</p><p class="brand-note">${market.date || '-'} / ${escapeHtml(market.place || '')} / あと${daysUntil(market.date) ?? '-'}日</p><div class="brand-meter"><span>準備 ${marketProgress(market)}%</span>${progressBar(marketProgress(market))}</div>` : empty('予定マルシェはありません。')}
-        <hr><h3>今月売上</h3>
+      </div>
+      <div class="brand-card">
+        <h3>今月売上</h3>
         <div class="brand-meter"><strong class="brand-metric">${yen(sales)}</strong><span class="brand-note">目標 ${yen(goal)} / あと ${yen(Math.max(0, goal - sales))}</span>${progressBar(goal ? sales / goal * 100 : 0)}</div>
       </div>
+      <div class="brand-card"><div class="brand-mini-head"><h3>期限が近いもの</h3></div><div class="brand-list">${dueSoonTasks().map(task => taskItem(task, true)).join('') || empty('近い期限はありません。')}</div></div>
+      <div class="brand-card"><div class="brand-mini-head"><h3>納期が近い注文</h3></div><div class="brand-list">${dueCustomers().map(customerCard).join('') || empty('近い納期の注文はありません。')}</div></div>
+      <div class="brand-card"><div class="brand-mini-head"><h3>今日連絡する営業先</h3></div><div class="brand-list">${todayLeads().map(leadCard).join('') || empty('今日連絡予定の営業先はありません。')}</div></div>
     </div>
   </div>`;
 }
@@ -239,9 +254,11 @@ function renderTasks(){
     if(activeTaskFilter === '完了済み') return task.done;
     return task.category === activeTaskFilter;
   }).sort((a,b)=>Number(a.done)-Number(b.done) || priorityValue(b)-priorityValue(a) || byDue(a,b));
+  const completed = allTasks().filter(task => task.done);
   root.innerHTML = `${pageHead('タスク管理','毎日の確認と個別タスクをここで整理します。', '<button class="btn btn-primary" data-action="new-task">タスク追加</button>')}
     <div class="brand-toolbar"><div class="brand-filters">${TASK_FILTERS.map(f => `<button class="brand-filter ${activeTaskFilter === f ? 'active' : ''}" data-action="filter-task" data-value="${f}">${f}</button>`).join('')}</div></div>
-    <div class="brand-list">${filtered.map(task => taskItem(task)).join('') || empty()}</div>`;
+    <div class="brand-list">${filtered.map(task => taskItem(task)).join('') || empty()}</div>
+    ${activeTaskFilter === '完了済み' ? '' : archiveDetails('完了アーカイブ', completed, task => taskItem(task))}`;
 }
 
 function goalProgress(goal){
@@ -308,13 +325,8 @@ function renderSales(){
     </section>`;
 }
 
-function renderCrm(){
-  const root = document.getElementById('brandCrm');
-  if(!root) return;
-  const counts = customerCounts();
-  root.innerHTML = `${pageHead('お客様管理','注文ごとの現在地が見えるよう、進捗バーとステータスで追います。', '<button class="btn btn-primary" data-action="new-customer">注文追加</button>')}
-    <div class="brand-status-summary">${CUSTOMER_STATUSES.map(status => `<div class="brand-status-tile"><strong>${counts[status]}</strong><span>${status}</span></div>`).join('')}</div>
-    <div class="brand-ops-grid">${state.customers.map(customer => `<article class="brand-card brand-ops-card">
+function customerOpsCard(customer){
+  return `<article class="brand-card brand-ops-card">
       <div class="brand-ops-head">
         <div>
           <span class="brand-chip ok">${escapeHtml(customer.status || '未設定')}</span>
@@ -337,19 +349,17 @@ function renderCrm(){
         <summary>ステータスを変更</summary>
         <div class="brand-status">${CUSTOMER_STATUSES.map(status => `<button class="brand-step ${customer.status === status ? 'active' : ''}" data-action="set-customer-status" data-id="${customer.id}" data-value="${status}">${status}</button>`).join('')}</div>
       </details>
-    </article>`).join('') || empty()}</div>`;
+    </article>`;
 }
 
-function renderLeads(){
-  const root = document.getElementById('brandLeads');
-  if(!root) return;
-  const counts = leadCounts();
-  root.innerHTML = `${pageHead('営業先管理','営業状況ごとの件数と、次の連絡予定を見やすくします。', '<button class="btn btn-primary" data-action="new-lead">営業先追加</button>')}
-    <div class="brand-status-summary">${LEAD_STATUSES.map(status => `<div class="brand-status-tile"><strong>${counts[status]}</strong><span>${status}</span></div>`).join('')}</div>
-    <div class="brand-ops-grid">${state.leads.map(lead => `<article class="brand-card brand-ops-card">
+function leadOpsCard(lead){
+  return `<article class="brand-card brand-ops-card">
       <div class="brand-ops-head">
         <div>
-          <span class="brand-chip ok">${escapeHtml(lead.status || '未調査')}</span>
+          <div class="brand-chiprow">
+            <span class="brand-chip ok">${escapeHtml(lead.status || '未調査')}</span>
+            <span class="brand-chip ${potentialClass(lead.potential)}">見込み ${escapeHtml(lead.potential || '未設定')}</span>
+          </div>
           <h3>${escapeHtml(lead.shopName || '店舗名未設定')}</h3>
           <p>${escapeHtml(lead.area || '-')} / ${escapeHtml(lead.instagram || '-')}</p>
         </div>
@@ -360,8 +370,9 @@ function renderLeads(){
       </div>
       <div class="brand-meter"><span>営業進捗 ${leadProgress(lead)}%</span>${progressBar(leadProgress(lead))}</div>
       <div class="brand-detail-grid">
-        <div><small>最終連絡</small><strong>${lead.lastContactDate || '-'}</strong><span>${escapeHtml(lead.person || '担当者未設定')}</span></div>
+        <div><small>見込み度</small><strong>${escapeHtml(lead.potential || '未設定')}</strong><span>営業判断の温度感</span></div>
         <div><small>次回連絡</small><strong>${lead.nextContactDate || '-'}</strong><span>${lead.nextContactDate ? `あと${daysUntil(lead.nextContactDate)}日` : '-'}</span></div>
+        <div><small>最終連絡</small><strong>${lead.lastContactDate || '-'}</strong><span>${escapeHtml(lead.person || '担当者未設定')}</span></div>
         <div><small>連絡先</small><strong>${escapeHtml(lead.email || lead.phone || '-')}</strong><span>${escapeHtml(lead.hp || '')}</span></div>
       </div>
       <div class="brand-next-action"><small>次にやること</small><p>${escapeHtml(lead.nextAction || '未設定')}</p></div>
@@ -369,7 +380,31 @@ function renderLeads(){
         <summary>営業状況を変更</summary>
         <div class="brand-status">${LEAD_STATUSES.map(status => `<button class="brand-step ${lead.status === status ? 'active' : ''}" data-action="set-lead-status" data-id="${lead.id}" data-value="${status}">${status}</button>`).join('')}</div>
       </details>
-    </article>`).join('') || empty()}</div>`;
+    </article>`;
+}
+
+function renderCrm(){
+  const root = document.getElementById('brandCrm');
+  if(!root) return;
+  const counts = customerCounts();
+  const activeCustomers = state.customers.filter(customer => customer.status !== '完了');
+  const archivedCustomers = state.customers.filter(customer => customer.status === '完了');
+  root.innerHTML = `${pageHead('お客様管理','注文ごとの現在地が見えるよう、進捗バーとステータスで追います。', '<button class="btn btn-primary" data-action="new-customer">注文追加</button>')}
+    <div class="brand-status-summary">${CUSTOMER_STATUSES.map(status => `<div class="brand-status-tile"><strong>${counts[status]}</strong><span>${status}</span></div>`).join('')}</div>
+    <div class="brand-ops-grid">${activeCustomers.map(customerOpsCard).join('') || empty()}</div>
+    ${archiveDetails('完了アーカイブ', archivedCustomers, customerOpsCard)}`;
+}
+
+function renderLeads(){
+  const root = document.getElementById('brandLeads');
+  if(!root) return;
+  const counts = leadCounts();
+  const activeLeads = state.leads.filter(lead => !['導入済','見送り'].includes(lead.status));
+  const archivedLeads = state.leads.filter(lead => ['導入済','見送り'].includes(lead.status));
+  root.innerHTML = `${pageHead('営業先管理','営業状況ごとの件数と、次の連絡予定を見やすくします。', '<button class="btn btn-primary" data-action="new-lead">営業先追加</button>')}
+    <div class="brand-status-summary">${LEAD_STATUSES.map(status => `<div class="brand-status-tile"><strong>${counts[status]}</strong><span>${status}</span></div>`).join('')}</div>
+    <div class="brand-ops-grid">${activeLeads.map(leadOpsCard).join('') || empty()}</div>
+    ${archiveDetails('完了・見送りアーカイブ', archivedLeads, leadOpsCard)}`;
 }
 
 function renderProducts(){
@@ -433,6 +468,7 @@ function openForm(title, fields, values, onSubmit){
   });
 }
 function fieldHtml(field){
+  if(field.type === 'section') return `<div class="brand-form-section">${field.label}</div>`;
   const cls = `brand-field ${field.full ? 'full' : ''}`;
   if(field.type === 'textarea') return `<div class="${cls}"><label>${field.label}</label><textarea name="${field.name}"></textarea></div>`;
   if(field.type === 'select') return `<div class="${cls}"><label>${field.label}</label><select name="${field.name}">${field.options.map(option => `<option value="${escapeHtml(option.value ?? option)}">${escapeHtml(option.label ?? option)}</option>`).join('')}</select></div>`;
@@ -485,8 +521,30 @@ function marketProductForm(marketId, item = {}){
 }
 function saleForm(){ openForm('売上追加', [{name:'date',label:'日付',type:'date'},{name:'category',label:'カテゴリ',type:'select',options:CATEGORIES},{name:'amount',label:'金額',type:'number'},{name:'memo',label:'メモ',type:'textarea',full:true}], {date:todayKey()}, async data => { state.sales.push({...data, id:uid('sale')}); await save(); }); }
 function salesGoalForm(){ openForm('月間売上目標', [{name:'salesMonth',label:'対象月',type:'month'},{name:'monthlySalesGoal',label:'月間目標',type:'number'}], state, async data => { state.salesMonth = data.salesMonth; state.monthlySalesGoal = Number(data.monthlySalesGoal || 0); await save(); }); }
-function customerForm(customer = {}){ openForm(customer.id ? '注文編集' : '注文追加', [{name:'customerName',label:'お客様名'},{name:'sns',label:'SNSアカウント'},{name:'line',label:'LINE'},{name:'email',label:'メール'},{name:'memo',label:'メモ',type:'textarea',full:true},{name:'petName',label:'ペット名'},{name:'petType',label:'種類'},{name:'petNote',label:'ペット備考',type:'textarea',full:true},{name:'orderNo',label:'受付番号'},{name:'productName',label:'商品名'},{name:'quantity',label:'数量',type:'number'},{name:'amount',label:'金額',type:'number'},{name:'paid',label:'入金状況',type:'select',options:['未入金','入金済','一部入金']},{name:'dueDate',label:'納期',type:'date'},{name:'status',label:'制作状況',type:'select',options:CUSTOMER_STATUSES},{name:'nextAction',label:'次に確認すること',full:true}], customer, async data => { upsert('customers', {...customer, ...data, id:customer.id || uid('customer')}); await save(); }); }
-function leadForm(lead = {}){ openForm(lead.id ? '営業先編集' : '営業先追加', [{name:'shopName',label:'店舗名'},{name:'area',label:'地域'},{name:'hp',label:'HP'},{name:'instagram',label:'Instagram'},{name:'person',label:'担当者'},{name:'phone',label:'電話'},{name:'email',label:'メール'},{name:'status',label:'営業状況',type:'select',options:LEAD_STATUSES},{name:'lastContactDate',label:'最終連絡日',type:'date'},{name:'nextContactDate',label:'次回連絡予定日',type:'date'},{name:'nextAction',label:'次にやること',full:true},{name:'memo',label:'メモ',type:'textarea',full:true}], lead, async data => { upsert('leads', {...lead, ...data, id:lead.id || uid('lead')}); await save(); }); }
+function customerForm(customer = {}){ openForm(customer.id ? '注文編集' : '注文追加', [
+  {type:'section',label:'基本情報'},
+  {name:'customerName',label:'お客様名'},{name:'sns',label:'SNSアカウント'},{name:'line',label:'LINE'},{name:'email',label:'メール'},
+  {type:'section',label:'ペット情報'},
+  {name:'petName',label:'ペット名'},{name:'petType',label:'種類'},{name:'petNote',label:'ペット備考',type:'textarea',full:true},
+  {type:'section',label:'注文と進捗'},
+  {name:'orderNo',label:'受付番号'},{name:'productName',label:'商品名'},{name:'quantity',label:'数量',type:'number'},{name:'amount',label:'金額',type:'number'},
+  {name:'paid',label:'入金状況',type:'select',options:['未入金','入金済','一部入金']},{name:'dueDate',label:'納期',type:'date'},{name:'status',label:'制作状況',type:'select',options:CUSTOMER_STATUSES},
+  {name:'nextAction',label:'次に確認すること',full:true},{name:'memo',label:'メモ',type:'textarea',full:true}
+], customer, async data => {
+  const completedAt = data.status === '完了' ? (customer.completedAt || todayKey()) : customer.completedAt;
+  upsert('customers', {...customer, ...data, completedAt, id:customer.id || uid('customer')});
+  await save();
+}); }
+function leadForm(lead = {}){ openForm(lead.id ? '営業先編集' : '営業先追加', [
+  {type:'section',label:'店舗情報'},
+  {name:'shopName',label:'店舗名'},{name:'area',label:'地域'},{name:'hp',label:'HP'},{name:'instagram',label:'Instagram'},
+  {type:'section',label:'連絡先'},
+  {name:'person',label:'担当者'},{name:'phone',label:'電話'},{name:'email',label:'メール'},
+  {type:'section',label:'営業の進み具合'},
+  {name:'status',label:'営業状況',type:'select',options:LEAD_STATUSES},{name:'potential',label:'見込み度',type:'select',options:LEAD_POTENTIALS},
+  {name:'lastContactDate',label:'最終連絡日',type:'date'},{name:'nextContactDate',label:'次回連絡予定日',type:'date'},
+  {name:'nextAction',label:'次にやること',full:true},{name:'memo',label:'メモ',type:'textarea',full:true}
+], {potential:'未設定', ...lead}, async data => { upsert('leads', {...lead, ...data, id:lead.id || uid('lead')}); await save(); }); }
 function productForm(product = {}){ openForm(product.id ? '商品編集' : '商品追加', [{name:'name',label:'商品名'},{name:'category',label:'商品カテゴリ',type:'select',options:CATEGORIES},{name:'price',label:'販売価格',type:'number'},{name:'cost',label:'原価',type:'number'},{name:'minutes',label:'制作時間目安',type:'number'},{name:'stock',label:'在庫数',type:'number'},{name:'image',label:'サンプル画像URL'},{name:'status',label:'販売状態',type:'select',options:['販売中','非公開']},{name:'sold',label:'販売数',type:'number'},{name:'lastSoldDate',label:'最終販売日',type:'date'},{name:'description',label:'商品説明',type:'textarea',full:true}], product, async data => { upsert('products', {...product, ...data, id:product.id || uid('product')}); await save(); }); }
 function ideaForm(idea = {}){ openForm(idea.id ? 'アイデア編集' : 'アイデア追加', [{name:'title',label:'タイトル',full:true},{name:'memo',label:'メモ',type:'textarea',full:true},{name:'tags',label:'タグ'},{name:'priority',label:'優先度',type:'select',options:['高','中','低']}], idea, async data => { upsert('ideas', {...idea, ...data, id:idea.id || uid('idea'), createdAt:idea.createdAt || todayKey()}); await save(); }); }
 
