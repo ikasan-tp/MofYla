@@ -262,11 +262,38 @@ function renderLeads(){
 function renderProducts(){
   const root = document.getElementById('brandProducts');
   if(!root) return;
-  const popular = [...state.products].sort((a,b)=>Number(b.sold || 0)-Number(a.sold || 0)).slice(0, 3);
+  const popular = [...state.products].filter(product => Number(product.sold || 0) > 0).sort((a,b)=>Number(b.sold || 0)-Number(a.sold || 0)).slice(0, 3);
   const stale = state.products.filter(product => product.status === '販売中' && (!product.lastSoldDate || daysUntil(product.lastSoldDate) < -30));
   root.innerHTML = `${pageHead('商品管理','価格・原価・在庫・販売状態をまとめます。', '<button class="btn btn-primary" data-action="new-product">商品追加</button>')}
-    <div class="brand-grid"><div class="brand-card"><h3>人気商品</h3>${popular.map(p => `<p class="brand-note">${escapeHtml(p.name)} / 販売 ${p.sold || 0}</p>`).join('') || empty()}</div><div class="brand-card"><h3>最近売れていない商品</h3>${stale.map(p => `<p class="brand-note">${escapeHtml(p.name)} / 最終 ${p.lastSoldDate || '-'}</p>`).join('') || empty('該当商品はありません。')}</div></div>
-    <div class="brand-grid">${state.products.map(product => `<div class="brand-card"><div class="brand-row"><div><h3>${escapeHtml(product.name || '商品名未設定')}</h3><p class="brand-note">${escapeHtml(product.category)} / ${escapeHtml(product.status)}</p></div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="edit-product" data-id="${product.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button></div></div><div class="brand-chiprow"><span class="brand-chip">価格 ${yen(product.price)}</span><span class="brand-chip">原価 ${yen(product.cost)}</span><span class="brand-chip">在庫 ${product.stock || 0}</span><span class="brand-chip">${product.minutes || 0}分</span></div><p class="brand-note">${escapeHtml(product.description || '')}</p></div>`).join('') || empty()}</div>`;
+    <div class="brand-insight-grid">
+      <section class="brand-insight-card">
+        <div class="brand-mini-head"><h3>人気商品</h3><span class="brand-chip ok">${popular.length}件</span></div>
+        ${popular.length ? `<div class="brand-compact-list">${popular.map(p => `<div><strong>${escapeHtml(p.name || '商品名未設定')}</strong><span>販売 ${p.sold || 0}</span></div>`).join('')}</div>` : empty('まだ販売数の記録がありません。')}
+      </section>
+      <section class="brand-insight-card">
+        <div class="brand-mini-head"><h3>最近売れていない商品</h3><span class="brand-chip">${stale.length}件</span></div>
+        ${stale.length ? `<div class="brand-compact-list">${stale.map(p => `<div><strong>${escapeHtml(p.name || '商品名未設定')}</strong><span>最終 ${p.lastSoldDate || '-'}</span></div>`).join('')}</div>` : empty('該当商品はありません。')}
+      </section>
+    </div>
+    <div class="brand-product-grid">${state.products.map(product => `<article class="brand-card brand-product-card">
+      <div class="brand-product-head">
+        <div class="brand-product-title">
+          <h3>${escapeHtml(product.name || '商品名未設定')}</h3>
+          <p>${escapeHtml(product.category || 'カテゴリ未設定')} / ${escapeHtml(product.status || '未設定')}</p>
+        </div>
+        <div class="brand-product-actions">
+          <button class="btn btn-ghost btn-small" data-action="edit-product" data-id="${product.id}">編集</button>
+          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
+        </div>
+      </div>
+      <div class="brand-product-metrics">
+        <span><b>${yen(product.price)}</b><small>価格</small></span>
+        <span><b>${yen(product.cost)}</b><small>原価</small></span>
+        <span><b>${product.stock || 0}</b><small>在庫</small></span>
+        <span><b>${product.minutes || 0}分</b><small>制作</small></span>
+      </div>
+      ${product.description ? `<p class="brand-note">${escapeHtml(product.description)}</p>` : '<p class="brand-note">説明はまだありません。</p>'}
+    </article>`).join('') || empty()}</div>`;
 }
 
 function renderIdeas(){
