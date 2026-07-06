@@ -111,59 +111,59 @@ const IDEAS = [
 const CATEGORY_LIST = [...new Set(IDEAS.map(i=>i.tag))];
 const dayIndex = Math.floor((now - new Date(now.getFullYear(),0,0)) / 86400000);
 const RABBIT_BREEDS = [
-  {name:'アメリカン', origin:'アメリカ', length:'約45〜55cm', weight:'約4.1〜5.4kg', features:['大型寄り','マンドリン型の体型','穏やかな気質']},
-  {name:'アメリカンチンチラ', origin:'アメリカ', length:'約45〜55cm', weight:'約4.1〜5.4kg', features:['チンチラカラー','がっしり体型','希少性が高い']},
-  {name:'アメリカンファジーロップ', origin:'アメリカ', length:'約30〜35cm', weight:'約1.4〜1.8kg', features:['垂れ耳','ふわふわの長毛','小柄で愛らしい']},
-  {name:'アメリカンセーブル', origin:'アメリカ', length:'約38〜45cm', weight:'約3.2〜4.5kg', features:['セーブル色','濃淡のある被毛','落ち着いた印象']},
-  {name:'アルジャンテブラン', origin:'フランス', length:'約40〜50cm', weight:'約3.6〜4.8kg', features:['銀がかったチョコレート色','短毛','カナダ由来']},
-  {name:'ベルジアンヘア', origin:'ベルギー', length:'約45〜55cm', weight:'約3.6〜4.3kg', features:['野うさぎ風の体型','長い脚','活動的']},
-  {name:'ベファレン', origin:'ベルギー', length:'約45〜55cm', weight:'約3.6〜5.4kg', features:['大きめの体','光沢のある被毛','青い目の白色も有名']},
-  {name:'ブランデホト', origin:'フランス', length:'約40〜50cm', weight:'約3.6〜5.0kg', features:['白い体','黒いアイバンド','上品な見た目']},
-  {name:'ブルーホリサー', origin:'アメリカ', length:'約35〜45cm', weight:'約2.5〜3.3kg', features:['スチールブルーの被毛','円筒型の体型','2023年にARBA公認']},
-  {name:'ブリタニアペティート', origin:'イギリス', length:'約20〜28cm', weight:'約0.7〜1.1kg', features:['とても小柄','弓なりの体型','活発で機敏']},
-  {name:'カリフォルニアン', origin:'アメリカ', length:'約45〜55cm', weight:'約4.1〜4.8kg', features:['白地に黒いポイント','赤い目','しっかりした体']},
-  {name:'シャンパーニュダルジャン', origin:'フランス', length:'約45〜55cm', weight:'約4.1〜5.4kg', features:['銀色の被毛','生まれた時は黒っぽい','歴史ある品種']},
-  {name:'チェッカードジャイアント', origin:'ドイツ／フランス', length:'約60〜75cm', weight:'約5.0〜7.0kg以上', features:['大型','斑点模様','半アーチ体型']},
-  {name:'シナモン', origin:'アメリカ', length:'約45〜55cm', weight:'約4.5〜5.0kg', features:['シナモン色','商業型の体型','比較的新しい品種']},
-  {name:'クリームダルジャン', origin:'フランス', length:'約40〜50cm', weight:'約3.6〜5.0kg', features:['クリーム色','オレンジの下毛','希少品種']},
-  {name:'チェコフロスティ', origin:'チェコ', length:'約32〜40cm', weight:'約2.5〜3.6kg', features:['霜がかった白い被毛','黒っぽい目元','コンパクト']},
-  {name:'ダッチ', origin:'オランダ', length:'約30〜38cm', weight:'約1.6〜2.5kg', features:['特徴的な白黒模様','小〜中型','人に慣れやすい']},
-  {name:'ドワーフホト', origin:'ドイツ', length:'約22〜28cm', weight:'約0.9〜1.4kg', features:['黒いアイライン','小柄','白い体']},
-  {name:'ドワーフパピヨン', origin:'フランス', length:'約25〜32cm', weight:'約1.4〜2.0kg', features:['蝶のような鼻模様','斑点模様','小型のスポット系']},
-  {name:'イングリッシュアンゴラ', origin:'イギリス', length:'約30〜38cm', weight:'約2.3〜3.4kg', features:['顔まわりまで長毛','羊毛のような被毛','こまめな手入れが必要']},
-  {name:'イングリッシュロップ', origin:'イギリス', length:'約45〜60cm', weight:'約4.5kg以上', features:['非常に長い垂れ耳','歴史あるロップ','ゆったりした印象']},
-  {name:'イングリッシュスポット', origin:'イギリス', length:'約38〜48cm', weight:'約2.3〜3.6kg', features:['スポット模様','すらっとした体型','活発']},
-  {name:'フレミッシュジャイアント', origin:'ベルギー', length:'約60〜75cm', weight:'約6.0〜10.0kg以上', features:['超大型','温厚','広い飼育スペースが必要']},
-  {name:'フロリダホワイト', origin:'アメリカ', length:'約35〜42cm', weight:'約1.8〜2.7kg', features:['白い短毛','赤い目','コンパクトで丸い体']},
-  {name:'フレンチアンゴラ', origin:'フランス', length:'約40〜50cm', weight:'約3.4〜4.8kg', features:['長毛','顔まわりは比較的すっきり','毛質が豊か']},
-  {name:'フレンチロップ', origin:'フランス', length:'約55〜70cm', weight:'約4.5kg以上', features:['大型の垂れ耳','重量感のある体','穏やか']},
-  {name:'ジャイアントアンゴラ', origin:'アメリカ', length:'約50〜65cm', weight:'約4.3kg以上', features:['大型の長毛種','白い被毛が代表的','毛量が多い']},
-  {name:'ジャイアントチンチラ', origin:'アメリカ', length:'約55〜70cm', weight:'約5.4〜7.3kg', features:['大型','チンチラカラー','がっしりした体']},
-  {name:'ハーレクイン', origin:'フランス', length:'約38〜48cm', weight:'約2.9〜4.3kg', features:['左右で分かれる模様','個性的な配色','ショー映えする']},
-  {name:'ハバナ', origin:'オランダ', length:'約30〜38cm', weight:'約2.0〜2.9kg', features:['光沢のある被毛','コンパクト','丸みのある体']},
-  {name:'ヒマラヤン', origin:'起源諸説あり（英国で標準化）', length:'約30〜40cm', weight:'約1.1〜2.0kg', features:['ポイントカラー','細長い体型','落ち着いた雰囲気']},
-  {name:'ホーランドロップ', origin:'オランダ', length:'約30〜35cm', weight:'約1.3〜1.8kg', features:['垂れ耳','丸い顔','穏やかで人懐っこい']},
-  {name:'ジャージーウーリー', origin:'アメリカ', length:'約25〜30cm', weight:'約1.0〜1.6kg', features:['小型の長毛種','丸い体','おだやか']},
-  {name:'ライラック', origin:'イギリス', length:'約35〜45cm', weight:'約2.5〜3.6kg', features:['淡いラベンダー色','中型','やわらかな印象']},
-  {name:'ライオンヘッド', origin:'ベルギー', length:'約25〜35cm', weight:'約1.2〜1.7kg', features:['たてがみ状の毛','小型','個性的な見た目']},
-  {name:'ミニカリフォルニアン', origin:'アメリカ', length:'約35〜45cm', weight:'約2.7kg以下', features:['カリフォルニアンの小型版','白地にポイントカラー','ARBA第53番目の公認品種']},
-  {name:'ミニロップ', origin:'ドイツ', length:'約35〜45cm', weight:'約2.0〜3.0kg', features:['垂れ耳','丸くがっしりした体','親しみやすい']},
-  {name:'ミニレッキス', origin:'アメリカ', length:'約30〜35cm', weight:'約1.4〜2.0kg', features:['ベルベットのような毛質','短毛','小柄']},
-  {name:'ミニサテン', origin:'アメリカ', length:'約30〜38cm', weight:'約1.4〜2.2kg', features:['光沢のある被毛','小型','なめらかな手触り']},
-  {name:'ネザーランドドワーフ', origin:'オランダ', length:'約20〜28cm', weight:'約0.8〜1.2kg', features:['小柄','短い耳','活発で好奇心旺盛']},
-  {name:'ニュージーランド', origin:'アメリカ', length:'約45〜60cm', weight:'約4.0〜5.4kg', features:['大型寄り','しっかりした体','白色が代表的']},
-  {name:'パロミノ', origin:'アメリカ', length:'約40〜50cm', weight:'約3.6〜5.0kg', features:['黄金色またはリンクス色','中〜大型','穏やか']},
-  {name:'ポーリッシュ', origin:'イギリス', length:'約22〜30cm', weight:'約1.1〜1.6kg', features:['小型','短い耳','丸い頭']},
-  {name:'レッキス', origin:'フランス', length:'約40〜50cm', weight:'約3.0〜4.8kg', features:['ベルベット状の被毛','中型','毛並みが特徴的']},
-  {name:'ラインランダー', origin:'ドイツ', length:'約40〜50cm', weight:'約2.9〜4.5kg', features:['蝶模様とスポット','白地に色柄','アーチ体型']},
-  {name:'サテン', origin:'アメリカ', length:'約40〜50cm', weight:'約3.6〜5.0kg', features:['強い光沢の被毛','なめらか','中〜大型']},
-  {name:'サテンアンゴラ', origin:'アメリカ', length:'約38〜50cm', weight:'約3.0〜4.5kg', features:['光沢のある長毛','絹のような質感','手入れが重要']},
-  {name:'シルバー', origin:'イギリス', length:'約32〜42cm', weight:'約1.8〜3.2kg', features:['銀差しの被毛','古い歴史','希少性が高い']},
-  {name:'シルバーフォックス', origin:'アメリカ', length:'約45〜55cm', weight:'約4.1〜5.4kg', features:['銀毛の入る被毛','大型寄り','毛が立ちやすい']},
-  {name:'シルバーマーチン', origin:'アメリカ', length:'約32〜42cm', weight:'約2.7〜4.3kg', features:['黒やチョコに白い差し毛','コントラストが強い','中型']},
-  {name:'スタンダードチンチラ', origin:'フランス', length:'約35〜45cm', weight:'約2.3〜3.4kg', features:['チンチラカラー','中型','丸みのある体']},
-  {name:'タン', origin:'イギリス', length:'約30〜38cm', weight:'約1.8〜2.7kg', features:['黒や青にタン模様','小〜中型','活発']},
-  {name:'トリアンタ', origin:'オランダ', length:'約30〜38cm', weight:'約2.0〜2.7kg', features:['鮮やかな赤茶色','コンパクト','温かみのある色']},
+  {name:'アメリカン', length:'約45〜55cm', weight:'約4.1〜5.4kg', features:['大型寄り','マンドリン型の体型','穏やかな気質']},
+  {name:'アメリカンチンチラ', length:'約45〜55cm', weight:'約4.1〜5.4kg', features:['チンチラカラー','がっしり体型','希少性が高い']},
+  {name:'アメリカンファジーロップ', length:'約30〜35cm', weight:'約1.4〜1.8kg', features:['垂れ耳','ふわふわの長毛','小柄で愛らしい']},
+  {name:'アメリカンセーブル', length:'約38〜45cm', weight:'約3.2〜4.5kg', features:['セーブル色','濃淡のある被毛','落ち着いた印象']},
+  {name:'アルジャンテブラン', length:'約40〜50cm', weight:'約3.6〜4.8kg', features:['銀がかったチョコレート色','短毛','カナダ由来']},
+  {name:'ベルジアンヘア', length:'約45〜55cm', weight:'約3.6〜4.3kg', features:['野うさぎ風の体型','長い脚','活動的']},
+  {name:'ベファレン', length:'約45〜55cm', weight:'約3.6〜5.4kg', features:['大きめの体','光沢のある被毛','青い目の白色も有名']},
+  {name:'ブランデホト', length:'約40〜50cm', weight:'約3.6〜5.0kg', features:['白い体','黒いアイバンド','上品な見た目']},
+  {name:'ブルーホリサー', length:'約35〜45cm', weight:'約2.5〜3.3kg', features:['スチールブルーの被毛','円筒型の体型','2023年にARBA公認']},
+  {name:'ブリタニアペティート', length:'約20〜28cm', weight:'約0.7〜1.1kg', features:['とても小柄','弓なりの体型','活発で機敏']},
+  {name:'カリフォルニアン', length:'約45〜55cm', weight:'約4.1〜4.8kg', features:['白地に黒いポイント','赤い目','しっかりした体']},
+  {name:'シャンパーニュダルジャン', length:'約45〜55cm', weight:'約4.1〜5.4kg', features:['銀色の被毛','生まれた時は黒っぽい','歴史ある品種']},
+  {name:'チェッカードジャイアント', length:'約60〜75cm', weight:'約5.0〜7.0kg以上', features:['大型','斑点模様','半アーチ体型']},
+  {name:'シナモン', length:'約45〜55cm', weight:'約4.5〜5.0kg', features:['シナモン色','商業型の体型','比較的新しい品種']},
+  {name:'クリームダルジャン', length:'約40〜50cm', weight:'約3.6〜5.0kg', features:['クリーム色','オレンジの下毛','希少品種']},
+  {name:'チェコフロスティ', length:'約32〜40cm', weight:'約2.5〜3.6kg', features:['霜がかった白い被毛','黒っぽい目元','コンパクト']},
+  {name:'ダッチ', length:'約30〜38cm', weight:'約1.6〜2.5kg', features:['特徴的な白黒模様','小〜中型','人に慣れやすい']},
+  {name:'ドワーフホト', length:'約22〜28cm', weight:'約0.9〜1.4kg', features:['黒いアイライン','小柄','白い体']},
+  {name:'ドワーフパピヨン', length:'約25〜32cm', weight:'約1.4〜2.0kg', features:['蝶のような鼻模様','斑点模様','小型のスポット系']},
+  {name:'イングリッシュアンゴラ', length:'約30〜38cm', weight:'約2.3〜3.4kg', features:['顔まわりまで長毛','羊毛のような被毛','こまめな手入れが必要']},
+  {name:'イングリッシュロップ', length:'約45〜60cm', weight:'約4.5kg以上', features:['非常に長い垂れ耳','歴史あるロップ','ゆったりした印象']},
+  {name:'イングリッシュスポット', length:'約38〜48cm', weight:'約2.3〜3.6kg', features:['スポット模様','すらっとした体型','活発']},
+  {name:'フレミッシュジャイアント', length:'約60〜75cm', weight:'約6.0〜10.0kg以上', features:['超大型','温厚','広い飼育スペースが必要']},
+  {name:'フロリダホワイト', length:'約35〜42cm', weight:'約1.8〜2.7kg', features:['白い短毛','赤い目','コンパクトで丸い体']},
+  {name:'フレンチアンゴラ', length:'約40〜50cm', weight:'約3.4〜4.8kg', features:['長毛','顔まわりは比較的すっきり','毛質が豊か']},
+  {name:'フレンチロップ', length:'約55〜70cm', weight:'約4.5kg以上', features:['大型の垂れ耳','重量感のある体','穏やか']},
+  {name:'ジャイアントアンゴラ', length:'約50〜65cm', weight:'約4.3kg以上', features:['大型の長毛種','白い被毛が代表的','毛量が多い']},
+  {name:'ジャイアントチンチラ', length:'約55〜70cm', weight:'約5.4〜7.3kg', features:['大型','チンチラカラー','がっしりした体']},
+  {name:'ハーレクイン', length:'約38〜48cm', weight:'約2.9〜4.3kg', features:['左右で分かれる模様','個性的な配色','ショー映えする']},
+  {name:'ハバナ', length:'約30〜38cm', weight:'約2.0〜2.9kg', features:['光沢のある被毛','コンパクト','丸みのある体']},
+  {name:'ヒマラヤン', length:'約30〜40cm', weight:'約1.1〜2.0kg', features:['ポイントカラー','細長い体型','落ち着いた雰囲気']},
+  {name:'ホーランドロップ', length:'約30〜35cm', weight:'約1.3〜1.8kg', features:['垂れ耳','丸い顔','穏やかで人懐っこい']},
+  {name:'ジャージーウーリー', length:'約25〜30cm', weight:'約1.0〜1.6kg', features:['小型の長毛種','丸い体','おだやか']},
+  {name:'ライラック', length:'約35〜45cm', weight:'約2.5〜3.6kg', features:['淡いラベンダー色','中型','やわらかな印象']},
+  {name:'ライオンヘッド', length:'約25〜35cm', weight:'約1.2〜1.7kg', features:['たてがみ状の毛','小型','個性的な見た目']},
+  {name:'ミニカリフォルニアン', length:'約35〜45cm', weight:'約2.7kg以下', features:['カリフォルニアンの小型版','白地にポイントカラー','ARBA第53番目の公認品種']},
+  {name:'ミニロップ', length:'約35〜45cm', weight:'約2.0〜3.0kg', features:['垂れ耳','丸くがっしりした体','親しみやすい']},
+  {name:'ミニレッキス', length:'約30〜35cm', weight:'約1.4〜2.0kg', features:['ベルベットのような毛質','短毛','小柄']},
+  {name:'ミニサテン', length:'約30〜38cm', weight:'約1.4〜2.2kg', features:['光沢のある被毛','小型','なめらかな手触り']},
+  {name:'ネザーランドドワーフ', length:'約20〜28cm', weight:'約0.8〜1.2kg', features:['小柄','短い耳','活発で好奇心旺盛']},
+  {name:'ニュージーランド', length:'約45〜60cm', weight:'約4.0〜5.4kg', features:['大型寄り','しっかりした体','白色が代表的']},
+  {name:'パロミノ', length:'約40〜50cm', weight:'約3.6〜5.0kg', features:['黄金色またはリンクス色','中〜大型','穏やか']},
+  {name:'ポーリッシュ', length:'約22〜30cm', weight:'約1.1〜1.6kg', features:['小型','短い耳','丸い頭']},
+  {name:'レッキス', length:'約40〜50cm', weight:'約3.0〜4.8kg', features:['ベルベット状の被毛','中型','毛並みが特徴的']},
+  {name:'ラインランダー', length:'約40〜50cm', weight:'約2.9〜4.5kg', features:['蝶模様とスポット','白地に色柄','アーチ体型']},
+  {name:'サテン', length:'約40〜50cm', weight:'約3.6〜5.0kg', features:['強い光沢の被毛','なめらか','中〜大型']},
+  {name:'サテンアンゴラ', length:'約38〜50cm', weight:'約3.0〜4.5kg', features:['光沢のある長毛','絹のような質感','手入れが重要']},
+  {name:'シルバー', length:'約32〜42cm', weight:'約1.8〜3.2kg', features:['銀差しの被毛','古い歴史','希少性が高い']},
+  {name:'シルバーフォックス', length:'約45〜55cm', weight:'約4.1〜5.4kg', features:['銀毛の入る被毛','大型寄り','毛が立ちやすい']},
+  {name:'シルバーマーチン', length:'約32〜42cm', weight:'約2.7〜4.3kg', features:['黒やチョコに白い差し毛','コントラストが強い','中型']},
+  {name:'スタンダードチンチラ', length:'約35〜45cm', weight:'約2.3〜3.4kg', features:['チンチラカラー','中型','丸みのある体']},
+  {name:'タン', length:'約30〜38cm', weight:'約1.8〜2.7kg', features:['黒や青にタン模様','小〜中型','活発']},
+  {name:'トリアンタ', length:'約30〜38cm', weight:'約2.0〜2.7kg', features:['鮮やかな赤茶色','コンパクト','温かみのある色']},
 ];
 function renderDailyRabbit(){
   const rabbit = RABBIT_BREEDS[dayIndex % RABBIT_BREEDS.length];
@@ -172,8 +172,8 @@ function renderDailyRabbit(){
   const tagsEl = document.getElementById('dailyRabbitTags');
   if(!nameEl || !descEl || !tagsEl) return;
   nameEl.textContent = rabbit.name;
-  descEl.textContent = rabbit.features.join(' / ');
-  tagsEl.innerHTML = `<span>体長 ${rabbit.length}</span><span>体重 ${rabbit.weight}</span><span>原産国 ${rabbit.origin}</span>`;
+  descEl.textContent = '平均体長: ' + rabbit.length + ' / 平均体重: ' + rabbit.weight;
+  tagsEl.innerHTML = rabbit.features.map(feature => '<span>' + feature + '</span>').join('');
 }
 let recentIdeaTitles = [];
 
@@ -618,6 +618,7 @@ function openDayModal(dateKey){
 }
 function closeDayModal(){ document.getElementById('dayModalOverlay').classList.remove('show'); }
 document.getElementById('dayModalClose').addEventListener('click', closeDayModal);
+document.getElementById('dayModalOverlay').addEventListener('click', (e)=>{ if(e.target.id==='dayModalOverlay') closeDayModal(); });
 
 function renderActivityRowHtml(item){
   const meta = ACTIVITY_TYPES[item.type] || ACTIVITY_TYPES.post;
@@ -1311,14 +1312,14 @@ document.addEventListener('click', async (e)=>{
 document.getElementById('resetAllBtn').addEventListener('click', async ()=>{
   if(!confirm('保存されているデータを全て削除します。元に戻せません。よろしいですか？')) return;
   try{
-    const prefixes = ['post:','refnote:','reply:','postedday:','checklist:','setting:','activity:','brand:'];
+    const prefixes = ['post:','refnote:','reply:','postedday:','checklist:','setting:','activity:','products:'];
     for(const prefix of prefixes){
       const listed = await window.storage.list(prefix, false);
       const keys = (listed && listed.keys) || [];
       for(const key of keys){ await window.storage.delete(key, false); }
     }
     toast('データを削除しました');
-    await Promise.all([loadHistory(), loadRefNotes(), loadReplies(), loadPostedDays(), loadChecklist(), loadActivityLog(), loadMonthlyGoal()]);
+    await Promise.all([loadHistory(), loadRefNotes(), loadReplies(), loadPostedDays(), loadChecklist(), loadActivityLog(), loadMonthlyGoal(), loadProducts()]);
     renderCalendars();
     pickAndRenderTodayIdea();
     renderDailyRabbit();
@@ -1351,7 +1352,6 @@ import { renderBars } from './components/chart.js';
 import { createWeeklyPlan } from './services/aiPlanner.js';
 import { analyzeActivities } from './services/analysis.js';
 import { SNS_PROFILES, optimizeForSns, renderTemplate } from './services/templateEngine.js';
-import { initBrandDashboard } from './brand.js';
 
 const V2_KEYS = {
   draft: 'draft:current',
@@ -1360,6 +1360,7 @@ const V2_KEYS = {
   reply: 'reply:current',
   settings: 'settings:ai',
   templates: 'templates:items',
+  products: 'products:items',
   sns: 'settings:sns',
   todayRecommendation: 'home:todayRecommendation',
   analytics: 'analytics:snapshot'
@@ -1409,7 +1410,16 @@ async function restoreWholeState(){
 }
 
 function addSaveButtons(){
-  document.querySelectorAll('[data-v2-save]').forEach(btn => btn.remove());
+  document.querySelectorAll('.page').forEach(page => {
+    const head = page.querySelector('.page-head');
+    if(!head || head.querySelector('[data-v2-save]')) return;
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-ghost btn-small';
+    btn.dataset.v2Save = 'true';
+    btn.textContent = '保存';
+    btn.addEventListener('click', () => saveWholeState('保存しました'));
+    head.appendChild(btn);
+  });
 }
 
 function wireAutoSave(){
@@ -1446,7 +1456,7 @@ function ensureAssistantHome(){
   const panel = document.createElement('div');
   panel.className = 'panel section-gap assistant-card';
   panel.id = 'weeklyAssistantPanel';
-  panel.innerHTML = `<div class="page-head assistant-head"><div><p class="eyebrow">SNS Secretary</p><h2>AI秘書</h2><p>投稿履歴とジャンルの偏りから、今日のおすすめと来週の予定を提案します。</p></div><button class="btn btn-primary" id="makeWeeklyPlanBtn">来週の投稿を作成</button></div><div id="assistantInsight" class="ai-note"></div><div id="weeklyPlanList" class="assistant-list"></div>`;
+  panel.innerHTML = `<div class="page-head"><div><p class="eyebrow">SNS Secretary</p><h2>AI秘書</h2><p>投稿履歴とジャンルの偏りから、今日のおすすめと来週の予定を提案します。</p></div><button class="btn btn-primary" id="makeWeeklyPlanBtn">来週の投稿を作成</button></div><div id="assistantInsight" class="ai-note"></div><div id="weeklyPlanList" class="assistant-list"></div>`;
   home.appendChild(panel);
   document.getElementById('makeWeeklyPlanBtn').addEventListener('click', renderWeeklyPlan);
   renderAssistantInsight();
@@ -1560,13 +1570,180 @@ function generateFromTemplate(item){
   autoSave();
 }
 
+const PRODUCT_TAB_LABELS = {
+  wholesale: { tab: '卸し商品', channel: '店舗名', filter: '店舗で絞り込み', all: 'すべての店舗', placeholder: '例）○○雑貨店' },
+  online: { tab: 'ネット販売在庫', channel: '掲載先', filter: '掲載先で絞り込み', all: 'すべての掲載先', placeholder: '例）BASE、minne、Creema' }
+};
+let products = [];
+let activeProductTab = 'wholesale';
+let activeProductFilter = 'all';
+
+function productText(value){
+  return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+function productChannels(type = activeProductTab){
+  return [...new Set(products.filter(item => item.type === type).map(item => item.channel || '未設定'))].sort((a,b) => a.localeCompare(b, 'ja'));
+}
+function clearProductForm(){
+  ['productEditingId','productName','productSku','productPrice','productChannel','productMemo'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  const stock = document.getElementById('productStock');
+  if(stock) stock.value = 0;
+  const status = document.getElementById('productStatus');
+  if(status) status.value = '販売中';
+}
+function syncProductLabels(){
+  const labels = PRODUCT_TAB_LABELS[activeProductTab];
+  document.getElementById('productChannelLabel').textContent = labels.channel;
+  document.getElementById('productChannel').placeholder = labels.placeholder;
+  document.getElementById('productStoreFilterLabel').textContent = labels.filter;
+}
+function renderProductFilters(){
+  const filter = document.getElementById('productStoreFilter');
+  const dataList = document.getElementById('productStoreOptions');
+  if(!filter || !dataList) return;
+  const labels = PRODUCT_TAB_LABELS[activeProductTab];
+  const channels = productChannels(activeProductTab);
+  if(activeProductFilter !== 'all' && !channels.includes(activeProductFilter)) activeProductFilter = 'all';
+  filter.innerHTML = `<option value="all">${labels.all}</option>` + channels.map(channel => `<option value="${productText(channel)}">${productText(channel)}</option>`).join('');
+  filter.value = activeProductFilter;
+  dataList.innerHTML = channels.map(channel => `<option value="${productText(channel)}"></option>`).join('');
+}
+function renderProductSummary(items){
+  const summary = document.getElementById('productSummary');
+  if(!summary) return;
+  const totalStock = items.reduce((sum, item) => sum + (Number(item.stock) || 0), 0);
+  const lowStock = items.filter(item => (Number(item.stock) || 0) <= 2).length;
+  const channelCount = productChannels(activeProductTab).length;
+  const channelLabel = activeProductTab === 'wholesale' ? '店舗数' : '掲載先数';
+  summary.innerHTML = `
+    <div class="statcard"><div class="num">${items.length}</div><div class="lab">商品数</div></div>
+    <div class="statcard"><div class="num">${totalStock}</div><div class="lab">在庫合計</div></div>
+    <div class="statcard"><div class="num">${channelCount}</div><div class="lab">${channelLabel}</div></div>
+    <div class="statcard"><div class="num honey">${lowStock}</div><div class="lab">在庫2以下</div></div>
+  `;
+}
+function renderProducts(){
+  syncProductLabels();
+  renderProductFilters();
+  document.querySelectorAll('[data-product-tab]').forEach(btn => btn.classList.toggle('active', btn.dataset.productTab === activeProductTab));
+  const list = document.getElementById('productList');
+  if(!list) return;
+  const visible = products
+    .filter(item => item.type === activeProductTab)
+    .filter(item => activeProductFilter === 'all' || (item.channel || '未設定') === activeProductFilter)
+    .sort((a,b) => (a.channel || '').localeCompare(b.channel || '', 'ja') || (a.name || '').localeCompare(b.name || '', 'ja'));
+  renderProductSummary(visible);
+  if(!visible.length){
+    list.innerHTML = `<div class="empty-state">${PRODUCT_TAB_LABELS[activeProductTab].tab}はまだ登録されていません。</div>`;
+    return;
+  }
+  list.innerHTML = visible.map(item => `
+    <div class="product-card" data-product-id="${item.id}">
+      <div class="product-card-head">
+        <div><span class="litem-tag">${productText(item.channel || '未設定')}</span><h4>${productText(item.name || '名称未設定')}</h4></div>
+        <span class="product-status">${productText(item.status || '販売中')}</span>
+      </div>
+      <div class="product-meta">
+        <span>SKU: ${productText(item.sku || '-')}</span>
+        <span>在庫: <b>${Number(item.stock) || 0}</b></span>
+        <span>価格: ${item.price ? Number(item.price).toLocaleString('ja-JP') + '円' : '-'}</span>
+      </div>
+      ${item.memo ? `<p>${productText(item.memo)}</p>` : ''}
+      <div class="litem-foot">
+        <span class="hint">更新: ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('ja-JP') : '-'}</span>
+        <div class="litem-actions"><button class="btn-ghost btn-small btn" data-edit-product>編集</button><button class="btn-ghost btn-small btn" data-delete-product>削除</button></div>
+      </div>
+    </div>
+  `).join('');
+}
+async function saveProducts(){
+  await Storage.set(V2_KEYS.products, products);
+}
+async function loadProducts(){
+  products = await Storage.get(V2_KEYS.products, []);
+  renderProducts();
+}
+function productFormValue(){
+  const id = Number(document.getElementById('productEditingId')?.value || Date.now());
+  const existing = products.find(item => item.id === id);
+  return {
+    id,
+    type: activeProductTab,
+    name: document.getElementById('productName')?.value.trim() || '名称未設定',
+    sku: document.getElementById('productSku')?.value.trim() || '',
+    stock: Number(document.getElementById('productStock')?.value || 0),
+    price: Number(document.getElementById('productPrice')?.value || 0),
+    channel: document.getElementById('productChannel')?.value.trim() || '未設定',
+    status: document.getElementById('productStatus')?.value || '販売中',
+    memo: document.getElementById('productMemo')?.value.trim() || '',
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+}
+function fillProductForm(item){
+  activeProductTab = item.type || 'wholesale';
+  activeProductFilter = 'all';
+  document.getElementById('productEditingId').value = item.id;
+  document.getElementById('productName').value = item.name || '';
+  document.getElementById('productSku').value = item.sku || '';
+  document.getElementById('productStock').value = Number(item.stock) || 0;
+  document.getElementById('productPrice').value = Number(item.price) || '';
+  document.getElementById('productChannel').value = item.channel || '';
+  document.getElementById('productStatus').value = item.status || '販売中';
+  document.getElementById('productMemo').value = item.memo || '';
+  renderProducts();
+}
+function wireProducts(){
+  document.getElementById('productTabs')?.addEventListener('click', event => {
+    const btn = event.target.closest('[data-product-tab]');
+    if(!btn) return;
+    activeProductTab = btn.dataset.productTab;
+    activeProductFilter = 'all';
+    clearProductForm();
+    renderProducts();
+  });
+  document.getElementById('productStoreFilter')?.addEventListener('change', event => {
+    activeProductFilter = event.target.value;
+    renderProducts();
+  });
+  document.getElementById('productNewBtn')?.addEventListener('click', () => {
+    clearProductForm();
+    document.getElementById('productName')?.focus();
+  });
+  document.getElementById('productClearBtn')?.addEventListener('click', clearProductForm);
+  document.getElementById('productSaveBtn')?.addEventListener('click', async () => {
+    const item = productFormValue();
+    products = products.filter(product => product.id !== item.id).concat(item);
+    await saveProducts();
+    clearProductForm();
+    renderProducts();
+    showToast('商品を保存しました');
+  });
+  document.getElementById('productList')?.addEventListener('click', async event => {
+    const card = event.target.closest('[data-product-id]');
+    if(!card) return;
+    const item = products.find(product => String(product.id) === card.dataset.productId);
+    if(!item) return;
+    if(event.target.closest('[data-edit-product]')) fillProductForm(item);
+    if(event.target.closest('[data-delete-product]')){
+      products = products.filter(product => product.id !== item.id);
+      await saveProducts();
+      renderProducts();
+      showToast('商品を削除しました');
+    }
+  });
+}
+
 function wireExport(){
   const preview = document.getElementById('exportPreview');
   const cloudUrlInput = document.getElementById('cloudSyncUrl');
   const cloudKeyInput = document.getElementById('cloudSyncKey');
   const cloudAutoToggle = document.getElementById('cloudAutoUploadToggle');
   const cloudStatus = document.getElementById('cloudSyncStatus');
-  const syncPrefixes = ['post:','refnote:','reply:','postedday:','checklist:','setting:','activity:','draft:','calendar:','ideas:','templates:','analytics:','app:','brand:'];
+  const syncPrefixes = ['post:','refnote:','reply:','postedday:','checklist:','setting:','activity:','draft:','calendar:','ideas:','templates:','products:','analytics:','app:'];
   let downloadedCloudData = null;
   let cloudAutoTimer = null;
 
@@ -1757,7 +1934,6 @@ function exposeLegacyHooks(){
 window.addEventListener('DOMContentLoaded', async () => {
   exposeLegacyHooks();
   await restoreWholeState();
-  await initBrandDashboard();
   addSaveButtons();
   wireAutoSave();
   addSnsSwitcher();
@@ -1765,6 +1941,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   enhanceAnalytics();
   await loadTemplates();
   wireTemplates();
+  await loadProducts();
+  wireProducts();
   wireExport();
   wireUndoRedo();
   setInterval(() => { renderAssistantInsight(); refreshAnalytics(); }, 3000);
