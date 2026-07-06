@@ -17,6 +17,7 @@ const DEMO_WORDS = ['神戸マルシェ','山田さま','うさぎネームプ�
 
 let state;
 let activeTaskFilter = '今日';
+let activeProductTab = 'online';
 
 function uid(prefix){ return `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`; }
 function yen(value){ return `${Number(value || 0).toLocaleString('ja-JP')}円`; }
@@ -419,20 +420,17 @@ function renderLeads(){
 function renderProducts(){
   const root = document.getElementById('brandProducts');
   if(!root) return;
-  const popular = [...state.products].filter(product => Number(product.sold || 0) > 0).sort((a,b)=>Number(b.sold || 0)-Number(a.sold || 0)).slice(0, 3);
-  const stale = state.products.filter(product => product.status === '販売中' && (!product.lastSoldDate || daysUntil(product.lastSoldDate) < -30));
-  root.innerHTML = `${pageHead('商品管理','価格・原価・在庫・販売状態をまとめます。', '<button class="btn btn-primary" data-action="new-product">商品追加</button>')}
-    <div class="brand-insight-grid">
-      <section class="brand-insight-card">
-        <div class="brand-mini-head"><h3>人気商品</h3><span class="brand-chip ok">${popular.length}件</span></div>
-        ${popular.length ? `<div class="brand-compact-list">${popular.map(p => `<div><strong>${escapeHtml(p.name || '商品名未設定')}</strong><span>販売 ${p.sold || 0}</span></div>`).join('')}</div>` : empty('まだ販売数の記録がありません。')}
-      </section>
-      <section class="brand-insight-card">
-        <div class="brand-mini-head"><h3>最近売れていない商品</h3><span class="brand-chip">${stale.length}件</span></div>
-        ${stale.length ? `<div class="brand-compact-list">${stale.map(p => `<div><strong>${escapeHtml(p.name || '商品名未設定')}</strong><span>最終 ${p.lastSoldDate || '-'}</span></div>`).join('')}</div>` : empty('該当商品はありません。')}
-      </section>
-    </div>
-    <div class="brand-product-grid">${state.products.map(product => `<article class="brand-card brand-product-card">
+  const isWholesale = product => product.salesChannel === 'wholesale' || product.isWholesale === true;
+  const productStock = product => Number((isWholesale(product) ? product.wholesaleStock : product.stock) || 0);
+  const productPrice = product => Number((isWholesale(product) ? product.wholesalePrice : product.price) || 0);
+  const productStore = product => product.storeName || product.shopName || product.wholesaleStore || '店舗未設定';
+  const onlineProducts = state.products.filter(product => !isWholesale(product));
+  const wholesaleProducts = state.products.filter(isWholesale);
+  const currentProducts = activeProductTab === 'wholesale' ? wholesaleProducts : onlineProducts;
+  const stores = [...new Set(wholesaleProducts.map(productStore))].sort((a,b)=>a.localeCompare(b,'ja'));
+  const totalStock = currentProducts.reduce((sum, product) => sum + productStock(product), 0);
+  const totalValue = currentProducts.reduce((sum, product) => sum + productStock(product) * productPrice(product), 0);
+  const productCard = product => `<article class="brand-card brand-product-card">
       <div class="brand-product-head">
         <div class="brand-product-title">
           <h3>${escapeHtml(product.name || '商品名未設定')}</h3>
@@ -443,14 +441,34 @@ function renderProducts(){
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
         </div>
       </div>
+      ${isWholesale(product) ? `<span class="brand-wholesale-store">${escapeHtml(productStore(product))}</span>` : ''}
       <div class="brand-product-metrics">
-        <span><b>${yen(product.price)}</b><small>価格</small></span>
+        <span><b>${yen(productPrice(product))}</b><small>${isWholesale(product) ? '卸し価格' : '価格'}</small></span>
         <span><b>${yen(product.cost)}</b><small>原価</small></span>
-        <span><b>${product.stock || 0}</b><small>在庫</small></span>
+        <span><b>${productStock(product)}</b><small>${isWholesale(product) ? '店舗在庫' : '在庫'}</small></span>
         <span><b>${product.minutes || 0}分</b><small>制作</small></span>
       </div>
       ${product.description ? `<p class="brand-note">${escapeHtml(product.description)}</p>` : '<p class="brand-note">説明はまだありません。</p>'}
-    </article>`).join('') || empty()}</div>`;
+      ${isWholesale(product) && product.wholesaleMemo ? `<p class="brand-note">${escapeHtml(product.wholesaleMemo)}</p>` : ''}
+    </article>`;
+  const tabs = `<div class="brand-product-tabs">
+    <button class="brand-filter ${activeProductTab === 'online' ? 'active' : ''}" data-action="set-product-tab" data-value="online">ネット販売在庫 <span>${onlineProducts.length}</span></button>
+    <button class="brand-filter ${activeProductTab === 'wholesale' ? 'active' : ''}" data-action="set-product-tab" data-value="wholesale">卸し商品 <span>${wholesaleProducts.length}</span></button>
+  </div>`;
+  const summary = `<div class="brand-status-summary">
+    <div class="brand-status-tile"><strong>${currentProducts.length}</strong><span>商品数</span></div>
+    <div class="brand-status-tile"><strong>${totalStock}</strong><span>${activeProductTab === 'wholesale' ? '店舗在庫合計' : '在庫合計'}</span></div>
+    <div class="brand-status-tile"><strong>${activeProductTab === 'wholesale' ? stores.length : onlineProducts.length}</strong><span>${activeProductTab === 'wholesale' ? '店舗数' : 'ネット販売商品'}</span></div>
+    <div class="brand-status-tile"><strong>${yen(totalValue)}</strong><span>在庫金額目安</span></div>
+  </div>`;
+  const content = activeProductTab === 'wholesale'
+    ? stores.map(store => {
+        const items = wholesaleProducts.filter(product => productStore(product) === store);
+        const stock = items.reduce((sum, product) => sum + productStock(product), 0);
+        return `<section class="brand-wholesale-group"><div class="brand-mini-head"><h3>${escapeHtml(store)}</h3><span class="brand-chip ok">${items.length}商品 / 在庫${stock}</span></div><div class="brand-product-grid">${items.map(productCard).join('')}</div></section>`;
+      }).join('') || empty('卸し商品はまだありません。商品追加から管理区分を「卸し商品」にして登録できます。')
+    : `<div class="brand-product-grid">${onlineProducts.map(productCard).join('') || empty('ネット販売在庫はまだありません。')}</div>`;
+  root.innerHTML = `${pageHead('商品管理','卸し商品とネット販売在庫を分けて管理します。', '<button class="btn btn-primary" data-action="new-product">商品追加</button>')}${tabs}${summary}${content}`;
 }
 
 function renderIdeas(){
@@ -554,7 +572,7 @@ function leadForm(lead = {}){ openForm(lead.id ? '営業先編集' : '営業先�
   {name:'lastContactDate',label:'最終連絡日',type:'date'},{name:'nextContactDate',label:'次回連絡予定日',type:'date'},
   {name:'nextAction',label:'次にやること',full:true},{name:'memo',label:'メモ',type:'textarea',full:true}
 ], {potential:'未設定', ...lead}, async data => { upsert('leads', {...lead, ...data, id:lead.id || uid('lead')}); await save(); }); }
-function productForm(product = {}){ openForm(product.id ? '商品編集' : '商品追加', [{name:'name',label:'商品名'},{name:'category',label:'商品カテゴリ',type:'select',options:CATEGORIES},{name:'price',label:'販売価格',type:'number'},{name:'cost',label:'原価',type:'number'},{name:'minutes',label:'制作時間目安',type:'number'},{name:'stock',label:'在庫数',type:'number'},{name:'image',label:'サンプル画像URL'},{name:'status',label:'販売状態',type:'select',options:['販売中','非公開']},{name:'sold',label:'販売数',type:'number'},{name:'lastSoldDate',label:'最終販売日',type:'date'},{name:'description',label:'商品説明',type:'textarea',full:true}], product, async data => { upsert('products', {...product, ...data, id:product.id || uid('product')}); await save(); }); }
+function productForm(product = {}){ openForm(product.id ? '商品編集' : '商品追加', [{name:'salesChannel',label:'管理区分',type:'select',options:[{value:'online',label:'ネット販売在庫'},{value:'wholesale',label:'卸し商品'}]},{name:'name',label:'商品名'},{name:'category',label:'商品カテゴリ',type:'select',options:CATEGORIES},{name:'storeName',label:'店舗名（卸し商品の場合）'},{name:'price',label:'販売価格',type:'number'},{name:'wholesalePrice',label:'卸し価格',type:'number'},{name:'cost',label:'原価',type:'number'},{name:'minutes',label:'制作時間目安',type:'number'},{name:'stock',label:'ネット販売在庫数',type:'number'},{name:'wholesaleStock',label:'店舗在庫数',type:'number'},{name:'image',label:'サンプル画像URL'},{name:'status',label:'販売状態',type:'select',options:['販売中','非公開','準備中','在庫少']},{name:'sold',label:'販売数',type:'number'},{name:'lastSoldDate',label:'最終販売日',type:'date'},{name:'description',label:'商品説明',type:'textarea',full:true},{name:'wholesaleMemo',label:'卸しメモ',type:'textarea',full:true}], {salesChannel:product.salesChannel || (product.isWholesale ? 'wholesale' : activeProductTab), ...product}, async data => { const salesChannel = data.salesChannel || 'online'; upsert('products', {...product, ...data, id:product.id || uid('product'), salesChannel, price:Number(data.price || 0), wholesalePrice:Number(data.wholesalePrice || 0), cost:Number(data.cost || 0), minutes:Number(data.minutes || 0), stock:Number(data.stock || 0), wholesaleStock:Number(data.wholesaleStock || 0), sold:Number(data.sold || 0)}); activeProductTab = salesChannel === 'wholesale' ? 'wholesale' : 'online'; await save(); }); }
 function ideaForm(idea = {}){ openForm(idea.id ? 'アイデア編集' : 'アイデア追加', [{name:'title',label:'タイトル',full:true},{name:'memo',label:'メモ',type:'textarea',full:true},{name:'tags',label:'タグ'},{name:'priority',label:'優先度',type:'select',options:['高','中','低']}], idea, async data => { upsert('ideas', {...idea, ...data, id:idea.id || uid('idea'), createdAt:idea.createdAt || todayKey()}); await save(); }); }
 
 async function handleClick(event){
@@ -573,6 +591,7 @@ async function handleClick(event){
   if(action === 'toggle-market-check'){ const m = findBy('markets', market); const check = m?.checklist.find(item => item.id === id); if(check){ check.done = el.checked; await save(); renderAll(); } }
   if(action === 'set-customer-status'){ const c = findBy('customers', id); if(c){ c.status = value; if(value === '完了' && !c.completedAt) c.completedAt = todayKey(); await save(); renderAll(); } }
   if(action === 'set-lead-status'){ const lead = findBy('leads', id); if(lead){ lead.status = value; await save(); renderAll(); } }
+  if(action === 'set-product-tab'){ activeProductTab = value === 'wholesale' ? 'wholesale' : 'online'; renderProducts(); }
   if(action === 'new-task') taskForm();
   if(action === 'edit-task') taskForm(findBy('tasks', id));
   if(action === 'new-goal') goalForm();
