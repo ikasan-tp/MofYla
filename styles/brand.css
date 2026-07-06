@@ -360,10 +360,12 @@
   min-height:42px;
 }
 #weeklyAssistantPanel{
-  margin-top:26px;
+  max-width:1180px;
+  margin:26px auto 0;
 }
 .daily-rabbit-card{
-  margin-top:26px;
+  max-width:1180px;
+  margin:26px auto 0;
   background:linear-gradient(135deg, var(--clay-soft), var(--card) 65%);
   border:1px solid var(--line);
   border-radius:var(--radius-lg);
