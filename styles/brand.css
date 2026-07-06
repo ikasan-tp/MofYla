@@ -70,6 +70,10 @@
 .brand-energy button.active{background:var(--clay);border-color:var(--clay);color:#fff;}
 .brand-checkline{display:flex;align-items:flex-start;gap:8px;}
 .brand-checkline input{margin-top:4px;}
+.brand-checkline input[type="checkbox"],
+.metric-check input[type="checkbox"]{
+  accent-color:var(--sage);
+}
 .brand-status{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;}
 .brand-step{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 6px;text-align:center;color:var(--ink-soft);font-size:.74rem;font-weight:700;}
 .brand-step{flex:0 0 118px;}
