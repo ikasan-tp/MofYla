@@ -385,14 +385,14 @@
 
 .assistant-head{
   align-items:center;
-  justify-content:flex-start;
-  gap:40px;
+  justify-content:space-between;
+  gap:24px;
 }
 .assistant-head > div{
   max-width:720px;
 }
 .assistant-head .btn{
-  margin-left:0;
+  margin-left:auto;
   min-width:150px;
   justify-content:center;
   flex-shrink:0;
