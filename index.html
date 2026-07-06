@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MofYla Studio | SNS</title>
+<title>MofYla Studio | Brand Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Zen+Maru+Gothic:wght@400;500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Klee+One:wght@500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -11,6 +11,8 @@
 <link rel="stylesheet" href="./styles/components.css">
 <link rel="stylesheet" href="./styles/calendar.css">
 <link rel="stylesheet" href="./styles/dashboard.css">
+<link rel="stylesheet" href="./styles/brand.css">
+<link rel="icon" type="image/png" href="./favicon.png">
 </head>
 <body>
 
@@ -55,11 +57,11 @@
 
 <div class="app">
   <div class="mobile-topbar">
+    <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く"><svg class="svgic"><use href="#ic-menu"/></svg></button>
     <div class="side-brand">
       <img class="side-logo" src="./assets/mofyla-logo.png" alt="MofYla logo">
       <div><h1>MofYla</h1></div>
     </div>
-    <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く"><svg class="svgic"><use href="#ic-menu"/></svg></button>
   </div>
   <div class="nav-overlay" id="navOverlay"></div>
 
@@ -68,18 +70,32 @@
       <img class="side-logo" src="./assets/mofyla-logo.png" alt="MofYla logo">
       <div>
         <h1>MofYla</h1>
-        <span>SNSmanager</span>
+        <span>Brand dashboard</span>
       </div>
       <button class="side-close" id="sideCloseBtn" aria-label="閉じる"><svg class="svgic"><use href="#ic-close"/></svg></button>
     </div>
     <div class="side-nav" id="sideNav">
       <button data-page="home" class="active"><svg class="ic svgic"><use href="#ic-home"/></svg>Home</button>
+
+      <p class="side-nav-label">ブランド運営</p>
+      <button data-page="brand-tasks"><svg class="ic svgic"><use href="#ic-check-circle"/></svg>タスク</button>
+      <button data-page="brand-goals"><svg class="ic svgic"><use href="#ic-target"/></svg>目標</button>
+      <button data-page="brand-markets"><svg class="ic svgic"><use href="#ic-flag"/></svg>マルシェ</button>
+      <button data-page="brand-sales"><svg class="ic svgic"><use href="#ic-chart"/></svg>売上</button>
+      <button data-page="brand-crm"><svg class="ic svgic"><use href="#ic-chat"/></svg>お客様</button>
+      <button data-page="brand-leads"><svg class="ic svgic"><use href="#ic-pin"/></svg>営業先</button>
+      <button data-page="brand-products"><svg class="ic svgic"><use href="#ic-gift"/></svg>商品</button>
+      <button data-page="brand-ideas"><svg class="ic svgic"><use href="#ic-lightbulb"/></svg>アイデア</button>
+
+      <p class="side-nav-label">SNS運用</p>
       <button data-page="write"><svg class="ic svgic"><use href="#ic-pencil"/></svg>投稿</button>
       <button data-page="calendar"><svg class="ic svgic"><use href="#ic-calendar"/></svg>カレンダー</button>
       <button data-page="ideas"><svg class="ic svgic"><use href="#ic-notebook"/></svg>ネタ帳</button>
       <button data-page="reply"><svg class="ic svgic"><use href="#ic-chat"/></svg>コメント返信</button>
       <button data-page="analytics"><svg class="ic svgic"><use href="#ic-chart"/></svg>分析</button>
       <button data-page="template"><svg class="ic svgic"><use href="#ic-notebook"/></svg>テンプレート</button>
+
+      <p class="side-nav-label">その他</p>
       <button data-page="export"><svg class="ic svgic"><use href="#ic-download"/></svg>エクスポート</button>
       <button data-page="settings"><svg class="ic svgic"><use href="#ic-sliders"/></svg>設定</button>
     </div>
@@ -100,6 +116,18 @@
     <!-- ============ HOME ============ -->
 
     <section class="page active" id="page-home">
+      <div id="brandHome"></div>
+
+      <section class="daily-rabbit-card section-gap" id="dailyRabbitCard">
+        <div>
+          <p class="label-eyebrow">今日のうさぎ</p>
+          <h3 id="dailyRabbitName">今日のうさぎ</h3>
+          <p id="dailyRabbitDescription">日替わりでうさぎの種類を紹介します。</p>
+          <div class="daily-rabbit-tags" id="dailyRabbitTags"></div>
+        </div>
+      </section>
+
+      <div class="legacy-home-sns" aria-hidden="true">
       <div class="greeting-card">
         <div>
           <h2 style="display:flex;align-items:center;gap:10px;"><svg class="icon-md svgic brand-mark"><use href="#ic-rabbit"/></svg><span id="greetingText">Good Morning</span></h2>
@@ -128,20 +156,6 @@
           <div class="checklist-item" data-task="posted"><span class="checkbox"><svg class="svgic"><use href="#ic-check"/></svg></span><span class="txt">投稿した</span></div>
         </div>
       </div>
-
-      <section class="daily-rabbit-card section-gap" id="dailyRabbitCard">
-        <div class="daily-rabbit-visual" aria-hidden="true">
-          <span class="rabbit-ear left"></span>
-          <span class="rabbit-ear right"></span>
-          <span class="rabbit-face"></span>
-        </div>
-        <div>
-          <p class="label-eyebrow">今日のうさぎ</p>
-          <h3 id="dailyRabbitName">今日のうさぎ</h3>
-          <p id="dailyRabbitDescription">日替わりでうさぎの種類を紹介します。</p>
-          <div class="daily-rabbit-tags" id="dailyRabbitTags"></div>
-        </div>
-      </section>
 
       <p class="label-eyebrow">今日のおすすめ</p>
       <div class="feature-card">
@@ -176,6 +190,39 @@
         <div class="paperloader" id="fLoader"><span class="flip"></span><span class="ltxt">めくっています…</span></div>
         <div class="errbox" id="fErr" style="margin:0 32px 16px;"></div>
       </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-brand-tasks">
+      <div class="brand-page" id="brandTasks"></div>
+    </section>
+
+    <section class="page" id="page-brand-goals">
+      <div class="brand-page" id="brandGoals"></div>
+    </section>
+
+    <section class="page" id="page-brand-markets">
+      <div class="brand-page" id="brandMarkets"></div>
+    </section>
+
+    <section class="page" id="page-brand-sales">
+      <div class="brand-page" id="brandSales"></div>
+    </section>
+
+    <section class="page" id="page-brand-crm">
+      <div class="brand-page" id="brandCrm"></div>
+    </section>
+
+    <section class="page" id="page-brand-leads">
+      <div class="brand-page" id="brandLeads"></div>
+    </section>
+
+    <section class="page" id="page-brand-products">
+      <div class="brand-page" id="brandProducts"></div>
+    </section>
+
+    <section class="page" id="page-brand-ideas">
+      <div class="brand-page" id="brandIdeas"></div>
     </section>
 
     <!-- ============ WRITE ============ -->
@@ -404,37 +451,6 @@
       <div class="page-head"><div><p class="eyebrow">Templates</p><h2>投稿テンプレート</h2><p>商品紹介、制作動画、イベント告知などを管理して、投稿文のたたき台を作れます。</p></div><button class="btn btn-primary" id="templateAddBtn"><svg class="icon-sm svgic"><use href="#ic-plus"/></svg><span class="btn-label">追加</span></button></div>
       <div class="panel section-gap"><div class="mini-field-grid"><div class="mini-field"><label>テンプレート名</label><input id="templateName" type="text" placeholder="商品紹介"></div><div class="mini-field"><label>ジャンル</label><input id="templateCategory" type="text" placeholder="商品紹介"></div></div><div class="mini-field"><label>本文</label><textarea id="templateBody" rows="5" placeholder="今日は {topic} を紹介します。\nこだわり: {point}\n#MofYla"></textarea></div><div class="mini-field-grid"><div class="mini-field"><label>話題</label><input id="templateTopic" type="text" placeholder="新作のうさぎ用アイテム"></div><div class="mini-field"><label>こだわり</label><input id="templatePoint" type="text" placeholder="やさしい丸みと洗いやすさ"></div></div><div class="toolbar"><button class="btn btn-sage" id="templateSaveBtn">保存</button><button class="btn btn-ghost" id="templateGenerateBtn">投稿へ生成</button></div></div>
       <div class="idea-grid section-gap" id="templateList"></div>
-    </section>
-
-    <section class="page" id="page-products">
-      <div class="page-head"><div><p class="eyebrow">Products</p><h2>商品管理</h2><p>卸し商品は店舗ごとに、ネット販売は掲載先ごとに在庫を管理できます。</p></div><button class="btn btn-primary" id="productNewBtn"><svg class="icon-sm svgic"><use href="#ic-plus"/></svg><span class="btn-label">新規登録</span></button></div>
-      <div class="sns-tabs product-tabs" id="productTabs">
-        <button type="button" class="active" data-product-tab="wholesale">卸し商品</button>
-        <button type="button" data-product-tab="online">ネット販売在庫</button>
-      </div>
-      <div class="product-storebar section-gap" id="productStoreBar">
-        <div class="mini-field">
-          <label id="productStoreFilterLabel">店舗で絞り込み</label>
-          <select id="productStoreFilter"><option value="all">すべての店舗</option></select>
-        </div>
-      </div>
-      <div class="panel section-gap product-form">
-        <input type="hidden" id="productEditingId">
-        <div class="mini-field-grid">
-          <div class="mini-field"><label>商品名</label><input id="productName" type="text" placeholder="うさぎ用ヘイラック"></div>
-          <div class="mini-field"><label>品番 / SKU</label><input id="productSku" type="text" placeholder="MFY-HR-001"></div>
-          <div class="mini-field"><label>在庫数</label><input id="productStock" type="number" min="0" value="0"></div>
-          <div class="mini-field"><label>価格</label><input id="productPrice" type="number" min="0" step="1" placeholder="1800"></div>
-        </div>
-        <div class="mini-field-grid">
-          <div class="mini-field"><label id="productChannelLabel">店舗名</label><input id="productChannel" type="text" list="productStoreOptions" placeholder="例）○○雑貨店"><datalist id="productStoreOptions"></datalist></div>
-          <div class="mini-field"><label>ステータス</label><select id="productStatus"><option value="販売中">販売中</option><option value="準備中">準備中</option><option value="在庫少">在庫少</option><option value="停止中">停止中</option></select></div>
-        </div>
-        <div class="mini-field"><label>メモ</label><textarea id="productMemo" rows="3" placeholder="卸し条件、納期、セット内容、掲載メモなど"></textarea></div>
-        <div class="toolbar"><button class="btn btn-sage" id="productSaveBtn">保存</button><button class="btn btn-ghost" id="productClearBtn">入力をクリア</button></div>
-      </div>
-      <div class="product-summary section-gap" id="productSummary"></div>
-      <div class="product-list" id="productList"><div class="empty-state">まだ商品がありません。</div></div>
     </section>
 
     <section class="page" id="page-export">
