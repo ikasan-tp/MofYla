@@ -134,7 +134,25 @@ function normalizeMarket(market){
   market.carryOutTime = market.carryOutTime || '';
   market.transportMethod = market.transportMethod || '';
   market.suppliesMemo = market.suppliesMemo || '';
+  market.productItems = asArray(market.productItems).map(item => ({
+    id:item.id || uid('marketProduct'),
+    productName:item.productName || item.name || '',
+    category:item.category || '',
+    plannedQty:Number(item.plannedQty || 0),
+    packedQty:Number(item.packedQty || 0),
+    price:Number(item.price || 0),
+    memo:item.memo || ''
+  }));
   return market;
+}
+
+function marketProductTotals(market){
+  const items = asArray(market.productItems);
+  return {
+    planned: items.reduce((sum, item) => sum + Number(item.plannedQty || 0), 0),
+    packed: items.reduce((sum, item) => sum + Number(item.packedQty || 0), 0),
+    value: items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.packedQty || item.plannedQty || 0), 0)
+  };
 }
 
 function taskChips(task){
@@ -243,7 +261,9 @@ function renderMarkets(){
   const root = document.getElementById('brandMarkets');
   if(!root) return;
   root.innerHTML = `${pageHead('マルシェ準備','準備チェックと売上目標をまとめます。', '<button class="btn btn-primary" data-action="new-market">マルシェ追加</button>')}
-    <div class="brand-grid">${state.markets.map(market => `<div class="brand-card brand-market-card"><div class="brand-row"><div><h3>${escapeHtml(market.name)}</h3><p class="brand-note">${market.date || '-'} / ${escapeHtml(market.place || '')} / あと${daysUntil(market.date) ?? '-'}日</p></div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="edit-market" data-id="${market.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-market" data-id="${market.id}">削除</button></div></div><div class="brand-meter"><span>準備 ${marketProgress(market)}%</span>${progressBar(marketProgress(market))}</div><p class="brand-note">売上目標 ${yen(market.salesGoal)} / 実績 ${yen(market.actualSales)}</p>
+    <div class="brand-grid">${state.markets.map(market => {
+      const productTotals = marketProductTotals(market);
+      return `<div class="brand-card brand-market-card"><div class="brand-row"><div><h3>${escapeHtml(market.name)}</h3><p class="brand-note">${market.date || '-'} / ${escapeHtml(market.place || '')} / あと${daysUntil(market.date) ?? '-'}日</p></div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="edit-market" data-id="${market.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-market" data-id="${market.id}">削除</button></div></div><div class="brand-meter"><span>準備 ${marketProgress(market)}%</span>${progressBar(marketProgress(market))}</div><p class="brand-note">売上目標 ${yen(market.salesGoal)} / 実績 ${yen(market.actualSales)}</p>
       <div class="brand-detail-grid">
         <div><small>机</small><strong>${escapeHtml(market.deskStatus || '未確認')}</strong></div>
         <div><small>椅子</small><strong>${escapeHtml(market.chairStatus || '未確認')}</strong></div>
@@ -252,7 +272,13 @@ function renderMarkets(){
         <div><small>搬出</small><strong>${escapeHtml(market.carryOutTime || '-')}</strong><span>搬出時間</span></div>
         <div><small>持ち運び</small><strong>${escapeHtml(market.transportMethod || '-')}</strong><span>${escapeHtml(market.suppliesMemo || '備品メモなし')}</span></div>
       </div>
-      <div class="brand-list brand-check-grid">${asArray(market.checklist).map(item => `<label class="brand-checkline"><input type="checkbox" data-action="toggle-market-check" data-market="${market.id}" data-id="${item.id}" ${item.done ? 'checked' : ''}><span>${escapeHtml(item.title)}</span></label>`).join('')}</div></div>`).join('') || empty()}</div>`;
+      <section class="brand-market-products">
+        <div class="brand-mini-head"><h3>持っていく商品</h3><button class="btn btn-ghost btn-small" data-action="new-market-product" data-market="${market.id}">商品追加</button></div>
+        <div class="brand-market-product-summary"><span>予定 ${productTotals.planned}点</span><span>持参 ${productTotals.packed}点</span><span>概算 ${yen(productTotals.value)}</span></div>
+        <div class="brand-market-product-list">${asArray(market.productItems).map(item => `<div class="brand-market-product-row"><div><strong>${escapeHtml(item.productName || '商品名未設定')}</strong><span>${escapeHtml(item.category || '-')} / 予定 ${item.plannedQty || 0} / 持参 ${item.packedQty || 0} / ${yen(item.price)}</span>${item.memo ? `<p>${escapeHtml(item.memo)}</p>` : ''}</div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="edit-market-product" data-market="${market.id}" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-market-product" data-market="${market.id}" data-id="${item.id}">削除</button></div></div>`).join('') || empty('持っていく商品はまだありません。')}</div>
+      </section>
+      <div class="brand-list brand-check-grid">${asArray(market.checklist).map(item => `<label class="brand-checkline"><input type="checkbox" data-action="toggle-market-check" data-market="${market.id}" data-id="${item.id}" ${item.done ? 'checked' : ''}><span>${escapeHtml(item.title)}</span></label>`).join('')}</div></div>`;
+    }).join('') || empty()}</div>`;
 }
 
 function renderSales(){
@@ -432,6 +458,31 @@ function marketForm(market = {}){ openForm(market.id ? 'マルシェ編集' : '�
   {name:'deskStatus',label:'机',type:'select',options:['未確認','主催者用意','自分で用意','不要']},{name:'chairStatus',label:'椅子',type:'select',options:['未確認','主催者用意','自分で用意','不要']},{name:'tentStatus',label:'テント',type:'select',options:['未確認','主催者用意','自分で用意','不要']},
   {name:'suppliesMemo',label:'備品メモ',type:'textarea',full:true}
 ], normalizeMarket(market), async data => { upsert('markets', normalizeMarket({...market, ...data, id:market.id || uid('market'), checklist:market.checklist || defaultMarketChecklist()})); await save(); }); }
+function marketProductForm(marketId, item = {}){
+  const market = findBy('markets', marketId);
+  if(!market) return;
+  openForm(item.id ? '持っていく商品を編集' : '持っていく商品を追加', [
+    {name:'productName',label:'商品名',full:true},
+    {name:'category',label:'カテゴリ',type:'select',options:['',...CATEGORIES]},
+    {name:'plannedQty',label:'予定数',type:'number'},
+    {name:'packedQty',label:'持参数',type:'number'},
+    {name:'price',label:'販売価格',type:'number'},
+    {name:'memo',label:'メモ',type:'textarea',full:true}
+  ], item, async data => {
+    market.productItems = asArray(market.productItems);
+    const next = {
+      ...item,
+      ...data,
+      id:item.id || uid('marketProduct'),
+      plannedQty:Number(data.plannedQty || 0),
+      packedQty:Number(data.packedQty || 0),
+      price:Number(data.price || 0)
+    };
+    const index = market.productItems.findIndex(old => old.id === next.id);
+    if(index >= 0) market.productItems[index] = next; else market.productItems.push(next);
+    await save();
+  });
+}
 function saleForm(){ openForm('売上追加', [{name:'date',label:'日付',type:'date'},{name:'category',label:'カテゴリ',type:'select',options:CATEGORIES},{name:'amount',label:'金額',type:'number'},{name:'memo',label:'メモ',type:'textarea',full:true}], {date:todayKey()}, async data => { state.sales.push({...data, id:uid('sale')}); await save(); }); }
 function salesGoalForm(){ openForm('月間売上目標', [{name:'salesMonth',label:'対象月',type:'month'},{name:'monthlySalesGoal',label:'月間目標',type:'number'}], state, async data => { state.salesMonth = data.salesMonth; state.monthlySalesGoal = Number(data.monthlySalesGoal || 0); await save(); }); }
 function customerForm(customer = {}){ openForm(customer.id ? '注文編集' : '注文追加', [{name:'customerName',label:'お客様名'},{name:'sns',label:'SNSアカウント'},{name:'line',label:'LINE'},{name:'email',label:'メール'},{name:'memo',label:'メモ',type:'textarea',full:true},{name:'petName',label:'ペット名'},{name:'petType',label:'種類'},{name:'petNote',label:'ペット備考',type:'textarea',full:true},{name:'orderNo',label:'受付番号'},{name:'productName',label:'商品名'},{name:'quantity',label:'数量',type:'number'},{name:'amount',label:'金額',type:'number'},{name:'paid',label:'入金状況',type:'select',options:['未入金','入金済','一部入金']},{name:'dueDate',label:'納期',type:'date'},{name:'status',label:'制作状況',type:'select',options:CUSTOMER_STATUSES},{name:'nextAction',label:'次に確認すること',full:true}], customer, async data => { upsert('customers', {...customer, ...data, id:customer.id || uid('customer')}); await save(); }); }
@@ -463,6 +514,16 @@ async function handleClick(event){
   if(action === 'edit-goal') goalForm(findBy('goals', id));
   if(action === 'new-market') marketForm();
   if(action === 'edit-market') marketForm(findBy('markets', id));
+  if(action === 'new-market-product') marketProductForm(market);
+  if(action === 'edit-market-product'){ const m = findBy('markets', market); const item = m?.productItems?.find(product => product.id === id); if(m && item) marketProductForm(market, item); }
+  if(action === 'delete-market-product'){
+    const m = findBy('markets', market);
+    if(m && confirm('持っていく商品を削除します。よろしいですか？')){
+      m.productItems = asArray(m.productItems).filter(product => product.id !== id);
+      await save();
+      renderAll();
+    }
+  }
   if(action === 'new-sale') saleForm();
   if(action === 'edit-sales-goal') salesGoalForm();
   if(action === 'new-customer') customerForm();
