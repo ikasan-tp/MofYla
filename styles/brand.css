@@ -45,6 +45,9 @@
 .brand-step-panel[open] summary::after{content:"−";}
 .brand-step-panel .brand-status{margin-top:10px;}
 .brand-list{display:grid;gap:9px;}
+.brand-market-card{display:grid;gap:14px;}
+.brand-check-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));align-items:start;}
+.brand-check-grid .brand-checkline{border:1px solid rgba(222,207,188,.7);border-radius:10px;background:rgba(255,253,248,.58);padding:9px 10px;}
 .brand-item{border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px;display:grid;gap:8px;}
 .brand-item.done{opacity:.62;}
 .brand-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
@@ -67,13 +70,15 @@
 .brand-energy button.active{background:var(--clay);border-color:var(--clay);color:#fff;}
 .brand-checkline{display:flex;align-items:flex-start;gap:8px;}
 .brand-checkline input{margin-top:4px;}
-.brand-status{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:7px;}
+.brand-status{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;}
 .brand-step{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 6px;text-align:center;color:var(--ink-soft);font-size:.74rem;font-weight:700;}
+.brand-step{flex:0 0 118px;}
 .brand-step.active{background:var(--sage-soft);border-color:var(--sage);color:var(--sage-deep);}
 .brand-danger{color:var(--clay);border-color:rgba(190,123,98,.32);}
 .brand-danger:hover{background:var(--clay-soft);}
-.brand-status-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;margin-bottom:14px;}
+.brand-status-summary{display:flex;gap:10px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;}
 .brand-status-tile{border:1px solid var(--line);border-radius:12px;background:rgba(255,253,248,.7);padding:12px;display:grid;gap:4px;box-shadow:0 6px 18px rgba(58,50,41,.045);}
+.brand-status-tile{flex:0 0 148px;}
 .brand-status-tile strong{font-family:'Comfortaa','Zen Maru Gothic',sans-serif;font-size:1.25rem;color:var(--sage-deep);}
 .brand-status-tile span{font-size:.72rem;color:var(--ink-soft);font-weight:700;}
 .brand-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
@@ -99,6 +104,7 @@
   .brand-ops-grid{grid-template-columns:1fr;}
   .brand-ops-head{grid-template-columns:1fr;}
   .brand-detail-grid{grid-template-columns:1fr;}
+  .brand-check-grid{grid-template-columns:1fr;}
   .brand-product-actions{justify-content:flex-start;}
   .brand-hero{padding:18px;}
   .brand-card{padding:14px;}
