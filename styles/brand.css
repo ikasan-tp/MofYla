@@ -96,7 +96,6 @@
 .brand-modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:1;}
 .brand-modal-head h3{margin:0;}
 .brand-modal-body{padding:18px;}
-.brand-timer{font-family:'Comfortaa',sans-serif;font-size:2rem;font-weight:800;color:var(--clay);}
 .brand-home-lists{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;}
 .brand-mini-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;}
 .brand-mini-head h3{margin:0;}
@@ -266,15 +265,12 @@
 }
 .brand-home-grid{
   display:grid;
-  grid-template-columns:1.35fr .85fr .85fr;
+  grid-template-columns:repeat(3,minmax(0,1fr));
   gap:16px;
   align-items:stretch;
 }
 .brand-home-grid > .brand-card{
   min-height:180px;
-}
-.brand-home-grid > .brand-card:first-child{
-  grid-row:span 2;
 }
 .brand-home-grid .brand-meter{
   margin-top:12px;
@@ -365,10 +361,6 @@
 @media (max-width:1100px){
   .brand-home-grid{
     grid-template-columns:1fr 1fr;
-  }
-  .brand-home-grid > .brand-card:first-child{
-    grid-column:1/-1;
-    grid-row:auto;
   }
 }
 
