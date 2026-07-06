@@ -33,6 +33,12 @@
 .brand-status{display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:6px;}
 .brand-step{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 6px;text-align:center;color:var(--ink-soft);font-size:.74rem;font-weight:700;}
 .brand-step.active{background:var(--sage-soft);border-color:var(--sage);color:var(--sage-deep);}
+.brand-danger{color:var(--clay);border-color:rgba(190,123,98,.32);}
+.brand-danger:hover{background:var(--clay-soft);}
+.brand-status-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px;margin-bottom:14px;}
+.brand-status-tile{border:1px solid var(--line);border-radius:12px;background:var(--paper);padding:10px;display:grid;gap:3px;}
+.brand-status-tile strong{font-family:'Comfortaa','Zen Maru Gothic',sans-serif;font-size:1.25rem;color:var(--sage-deep);}
+.brand-status-tile span{font-size:.72rem;color:var(--ink-soft);font-weight:700;}
 .brand-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
 .brand-field{display:grid;gap:4px;}
 .brand-field.full{grid-column:1/-1;}
