@@ -57,11 +57,11 @@
 
 <div class="app">
   <div class="mobile-topbar">
+    <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く"><svg class="svgic"><use href="#ic-menu"/></svg></button>
     <div class="side-brand">
       <img class="side-logo" src="./assets/mofyla-logo.png" alt="MofYla logo">
       <div><h1>MofYla</h1></div>
     </div>
-    <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く"><svg class="svgic"><use href="#ic-menu"/></svg></button>
   </div>
   <div class="nav-overlay" id="navOverlay"></div>
 
@@ -76,6 +76,8 @@
     </div>
     <div class="side-nav" id="sideNav">
       <button data-page="home" class="active"><svg class="ic svgic"><use href="#ic-home"/></svg>Home</button>
+
+      <p class="side-nav-label">ブランド運営</p>
       <button data-page="brand-tasks"><svg class="ic svgic"><use href="#ic-check-circle"/></svg>タスク</button>
       <button data-page="brand-goals"><svg class="ic svgic"><use href="#ic-target"/></svg>目標</button>
       <button data-page="brand-markets"><svg class="ic svgic"><use href="#ic-flag"/></svg>マルシェ</button>
@@ -84,12 +86,16 @@
       <button data-page="brand-leads"><svg class="ic svgic"><use href="#ic-pin"/></svg>営業先</button>
       <button data-page="brand-products"><svg class="ic svgic"><use href="#ic-gift"/></svg>商品</button>
       <button data-page="brand-ideas"><svg class="ic svgic"><use href="#ic-lightbulb"/></svg>アイデア</button>
+
+      <p class="side-nav-label">SNS運用</p>
       <button data-page="write"><svg class="ic svgic"><use href="#ic-pencil"/></svg>投稿</button>
       <button data-page="calendar"><svg class="ic svgic"><use href="#ic-calendar"/></svg>カレンダー</button>
       <button data-page="ideas"><svg class="ic svgic"><use href="#ic-notebook"/></svg>ネタ帳</button>
       <button data-page="reply"><svg class="ic svgic"><use href="#ic-chat"/></svg>コメント返信</button>
       <button data-page="analytics"><svg class="ic svgic"><use href="#ic-chart"/></svg>分析</button>
       <button data-page="template"><svg class="ic svgic"><use href="#ic-notebook"/></svg>テンプレート</button>
+
+      <p class="side-nav-label">その他</p>
       <button data-page="export"><svg class="ic svgic"><use href="#ic-download"/></svg>エクスポート</button>
       <button data-page="settings"><svg class="ic svgic"><use href="#ic-sliders"/></svg>設定</button>
     </div>
@@ -111,6 +117,16 @@
 
     <section class="page active" id="page-home">
       <div id="brandHome"></div>
+
+      <section class="daily-rabbit-card section-gap" id="dailyRabbitCard">
+        <div>
+          <p class="label-eyebrow">今日のうさぎ</p>
+          <h3 id="dailyRabbitName">今日のうさぎ</h3>
+          <p id="dailyRabbitDescription">日替わりでうさぎの種類を紹介します。</p>
+          <div class="daily-rabbit-tags" id="dailyRabbitTags"></div>
+        </div>
+      </section>
+
       <div class="legacy-home-sns" aria-hidden="true">
       <div class="greeting-card">
         <div>
@@ -140,20 +156,6 @@
           <div class="checklist-item" data-task="posted"><span class="checkbox"><svg class="svgic"><use href="#ic-check"/></svg></span><span class="txt">投稿した</span></div>
         </div>
       </div>
-
-      <section class="daily-rabbit-card section-gap" id="dailyRabbitCard">
-        <div class="daily-rabbit-visual" aria-hidden="true">
-          <span class="rabbit-ear left"></span>
-          <span class="rabbit-ear right"></span>
-          <span class="rabbit-face"></span>
-        </div>
-        <div>
-          <p class="label-eyebrow">今日のうさぎ</p>
-          <h3 id="dailyRabbitName">今日のうさぎ</h3>
-          <p id="dailyRabbitDescription">日替わりでうさぎの種類を紹介します。</p>
-          <div class="daily-rabbit-tags" id="dailyRabbitTags"></div>
-        </div>
-      </section>
 
       <p class="label-eyebrow">今日のおすすめ</p>
       <div class="feature-card">
