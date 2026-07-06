@@ -1312,7 +1312,7 @@ document.addEventListener('click', async (e)=>{
 document.getElementById('resetAllBtn').addEventListener('click', async ()=>{
   if(!confirm('保存されているデータを全て削除します。元に戻せません。よろしいですか？')) return;
   try{
-    const prefixes = ['post:','refnote:','reply:','postedday:','checklist:','setting:','activity:'];
+    const prefixes = ['post:','refnote:','reply:','postedday:','checklist:','setting:','activity:','brand:'];
     for(const prefix of prefixes){
       const listed = await window.storage.list(prefix, false);
       const keys = (listed && listed.keys) || [];
@@ -1352,6 +1352,7 @@ import { renderBars } from './components/chart.js';
 import { createWeeklyPlan } from './services/aiPlanner.js';
 import { analyzeActivities } from './services/analysis.js';
 import { SNS_PROFILES, optimizeForSns, renderTemplate } from './services/templateEngine.js';
+import { initBrandDashboard } from './brand.js';
 
 const V2_KEYS = {
   draft: 'draft:current',
@@ -1575,7 +1576,7 @@ function wireExport(){
   const cloudKeyInput = document.getElementById('cloudSyncKey');
   const cloudAutoToggle = document.getElementById('cloudAutoUploadToggle');
   const cloudStatus = document.getElementById('cloudSyncStatus');
-  const syncPrefixes = ['post:','refnote:','reply:','postedday:','checklist:','setting:','activity:','draft:','calendar:','ideas:','templates:','analytics:','app:'];
+  const syncPrefixes = ['post:','refnote:','reply:','postedday:','checklist:','setting:','activity:','draft:','calendar:','ideas:','templates:','analytics:','app:','brand:'];
   let downloadedCloudData = null;
   let cloudAutoTimer = null;
 
@@ -1766,6 +1767,7 @@ function exposeLegacyHooks(){
 window.addEventListener('DOMContentLoaded', async () => {
   exposeLegacyHooks();
   await restoreWholeState();
+  await initBrandDashboard();
   addSaveButtons();
   wireAutoSave();
   addSnsSwitcher();

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MofYla Studio | SNS</title>
+<title>MofYla Studio | Brand Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Zen+Maru+Gothic:wght@400;500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Klee+One:wght@500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="./styles/components.css">
 <link rel="stylesheet" href="./styles/calendar.css">
 <link rel="stylesheet" href="./styles/dashboard.css">
+<link rel="stylesheet" href="./styles/brand.css">
 </head>
 <body>
 
@@ -68,12 +69,20 @@
       <img class="side-logo" src="./assets/mofyla-logo.png" alt="MofYla logo">
       <div>
         <h1>MofYla</h1>
-        <span>SNSmanager</span>
+        <span>Brand dashboard</span>
       </div>
       <button class="side-close" id="sideCloseBtn" aria-label="閉じる"><svg class="svgic"><use href="#ic-close"/></svg></button>
     </div>
     <div class="side-nav" id="sideNav">
       <button data-page="home" class="active"><svg class="ic svgic"><use href="#ic-home"/></svg>Home</button>
+      <button data-page="brand-tasks"><svg class="ic svgic"><use href="#ic-check-circle"/></svg>タスク</button>
+      <button data-page="brand-goals"><svg class="ic svgic"><use href="#ic-target"/></svg>目標</button>
+      <button data-page="brand-markets"><svg class="ic svgic"><use href="#ic-flag"/></svg>マルシェ</button>
+      <button data-page="brand-sales"><svg class="ic svgic"><use href="#ic-chart"/></svg>売上</button>
+      <button data-page="brand-crm"><svg class="ic svgic"><use href="#ic-chat"/></svg>お客様</button>
+      <button data-page="brand-leads"><svg class="ic svgic"><use href="#ic-pin"/></svg>営業先</button>
+      <button data-page="brand-products"><svg class="ic svgic"><use href="#ic-gift"/></svg>商品</button>
+      <button data-page="brand-ideas"><svg class="ic svgic"><use href="#ic-lightbulb"/></svg>アイデア</button>
       <button data-page="write"><svg class="ic svgic"><use href="#ic-pencil"/></svg>投稿</button>
       <button data-page="calendar"><svg class="ic svgic"><use href="#ic-calendar"/></svg>カレンダー</button>
       <button data-page="ideas"><svg class="ic svgic"><use href="#ic-notebook"/></svg>ネタ帳</button>
@@ -100,6 +109,8 @@
     <!-- ============ HOME ============ -->
 
     <section class="page active" id="page-home">
+      <div id="brandHome"></div>
+      <div class="legacy-home-sns" aria-hidden="true">
       <div class="greeting-card">
         <div>
           <h2 style="display:flex;align-items:center;gap:10px;"><svg class="icon-md svgic brand-mark"><use href="#ic-rabbit"/></svg><span id="greetingText">Good Morning</span></h2>
@@ -176,6 +187,39 @@
         <div class="paperloader" id="fLoader"><span class="flip"></span><span class="ltxt">めくっています…</span></div>
         <div class="errbox" id="fErr" style="margin:0 32px 16px;"></div>
       </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-brand-tasks">
+      <div class="brand-page" id="brandTasks"></div>
+    </section>
+
+    <section class="page" id="page-brand-goals">
+      <div class="brand-page" id="brandGoals"></div>
+    </section>
+
+    <section class="page" id="page-brand-markets">
+      <div class="brand-page" id="brandMarkets"></div>
+    </section>
+
+    <section class="page" id="page-brand-sales">
+      <div class="brand-page" id="brandSales"></div>
+    </section>
+
+    <section class="page" id="page-brand-crm">
+      <div class="brand-page" id="brandCrm"></div>
+    </section>
+
+    <section class="page" id="page-brand-leads">
+      <div class="brand-page" id="brandLeads"></div>
+    </section>
+
+    <section class="page" id="page-brand-products">
+      <div class="brand-page" id="brandProducts"></div>
+    </section>
+
+    <section class="page" id="page-brand-ideas">
+      <div class="brand-page" id="brandIdeas"></div>
     </section>
 
     <!-- ============ WRITE ============ -->
