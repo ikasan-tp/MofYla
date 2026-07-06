@@ -380,7 +380,6 @@ function leadOpsCard(lead){
       </div>
       <div class="brand-meter"><span>営業進捗 ${leadProgress(lead)}%</span>${progressBar(leadProgress(lead))}</div>
       <div class="brand-detail-grid">
-        <div><small>見込み度</small><strong>${escapeHtml(lead.potential || '未設定')}</strong></div>
         <div><small>次回連絡</small><strong>${lead.nextContactDate || '-'}</strong><span>${lead.nextContactDate ? `あと${daysUntil(lead.nextContactDate)}日` : '-'}</span></div>
         <div><small>最終連絡</small><strong>${lead.lastContactDate || '-'}</strong><span>${escapeHtml(lead.person || '担当者未設定')}</span></div>
         <div><small>連絡先</small><strong>${escapeHtml(lead.email || lead.phone || '-')}</strong><span>${escapeHtml(lead.hp || '')}</span></div>
