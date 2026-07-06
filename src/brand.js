@@ -245,9 +245,9 @@ function renderMarkets(){
   root.innerHTML = `${pageHead('マルシェ準備','準備チェックと売上目標をまとめます。', '<button class="btn btn-primary" data-action="new-market">マルシェ追加</button>')}
     <div class="brand-grid">${state.markets.map(market => `<div class="brand-card brand-market-card"><div class="brand-row"><div><h3>${escapeHtml(market.name)}</h3><p class="brand-note">${market.date || '-'} / ${escapeHtml(market.place || '')} / あと${daysUntil(market.date) ?? '-'}日</p></div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="edit-market" data-id="${market.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-market" data-id="${market.id}">削除</button></div></div><div class="brand-meter"><span>準備 ${marketProgress(market)}%</span>${progressBar(marketProgress(market))}</div><p class="brand-note">売上目標 ${yen(market.salesGoal)} / 実績 ${yen(market.actualSales)}</p>
       <div class="brand-detail-grid">
-        <div><small>机</small><strong>${escapeHtml(market.deskStatus || '未確認')}</strong><span>必要確認</span></div>
-        <div><small>椅子</small><strong>${escapeHtml(market.chairStatus || '未確認')}</strong><span>必要確認</span></div>
-        <div><small>テント</small><strong>${escapeHtml(market.tentStatus || '未確認')}</strong><span>必要確認</span></div>
+        <div><small>机</small><strong>${escapeHtml(market.deskStatus || '未確認')}</strong></div>
+        <div><small>椅子</small><strong>${escapeHtml(market.chairStatus || '未確認')}</strong></div>
+        <div><small>テント</small><strong>${escapeHtml(market.tentStatus || '未確認')}</strong></div>
         <div><small>搬入</small><strong>${escapeHtml(market.carryInTime || '-')}</strong><span>搬入時間</span></div>
         <div><small>搬出</small><strong>${escapeHtml(market.carryOutTime || '-')}</strong><span>搬出時間</span></div>
         <div><small>持ち運び</small><strong>${escapeHtml(market.transportMethod || '-')}</strong><span>${escapeHtml(market.suppliesMemo || '備品メモなし')}</span></div>
@@ -263,9 +263,23 @@ function renderSales(){
   const byCat = Object.fromEntries(CATEGORIES.map(cat => [cat, 0]));
   state.sales.filter(sale => (sale.date || '').startsWith(state.salesMonth)).forEach(sale => { byCat[sale.category] = (byCat[sale.category] || 0) + Number(sale.amount || 0); });
   root.innerHTML = `${pageHead('売上管理','月間目標とカテゴリ別の売上を見ます。', '<button class="btn btn-primary" data-action="new-sale">売上追加</button>')}
-    <div class="brand-card brand-meter"><div class="brand-row"><div><strong class="brand-metric">${yen(total)}</strong><p class="brand-note">目標 ${yen(goal)} / あと ${yen(Math.max(0, goal - total))}</p></div><button class="btn btn-ghost btn-small" data-action="edit-sales-goal">目標設定</button></div>${progressBar(goal ? total / goal * 100 : 0)}</div>
-    <div class="brand-grid">${Object.entries(byCat).map(([cat, amount]) => `<div class="brand-card soft"><span class="brand-chip">${cat}</span><div class="brand-metric">${yen(amount)}</div></div>`).join('')}</div>
-    <div class="brand-list">${state.sales.slice().sort((a,b)=>(b.date || '').localeCompare(a.date || '')).map(sale => `<div class="brand-item"><div class="brand-row"><strong>${sale.date || '-'} / ${escapeHtml(sale.category)}</strong><div class="brand-row"><span>${yen(sale.amount)}</span><button class="btn btn-ghost btn-small brand-danger" data-action="delete-sale" data-id="${sale.id}">削除</button></div></div><p class="brand-note">${escapeHtml(sale.memo || '')}</p></div>`).join('') || empty()}</div>`;
+    <section class="brand-card brand-sales-hero">
+      <div>
+        <span class="brand-chip ok">${state.salesMonth || new Date().toISOString().slice(0, 7)}</span>
+        <h3>${yen(total)}</h3>
+        <p>目標 ${yen(goal)} / あと ${yen(Math.max(0, goal - total))}</p>
+      </div>
+      <button class="btn btn-ghost btn-small" data-action="edit-sales-goal">目標設定</button>
+      <div class="brand-sales-progress">${progressBar(goal ? total / goal * 100 : 0)}</div>
+    </section>
+    <section class="brand-sales-section">
+      <h3>カテゴリ別</h3>
+      <div class="brand-sales-categories">${Object.entries(byCat).map(([cat, amount]) => `<div><span>${escapeHtml(cat)}</span><strong>${yen(amount)}</strong></div>`).join('')}</div>
+    </section>
+    <section class="brand-sales-section">
+      <h3>売上履歴</h3>
+      <div class="brand-sales-list">${state.sales.slice().sort((a,b)=>(b.date || '').localeCompare(a.date || '')).map(sale => `<div class="brand-sales-row"><div><strong>${yen(sale.amount)}</strong><span>${sale.date || '-'} / ${escapeHtml(sale.category)}</span>${sale.memo ? `<p>${escapeHtml(sale.memo)}</p>` : ''}</div><button class="btn btn-ghost btn-small brand-danger" data-action="delete-sale" data-id="${sale.id}">削除</button></div>`).join('') || empty()}</div>
+    </section>`;
 }
 
 function renderCrm(){
@@ -415,7 +429,7 @@ function goalForm(goal = {}){ openForm(goal.id ? '目標編集' : '目標追加'
 function marketForm(market = {}){ openForm(market.id ? 'マルシェ編集' : 'マルシェ追加', [
   {name:'name',label:'マルシェ名'},{name:'date',label:'日付',type:'date'},{name:'place',label:'場所'},{name:'salesGoal',label:'目標売上',type:'number'},{name:'actualSales',label:'実績売上',type:'number'},
   {name:'carryInTime',label:'搬入時間'},{name:'carryOutTime',label:'搬出時間'},{name:'transportMethod',label:'持ち運び方法',full:true},
-  {name:'deskStatus',label:'机',type:'select',options:['未確認','先方用意','自分で用意','不要']},{name:'chairStatus',label:'椅子',type:'select',options:['未確認','先方用意','自分で用意','不要']},{name:'tentStatus',label:'テント',type:'select',options:['未確認','先方用意','自分で用意','不要']},
+  {name:'deskStatus',label:'机',type:'select',options:['未確認','主催者用意','自分で用意','不要']},{name:'chairStatus',label:'椅子',type:'select',options:['未確認','主催者用意','自分で用意','不要']},{name:'tentStatus',label:'テント',type:'select',options:['未確認','主催者用意','自分で用意','不要']},
   {name:'suppliesMemo',label:'備品メモ',type:'textarea',full:true}
 ], normalizeMarket(market), async data => { upsert('markets', normalizeMarket({...market, ...data, id:market.id || uid('market'), checklist:market.checklist || defaultMarketChecklist()})); await save(); }); }
 function saleForm(){ openForm('売上追加', [{name:'date',label:'日付',type:'date'},{name:'category',label:'カテゴリ',type:'select',options:CATEGORIES},{name:'amount',label:'金額',type:'number'},{name:'memo',label:'メモ',type:'textarea',full:true}], {date:todayKey()}, async data => { state.sales.push({...data, id:uid('sale')}); await save(); }); }
