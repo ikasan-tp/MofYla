@@ -359,9 +359,12 @@
 .brand-field input,.brand-field textarea,.brand-field select{
   min-height:42px;
 }
+#weeklyAssistantPanel{
+  margin-top:26px;
+}
 .assistant-head{
-  align-items:flex-start;
-  gap:28px;
+  align-items:center;
+  gap:40px;
 }
 .assistant-head > div{
   max-width:720px;

@@ -618,7 +618,6 @@ function openDayModal(dateKey){
 }
 function closeDayModal(){ document.getElementById('dayModalOverlay').classList.remove('show'); }
 document.getElementById('dayModalClose').addEventListener('click', closeDayModal);
-document.getElementById('dayModalOverlay').addEventListener('click', (e)=>{ if(e.target.id==='dayModalOverlay') closeDayModal(); });
 
 function renderActivityRowHtml(item){
   const meta = ACTIVITY_TYPES[item.type] || ACTIVITY_TYPES.post;

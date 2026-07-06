@@ -469,7 +469,7 @@ function openForm(title, fields, values, onSubmit){
   overlay.innerHTML = `<div class="brand-modal"><div class="brand-modal-head"><h3>${title}</h3><button class="modal-close" type="button" data-close-brand>×</button></div><form class="brand-modal-body"><div class="brand-form-grid">${fields.map(fieldHtml).join('')}</div><div class="toolbar" style="margin-top:16px;"><button class="btn btn-primary" type="submit">保存</button><button class="btn btn-ghost" type="button" data-close-brand>キャンセル</button></div></form></div>`;
   document.body.appendChild(overlay);
   fields.forEach(field => { const el = overlay.querySelector(`[name="${field.name}"]`); if(el) el.value = values[field.name] ?? field.default ?? ''; });
-  overlay.addEventListener('click', event => { if(event.target === overlay || event.target.closest('[data-close-brand]')) overlay.remove(); });
+  overlay.addEventListener('click', event => { if(event.target.closest('[data-close-brand]')) overlay.remove(); });
   overlay.querySelector('form').addEventListener('submit', async event => {
     event.preventDefault();
     await onSubmit(Object.fromEntries(new FormData(event.currentTarget).entries()));
