@@ -31,63 +31,35 @@ function priorityValue(task){ return ({高:3, 中:2, 低:1})[task.priority] || 1
 function taskGoal(task){ return state.goals.find(goal => goal.id === task.goalId); }
 function taskMarket(task){ return state.markets.find(market => market.id === task.marketId); }
 
-function sampleState(){
-  const marketId = uid('market');
-  const goalId = uid('goal');
-  const productGoalId = uid('goal');
-  const tasks = [
-    ['ショップカードを印刷する','事務作業','軽い','高','2026-08-12'],
-    ['値札を作る','マルシェ','普通','高','2026-08-18'],
-    ['商品写真を撮る','SNS','普通','中','2026-08-08'],
-    ['SNS告知文を作る','SNS','軽い','中','2026-08-10'],
-    ['QRコードを確認する','事務作業','軽い','高','2026-08-20'],
-    ['お釣りを用意する','マルシェ','軽い','中','2026-08-25'],
-    ['梱包材を確認する','制作','軽い','中','2026-08-16']
-  ].map(([title, category, energy, priority, dueDate]) => ({
-    id: uid('task'), title, memo:'神戸マルシェ準備。大きく感じたら分解メモに小さく書く。', dueDate,
-    priority, goalId, marketId, minutes:15, energy, category, done:false, decomposition:''
-  }));
+function defaultMarketChecklist(){
+  return ['商品数を決める','商品を制作する','値札を作る','POPを作る','ショップカードを用意する','QRコードを用意する','什器を確認する','お釣りを用意する','SNSで告知する','搬入物を確認する']
+    .map(title => ({ id:uid('check'), title, done:false }));
+}
+
+function emptyState(){
   return {
+    schemaVersion:2,
     energy:'普通',
     salesMonth: new Date().toISOString().slice(0, 7),
-    monthlySalesGoal: 30000,
-    goals:[
-      { id:goalId, type:'大目標', title:'神戸マルシェに参加する', parentId:'', dueDate:'2026-08-31', memo:'無理なく準備を進める。', progress:null },
-      { id:productGoalId, type:'中目標', title:'商品を20個作る', parentId:goalId, dueDate:'2026-08-24', memo:'ネームプレート10個、コースター10個。', progress:null }
-    ],
-    tasks,
-    markets:[{
-      id:marketId, name:'神戸マルシェ', date:'2026-08-31', place:'神戸', salesGoal:30000, actualSales:0,
-      checklist:['商品数を決める','商品を制作する','値札を作る','POPを作る','ショップカードを用意する','QRコードを用意する','什器を確認する','お釣りを用意する','SNSで告知する','搬入物を確認する'].map((title, index) => ({ id:uid('check'), title, done:index < 2 }))
-    }],
-    sales:[
-      { id:uid('sale'), date:TODAY(), category:'ネームプレート', amount:4500, memo:'デモ売上' }
-    ],
-    customers:[{
-      id:uid('customer'), customerName:'山田さま', sns:'@rabbit_sample', line:'', email:'', memo:'淡い色が好み',
-      petName:'もふ', petType:'うさぎ', petNote:'ネザーランドドワーフ',
-      orderNo:'MOF-001', productName:'オーダーネームプレート', quantity:1, amount:3500, paid:'未入金', dueDate:'2026-07-20',
-      status:'制作中', completedAt:''
-    }],
-    leads:[{
-      id:uid('lead'), shopName:'うさぎ専門店サンプル', area:'兵庫', hp:'', instagram:'@rabbit_shop', person:'', phone:'', email:'', memo:'委託販売の候補',
-      status:'DM送信', lastContactDate:'2026-07-01', nextContactDate:TODAY(), nextAction:'Instagramで返信確認'
-    }],
-    products:[
-      { id:uid('product'), name:'うさぎネームプレート', category:'ネームプレート', price:1800, cost:520, minutes:45, stock:10, image:'', description:'淡色の名入れプレート。', status:'販売中', sold:8, lastSoldDate:'2026-07-02' },
-      { id:uid('product'), name:'肉球風コースター', category:'コースター', price:1200, cost:360, minutes:35, stock:10, image:'', description:'マルシェ向けの手に取りやすい商品。', status:'販売中', sold:5, lastSoldDate:'2026-06-20' }
-    ],
-    ideas:[
-      { id:uid('idea'), title:'マルシェ什器のビフォーアフター動画', memo:'机の上が整う過程を短く撮る。', tags:'動画ネタ,マルシェ改善案', priority:'中', createdAt:TODAY() },
-      { id:uid('idea'), title:'迷子札の軽量版', memo:'小型うさぎ向けに薄くする。', tags:'商品アイデア', priority:'高', createdAt:TODAY() }
-    ]
+    monthlySalesGoal: 0,
+    goals:[],
+    tasks:[],
+    markets:[],
+    sales:[],
+    customers:[],
+    leads:[],
+    products:[],
+    ideas:[]
   };
 }
 
 async function load(){
   state = await Storage.get(STORE_KEY, null);
   if(!state){
-    state = sampleState();
+    state = emptyState();
+    await save(false);
+  }else if(!state.schemaVersion){
+    state = emptyState();
     await save(false);
   }
   state.goals = asArray(state.goals);
@@ -358,7 +330,7 @@ function marketForm(market = {}){
   openForm(market.id ? 'マルシェ編集' : 'マルシェ追加', [
     {name:'name',label:'マルシェ名'},{name:'date',label:'日付',type:'date'},{name:'place',label:'場所'},{name:'salesGoal',label:'目標売上',type:'number'},{name:'actualSales',label:'実績売上',type:'number'}
   ], market, async data => {
-    const checklist = market.checklist || sampleState().markets[0].checklist.map(item => ({...item, id:uid('check'), done:false}));
+    const checklist = market.checklist || defaultMarketChecklist();
     upsert('markets', {...market, ...data, id:market.id || uid('market'), checklist});
     await save();
   });
