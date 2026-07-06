@@ -165,3 +165,56 @@
   .page-head > .btn{margin-left:0;align-self:flex-start;}
   .brand-check-grid .brand-checkline span{white-space:normal;}
 }
+
+/* centered, breathable workspace */
+.main{
+  width:min(100%, 1320px);
+  max-width:1320px;
+  margin:0 auto;
+  padding-left:clamp(22px, 3.5vw, 48px);
+  padding-right:clamp(22px, 3.5vw, 48px);
+}
+.page-head{
+  max-width:100%;
+  align-items:flex-start;
+}
+.page-head > div{
+  min-width:0;
+  max-width:760px;
+}
+.page-head > .btn{
+  margin-left:auto;
+}
+.card,.brand-card,.panel,.feature-card,.greeting-card{
+  max-width:100%;
+}
+.month-cal{
+  max-width:1120px;
+  margin-left:auto;
+  margin-right:auto;
+}
+.month-grid{
+  gap:7px;
+}
+.day-cell{
+  min-height:112px;
+}
+
+@media (min-width:1500px){
+  .main{max-width:1380px;}
+}
+
+@media (max-width:880px){
+  .main{
+    width:100%;
+    max-width:100%;
+    padding-left:16px;
+    padding-right:16px;
+  }
+  .page-head > .btn{
+    margin-left:0;
+  }
+  .day-cell{
+    min-height:auto;
+  }
+}
