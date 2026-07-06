@@ -1447,7 +1447,7 @@ function ensureAssistantHome(){
   const panel = document.createElement('div');
   panel.className = 'panel section-gap assistant-card';
   panel.id = 'weeklyAssistantPanel';
-  panel.innerHTML = `<div class="page-head"><div><p class="eyebrow">SNS Secretary</p><h2>AI秘書</h2><p>投稿履歴とジャンルの偏りから、今日のおすすめと来週の予定を提案します。</p></div><button class="btn btn-primary" id="makeWeeklyPlanBtn">来週の投稿を作成</button></div><div id="assistantInsight" class="ai-note"></div><div id="weeklyPlanList" class="assistant-list"></div>`;
+  panel.innerHTML = `<div class="page-head assistant-head"><div><p class="eyebrow">SNS Secretary</p><h2>AI秘書</h2><p>投稿履歴とジャンルの偏りから、今日のおすすめと来週の予定を提案します。</p></div><button class="btn btn-primary" id="makeWeeklyPlanBtn">来週の投稿を作成</button></div><div id="assistantInsight" class="ai-note"></div><div id="weeklyPlanList" class="assistant-list"></div>`;
   home.appendChild(panel);
   document.getElementById('makeWeeklyPlanBtn').addEventListener('click', renderWeeklyPlan);
   renderAssistantInsight();

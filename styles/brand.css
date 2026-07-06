@@ -38,6 +38,8 @@
 .brand-detail-grid span{font-size:.74rem;color:var(--ink-soft);line-height:1.35;overflow-wrap:anywhere;}
 .brand-next-action{border:1px solid rgba(222,207,188,.76);border-radius:12px;background:rgba(255,253,248,.72);padding:11px 12px;}
 .brand-next-action p{margin:4px 0 0;color:var(--ink);line-height:1.6;font-size:.9rem;}
+.brand-inline-link{color:var(--sage-deep);font-weight:800;text-decoration:none;border-bottom:1px solid rgba(96,118,79,.35);}
+.brand-inline-link:hover{color:var(--clay);border-bottom-color:var(--clay);}
 .brand-step-panel{border-top:1px solid rgba(222,207,188,.76);padding-top:10px;}
 .brand-step-panel summary{cursor:pointer;color:var(--sage-deep);font-weight:800;font-size:.82rem;list-style:none;}
 .brand-step-panel summary::-webkit-details-marker{display:none;}
@@ -357,6 +359,18 @@
 .brand-field input,.brand-field textarea,.brand-field select{
   min-height:42px;
 }
+.assistant-head{
+  align-items:flex-start;
+  gap:28px;
+}
+.assistant-head > div{
+  max-width:720px;
+}
+.assistant-head .btn{
+  margin-left:auto;
+  min-width:150px;
+  justify-content:center;
+}
 
 @media (max-width:1100px){
   .brand-home-grid{
@@ -368,5 +382,9 @@
   .brand-home-grid,
   .brand-archive-body{
     grid-template-columns:1fr;
+  }
+  .assistant-head .btn{
+    margin-left:0;
+    width:100%;
   }
 }

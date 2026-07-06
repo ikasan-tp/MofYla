@@ -119,6 +119,19 @@ function dueCustomers(){ return state.customers.filter(item => item.status !== '
 function todayLeads(){ return state.leads.filter(lead => lead.nextContactDate && lead.nextContactDate <= todayKey() && !['導入済','見送り'].includes(lead.status)).sort((a,b)=>a.nextContactDate.localeCompare(b.nextContactDate)).slice(0, 4); }
 function customerCounts(){ return CUSTOMER_STATUSES.reduce((acc, status) => ({ ...acc, [status]:state.customers.filter(item => item.status === status).length }), {}); }
 function leadCounts(){ return LEAD_STATUSES.reduce((acc, status) => ({ ...acc, [status]:state.leads.filter(item => item.status === status).length }), {}); }
+function instagramUrl(value){
+  const raw = String(value || '').trim();
+  if(!raw) return '';
+  if(/^https?:\/\//i.test(raw)) return raw;
+  const handle = raw.replace(/^@/, '').replace(/^instagram\.com\//i, '').replace(/^www\.instagram\.com\//i, '').replace(/\/.*$/, '');
+  return handle ? `https://www.instagram.com/${encodeURIComponent(handle)}/` : '';
+}
+function instagramLink(value){
+  const label = String(value || '').trim();
+  const url = instagramUrl(label);
+  if(!url) return '-';
+  return `<a class="brand-inline-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label || url)}</a>`;
+}
 function archiveDetails(title, items, renderer){
   if(!items.length) return '';
   return `<details class="brand-archive">
@@ -204,7 +217,7 @@ function leadCard(lead){
   return `<div class="brand-item">
     <div class="brand-row"><strong>${escapeHtml(lead.shopName || '店舗名未設定')}</strong><span class="brand-chip ${potentialClass(lead.potential)}">見込み ${escapeHtml(lead.potential || '未設定')}</span></div>
     <div class="brand-meter"><span>営業進捗 ${leadProgress(lead)}%</span>${progressBar(leadProgress(lead))}</div>
-    <p class="brand-note">${escapeHtml(lead.nextAction || '')} / ${lead.nextContactDate || '-'}</p>
+    <p class="brand-note">${escapeHtml(lead.nextAction || '')} / ${lead.nextContactDate || '-'} / ${instagramLink(lead.instagram)}</p>
   </div>`;
 }
 function potentialClass(value){ return value === '高' ? 'hot' : value === '中' ? 'warm' : value === '低' ? 'cool' : ''; }
@@ -358,7 +371,7 @@ function leadOpsCard(lead){
             <span class="brand-chip ${potentialClass(lead.potential)}">見込み ${escapeHtml(lead.potential || '未設定')}</span>
           </div>
           <h3>${escapeHtml(lead.shopName || '店舗名未設定')}</h3>
-          <p>${escapeHtml(lead.area || '-')} / ${escapeHtml(lead.instagram || '-')}</p>
+          <p>${escapeHtml(lead.area || '-')} / ${instagramLink(lead.instagram)}</p>
         </div>
         <div class="brand-product-actions">
           <button class="btn btn-ghost btn-small" data-action="edit-lead" data-id="${lead.id}">編集</button>
@@ -367,7 +380,7 @@ function leadOpsCard(lead){
       </div>
       <div class="brand-meter"><span>営業進捗 ${leadProgress(lead)}%</span>${progressBar(leadProgress(lead))}</div>
       <div class="brand-detail-grid">
-        <div><small>見込み度</small><strong>${escapeHtml(lead.potential || '未設定')}</strong><span>営業判断の温度感</span></div>
+        <div><small>見込み度</small><strong>${escapeHtml(lead.potential || '未設定')}</strong></div>
         <div><small>次回連絡</small><strong>${lead.nextContactDate || '-'}</strong><span>${lead.nextContactDate ? `あと${daysUntil(lead.nextContactDate)}日` : '-'}</span></div>
         <div><small>最終連絡</small><strong>${lead.lastContactDate || '-'}</strong><span>${escapeHtml(lead.person || '担当者未設定')}</span></div>
         <div><small>連絡先</small><strong>${escapeHtml(lead.email || lead.phone || '-')}</strong><span>${escapeHtml(lead.hp || '')}</span></div>
