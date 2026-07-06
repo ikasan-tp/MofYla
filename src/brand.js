@@ -247,7 +247,30 @@ function renderCrm(){
   const counts = customerCounts();
   root.innerHTML = `${pageHead('お客様管理','注文ごとの現在地が見えるよう、進捗バーとステータスで追います。', '<button class="btn btn-primary" data-action="new-customer">注文追加</button>')}
     <div class="brand-status-summary">${CUSTOMER_STATUSES.map(status => `<div class="brand-status-tile"><strong>${counts[status]}</strong><span>${status}</span></div>`).join('')}</div>
-    <div class="brand-grid">${state.customers.map(customer => `<div class="brand-card"><div class="brand-row"><div><h3>${escapeHtml(customer.customerName || '名前未設定')}</h3><p class="brand-note">${escapeHtml(customer.orderNo || '-')} / ${escapeHtml(customer.productName || '-')} / ${yen(customer.amount)}</p></div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="edit-customer" data-id="${customer.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-customer" data-id="${customer.id}">削除</button></div></div><p class="brand-note">ペット: ${escapeHtml(customer.petName || '-')}（${escapeHtml(customer.petType || '-')}） / 納期 ${customer.dueDate || '-'} / あと${daysUntil(customer.dueDate) ?? '-'}日</p><div class="brand-meter"><span>制作進捗 ${customerProgress(customer)}%</span>${progressBar(customerProgress(customer))}</div><div class="brand-status">${CUSTOMER_STATUSES.map(status => `<button class="brand-step ${customer.status === status ? 'active' : ''}" data-action="set-customer-status" data-id="${customer.id}" data-value="${status}">${status}</button>`).join('')}</div><p class="brand-note">次に確認: ${escapeHtml(customer.nextAction || customer.memo || '-')} / 完了日: ${customer.completedAt || '-'}</p></div>`).join('') || empty()}</div>`;
+    <div class="brand-ops-grid">${state.customers.map(customer => `<article class="brand-card brand-ops-card">
+      <div class="brand-ops-head">
+        <div>
+          <span class="brand-chip ok">${escapeHtml(customer.status || '未設定')}</span>
+          <h3>${escapeHtml(customer.customerName || '名前未設定')}</h3>
+          <p>${escapeHtml(customer.orderNo || '-')} / ${escapeHtml(customer.productName || '-')} / ${yen(customer.amount)}</p>
+        </div>
+        <div class="brand-product-actions">
+          <button class="btn btn-ghost btn-small" data-action="edit-customer" data-id="${customer.id}">編集</button>
+          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-customer" data-id="${customer.id}">削除</button>
+        </div>
+      </div>
+      <div class="brand-meter"><span>制作進捗 ${customerProgress(customer)}%</span>${progressBar(customerProgress(customer))}</div>
+      <div class="brand-detail-grid">
+        <div><small>ペット</small><strong>${escapeHtml(customer.petName || '-')}</strong><span>${escapeHtml(customer.petType || '-')}</span></div>
+        <div><small>納期</small><strong>${customer.dueDate || '-'}</strong><span>あと${daysUntil(customer.dueDate) ?? '-'}日</span></div>
+        <div><small>入金</small><strong>${escapeHtml(customer.paid || '-')}</strong><span>完了日 ${customer.completedAt || '-'}</span></div>
+      </div>
+      <div class="brand-next-action"><small>次に確認</small><p>${escapeHtml(customer.nextAction || customer.memo || '未設定')}</p></div>
+      <details class="brand-step-panel">
+        <summary>ステータスを変更</summary>
+        <div class="brand-status">${CUSTOMER_STATUSES.map(status => `<button class="brand-step ${customer.status === status ? 'active' : ''}" data-action="set-customer-status" data-id="${customer.id}" data-value="${status}">${status}</button>`).join('')}</div>
+      </details>
+    </article>`).join('') || empty()}</div>`;
 }
 
 function renderLeads(){
@@ -256,7 +279,30 @@ function renderLeads(){
   const counts = leadCounts();
   root.innerHTML = `${pageHead('営業先管理','営業状況ごとの件数と、次の連絡予定を見やすくします。', '<button class="btn btn-primary" data-action="new-lead">営業先追加</button>')}
     <div class="brand-status-summary">${LEAD_STATUSES.map(status => `<div class="brand-status-tile"><strong>${counts[status]}</strong><span>${status}</span></div>`).join('')}</div>
-    <div class="brand-grid">${state.leads.map(lead => `<div class="brand-card"><div class="brand-row"><div><h3>${escapeHtml(lead.shopName || '店舗名未設定')}</h3><p class="brand-note">${escapeHtml(lead.area || '')} / ${escapeHtml(lead.instagram || '')}</p></div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="edit-lead" data-id="${lead.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-lead" data-id="${lead.id}">削除</button></div></div><div class="brand-meter"><span>営業進捗 ${leadProgress(lead)}%</span>${progressBar(leadProgress(lead))}</div><div class="brand-status">${LEAD_STATUSES.map(status => `<button class="brand-step ${lead.status === status ? 'active' : ''}" data-action="set-lead-status" data-id="${lead.id}" data-value="${status}">${status}</button>`).join('')}</div><p class="brand-note">最終連絡: ${lead.lastContactDate || '-'} / 次回: ${lead.nextContactDate || '-'} / 次: ${escapeHtml(lead.nextAction || '-')}</p></div>`).join('') || empty()}</div>`;
+    <div class="brand-ops-grid">${state.leads.map(lead => `<article class="brand-card brand-ops-card">
+      <div class="brand-ops-head">
+        <div>
+          <span class="brand-chip ok">${escapeHtml(lead.status || '未調査')}</span>
+          <h3>${escapeHtml(lead.shopName || '店舗名未設定')}</h3>
+          <p>${escapeHtml(lead.area || '-')} / ${escapeHtml(lead.instagram || '-')}</p>
+        </div>
+        <div class="brand-product-actions">
+          <button class="btn btn-ghost btn-small" data-action="edit-lead" data-id="${lead.id}">編集</button>
+          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-lead" data-id="${lead.id}">削除</button>
+        </div>
+      </div>
+      <div class="brand-meter"><span>営業進捗 ${leadProgress(lead)}%</span>${progressBar(leadProgress(lead))}</div>
+      <div class="brand-detail-grid">
+        <div><small>最終連絡</small><strong>${lead.lastContactDate || '-'}</strong><span>${escapeHtml(lead.person || '担当者未設定')}</span></div>
+        <div><small>次回連絡</small><strong>${lead.nextContactDate || '-'}</strong><span>${lead.nextContactDate ? `あと${daysUntil(lead.nextContactDate)}日` : '-'}</span></div>
+        <div><small>連絡先</small><strong>${escapeHtml(lead.email || lead.phone || '-')}</strong><span>${escapeHtml(lead.hp || '')}</span></div>
+      </div>
+      <div class="brand-next-action"><small>次にやること</small><p>${escapeHtml(lead.nextAction || '未設定')}</p></div>
+      <details class="brand-step-panel">
+        <summary>営業状況を変更</summary>
+        <div class="brand-status">${LEAD_STATUSES.map(status => `<button class="brand-step ${lead.status === status ? 'active' : ''}" data-action="set-lead-status" data-id="${lead.id}" data-value="${status}">${status}</button>`).join('')}</div>
+      </details>
+    </article>`).join('') || empty()}</div>`;
 }
 
 function renderProducts(){
