@@ -1410,16 +1410,7 @@ async function restoreWholeState(){
 }
 
 function addSaveButtons(){
-  document.querySelectorAll('.page').forEach(page => {
-    const head = page.querySelector('.page-head');
-    if(!head || head.querySelector('[data-v2-save]')) return;
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-ghost btn-small';
-    btn.dataset.v2Save = 'true';
-    btn.textContent = '保存';
-    btn.addEventListener('click', () => saveWholeState('保存しました'));
-    head.appendChild(btn);
-  });
+  document.querySelectorAll('[data-v2-save]').forEach(btn => btn.remove());
 }
 
 function wireAutoSave(){
