@@ -169,7 +169,7 @@
 .main{max-width:none;width:100%;}
 .page-head{width:100%;align-items:flex-start;}
 .page-head > div{min-width:0;max-width:760px;}
-.page-head > .btn{margin-left:auto;}
+.page-head > .btn{margin-left:auto;flex-shrink:0;white-space:nowrap;}
 .brand-status-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(86px,1fr));gap:8px;margin-bottom:14px;overflow:visible;padding-bottom:0;}
 .brand-status-tile{flex:initial;min-height:58px;padding:8px 9px;}
 .brand-status-tile strong{font-size:1rem;line-height:1;}
@@ -183,7 +183,7 @@
 .brand-check-grid .brand-checkline span{white-space:nowrap;}
 
 @media (max-width:880px){
-  .page-head > .btn{margin-left:0;align-self:flex-start;}
+  .page-head{flex-wrap:nowrap;}
   .brand-check-grid .brand-checkline span{white-space:normal;}
   .brand-market-product-row{grid-template-columns:1fr;}
 }
@@ -206,6 +206,8 @@
 }
 .page-head > .btn{
   margin-left:auto;
+  flex-shrink:0;
+  white-space:nowrap;
 }
 .card,.brand-card,.panel,.feature-card,.greeting-card{
   max-width:100%;
@@ -232,9 +234,6 @@
     max-width:100%;
     padding-left:16px;
     padding-right:16px;
-  }
-  .page-head > .btn{
-    margin-left:0;
   }
   .day-cell{
     min-height:auto;
