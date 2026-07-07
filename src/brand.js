@@ -273,8 +273,11 @@ function renderTasks(){
     ${activeTaskFilter === '完了済み' ? '' : archiveDetails('完了アーカイブ', completed, task => taskItem(task))}`;
 }
 
+function goalChildren(goal){ return state.goals.filter(g => g.parentId === goal.id); }
 function goalProgress(goal){
   if(goal.progress !== null && goal.progress !== undefined && goal.progress !== '') return clamp(goal.progress);
+  const children = goalChildren(goal);
+  if(children.length) return Math.round(children.reduce((sum, child) => sum + goalProgress(child), 0) / children.length);
   const related = state.tasks.filter(task => task.goalId === goal.id);
   if(!related.length) return 0;
   return Math.round(related.filter(task => task.done).length / related.length * 100);
@@ -282,8 +285,16 @@ function goalProgress(goal){
 function renderGoals(){
   const root = document.getElementById('brandGoals');
   if(!root) return;
-  root.innerHTML = `${pageHead('目標管理','大目標・中目標・小タスクを階層で見ます。', '<button class="btn btn-primary" data-action="new-goal">追加</button>')}
-    <div class="brand-grid">${state.goals.map(goal => `<div class="brand-card"><div class="brand-row"><div><span class="brand-chip">${escapeHtml(goal.type || '目標')}</span><h3>${escapeHtml(goal.title)}</h3></div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="edit-goal" data-id="${goal.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-goal" data-id="${goal.id}">削除</button></div></div><p class="brand-note">${goal.dueDate ? `期限: ${goal.dueDate}` : '期限なし'}</p>${progressBar(goalProgress(goal))}<p class="brand-note">完了率 ${goalProgress(goal)}%</p><p class="brand-note">${escapeHtml(goal.memo || '')}</p></div>`).join('') || empty()}</div>`;
+  const majorGoals = state.goals.filter(goal => goal.type === '大目標');
+  const orphans = state.goals.filter(goal => goal.type !== '大目標' && !majorGoals.some(major => major.id === goal.parentId));
+  const goalCard = (goal, isChild) => `<div class="brand-card ${isChild ? 'brand-goal-child' : ''}"><div class="brand-row"><div><span class="brand-chip">${escapeHtml(goal.type || '目標')}</span><h3>${escapeHtml(goal.title)}</h3></div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="edit-goal" data-id="${goal.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-goal" data-id="${goal.id}">削除</button></div></div><p class="brand-note">${goal.dueDate ? `期限: ${goal.dueDate}` : '期限なし'}</p>${progressBar(goalProgress(goal))}<p class="brand-note">完了率 ${goalProgress(goal)}%</p><p class="brand-note">${escapeHtml(goal.memo || '')}</p></div>`;
+  const groups = majorGoals.map(major => {
+    const children = goalChildren(major);
+    return `<section class="brand-goal-group">${goalCard(major, false)}${children.length ? `<div class="brand-goal-children">${children.map(child => goalCard(child, true)).join('')}</div>` : ''}</section>`;
+  }).join('');
+  const orphanSection = orphans.length ? `<section class="brand-goal-group"><div class="brand-mini-head"><h3>未分類</h3></div><div class="brand-goal-children">${orphans.map(goal => goalCard(goal, true)).join('')}</div></section>` : '';
+  const content = groups || orphanSection ? `<div class="brand-goal-tree">${groups}${orphanSection}</div>` : empty();
+  root.innerHTML = `${pageHead('目標管理','大目標ごとに、関連する中目標・小タスクをまとめて見ます。', '<button class="btn btn-primary" data-action="new-goal">追加</button>')}${content}`;
 }
 
 function renderMarkets(){
@@ -520,7 +531,7 @@ async function removeBy(type, id, label){
 function taskForm(task = {}){ openForm(task.id ? 'タスク編集' : 'タスク追加', [
   {name:'title',label:'タイトル',full:true},{name:'memo',label:'メモ',type:'textarea',full:true},{name:'dueDate',label:'期限',type:'date'},{name:'priority',label:'優先度',type:'select',options:['高','中','低']},{name:'goalId',label:'所属目標',type:'select',options:optionsFrom(state.goals,'title')},{name:'marketId',label:'所属マルシェ',type:'select',options:optionsFrom(state.markets,'name')},{name:'minutes',label:'作業時間目安',type:'number'},{name:'energy',label:'体力レベル',type:'select',options:['軽い','普通','重い']},{name:'category',label:'カテゴリ',type:'select',options:['制作','SNS','事務作業','マルシェ関連']},{name:'decomposition',label:'分解メモ',type:'textarea',full:true}
 ], task, async data => { upsert('tasks', {...task, ...data, id:task.id || uid('task'), done:!!task.done}); await save(); }); }
-function goalForm(goal = {}){ openForm(goal.id ? '目標編集' : '目標追加', [{name:'type',label:'種類',type:'select',options:['大目標','中目標','小タスク']},{name:'title',label:'タイトル',full:true},{name:'parentId',label:'親目標',type:'select',options:optionsFrom(state.goals.filter(g => g.id !== goal.id),'title')},{name:'dueDate',label:'期限',type:'date'},{name:'progress',label:'進捗率（空欄なら自動）',type:'number'},{name:'memo',label:'メモ',type:'textarea',full:true}], goal, async data => { upsert('goals', {...goal, ...data, id:goal.id || uid('goal'), progress:data.progress === '' ? null : Number(data.progress)}); await save(); }); }
+function goalForm(goal = {}){ openForm(goal.id ? '目標編集' : '目標追加', [{name:'type',label:'種類',type:'select',options:['大目標','中目標','小タスク']},{name:'title',label:'タイトル',full:true},{name:'parentId',label:'親目標（大目標のみ）',type:'select',options:optionsFrom(state.goals.filter(g => g.type === '大目標' && g.id !== goal.id),'title')},{name:'dueDate',label:'期限',type:'date'},{name:'progress',label:'進捗率（空欄なら自動）',type:'number'},{name:'memo',label:'メモ',type:'textarea',full:true}], goal, async data => { upsert('goals', {...goal, ...data, id:goal.id || uid('goal'), progress:data.progress === '' ? null : Number(data.progress)}); await save(); }); }
 function marketForm(market = {}){ openForm(market.id ? 'マルシェ編集' : 'マルシェ追加', [
   {name:'name',label:'マルシェ名'},{name:'date',label:'日付',type:'date'},{name:'place',label:'場所'},{name:'salesGoal',label:'目標売上',type:'number'},{name:'actualSales',label:'実績売上',type:'number'},
   {name:'carryInTime',label:'搬入時間'},{name:'carryOutTime',label:'搬出時間'},{name:'transportMethod',label:'持ち運び方法',full:true},
