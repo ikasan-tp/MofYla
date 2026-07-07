@@ -7,6 +7,7 @@ const todayKey = () => new Date().toISOString().slice(0, 10);
 const CUSTOMER_STATUSES = ['お問い合わせ','見積り','デザイン確認','制作中','印刷','塗装','梱包','発送','完了'];
 const LEAD_STATUSES = ['未調査','調査済','DM送信','返信待ち','商談中','サンプル送付','導入済','見送り'];
 const LEAD_POTENTIALS = ['未設定','高','中','低'];
+const WHOLESALE_STATUSES = ['商談中','納品準備中','納品済み','受注中','追加発注待ち','取り扱い終了'];
 const CATEGORIES = ['ネームプレート','コースター','キーホルダー','その他'];
 const TASK_FILTERS = ['今日','期限近い','マルシェ関連','制作','SNS','事務作業','完了済み'];
 const DAILY_TASKS = [
@@ -597,7 +598,7 @@ function productForm(product = {}){
   const wholesaleFields = [
     {name:'storeName',label:'店舗名'},
     {name:'wholesalePrice',label:'卸し価格',type:'number'},
-    {name:'status',label:'取引状態',type:'select',options:['販売中','非公開','準備中','在庫少']},
+    {name:'status',label:'取引状態',type:'select',options:WHOLESALE_STATUSES},
     {name:'description',label:'商品説明',type:'textarea',full:true},
     {name:'wholesaleMemo',label:'卸しメモ',type:'textarea',full:true}
   ];
