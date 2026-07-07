@@ -177,7 +177,7 @@ function marketProductTotals(market){
   return {
     planned: items.reduce((sum, item) => sum + Number(item.plannedQty || 0), 0),
     packed: items.reduce((sum, item) => sum + Number(item.packedQty || 0), 0),
-    value: items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.packedQty || item.plannedQty || 0), 0)
+    value: items.reduce((sum, item) => sum + Number(item.price || 0) * (Number(item.packedQty) || Number(item.plannedQty) || 1), 0)
   };
 }
 
