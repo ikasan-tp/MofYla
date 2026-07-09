@@ -441,6 +441,7 @@
 .invoice-billto strong{font-size:1.15rem;display:inline-block;border-bottom:2px solid var(--ink);padding-bottom:5px;}
 .invoice-seller{text-align:right;font-size:.82rem;color:var(--ink-soft);}
 .invoice-seller p{margin:2px 0;}
+.invoice-logo{width:44px;height:44px;object-fit:contain;display:inline-block;margin-bottom:6px;}
 .invoice-total-highlight{background:var(--sage-soft);color:var(--sage-deep);border-radius:12px;padding:14px 18px;font-size:1.2rem;font-weight:800;margin:16px 0;}
 .invoice-table{width:100%;border-collapse:collapse;margin-top:12px;}
 .invoice-table th,.invoice-table td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;font-size:.86rem;}

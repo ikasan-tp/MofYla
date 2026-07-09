@@ -539,6 +539,7 @@ function renderInvoice(){
       <div class="invoice-parties">
         <div class="invoice-billto"><strong>${escapeHtml(draft.billTo || draft.store || 'お客様')} 御中</strong></div>
         <div class="invoice-seller">
+          <img class="invoice-logo" src="./assets/mofyla-logo.png" alt="MofYla logo">
           <p>${escapeHtml(profile.name || '（発行者情報未設定）')}</p>
           <p>${escapeHtml(profile.address || '')}</p>
           <p>${escapeHtml(profile.contact || '')}</p>
