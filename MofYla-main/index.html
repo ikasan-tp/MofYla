@@ -1,0 +1,498 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MofYla Studio | Brand Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Zen+Maru+Gothic:wght@400;500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Klee+One:wght@500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles/main.css">
+<link rel="stylesheet" href="./styles/components.css">
+<link rel="stylesheet" href="./styles/calendar.css">
+<link rel="stylesheet" href="./styles/dashboard.css">
+<link rel="stylesheet" href="./styles/brand.css">
+<link rel="icon" type="image/png" href="./favicon.png">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+<symbol id="ic-rabbit" viewBox="0 0 24 24">
+  <path d="M8.6 11.2C7.1 8.3 7.4 3.6 9.2 2.1c1.2 3 1.4 6.8 0.5 9.6" fill="currentColor"/>
+  <path d="M15.4 11.2c1.5-2.9 1.2-7.6-0.6-9.1-1.2 3-1.4 6.8-0.5 9.6" fill="currentColor"/>
+  <ellipse cx="12" cy="15.6" rx="5.7" ry="5.1" fill="currentColor"/>
+</symbol>
+<symbol id="ic-home" viewBox="0 0 24 24"><path d="M3.5 11.5 12 4l8.5 7.5M5.5 10v10h13V10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-pencil" viewBox="0 0 24 24"><path d="M4 20h4L18.4 9.6a2.1 2.1 0 0 0-3-3L5 17v3z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.6 5.4l4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+<symbol id="ic-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 9.8h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+<symbol id="ic-notebook" viewBox="0 0 24 24"><rect x="4.5" y="3" width="15" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 3v18M11.5 8.3h6M11.5 12.3h6M11.5 16.3h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+<symbol id="ic-chat" viewBox="0 0 24 24"><path d="M4 5h16v12.3H9L4.5 21v-3.7H4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+<symbol id="ic-chart" viewBox="0 0 24 24"><path d="M4 20.5h16M6.5 20V13m5.5 7V8.5M17.5 20V5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+<symbol id="ic-sliders" viewBox="0 0 24 24"><path d="M4 6.5h11M17.5 6.5h2.5M4 12h6.5M13 12h7M4 17.5h13M19.5 17.5H20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="13.5" cy="6.5" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="9" cy="12" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="16" cy="17.5" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+<symbol id="ic-refresh" viewBox="0 0 24 24"><path d="M20 11A8 8 0 1 0 18.5 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M20 5v6h-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-pin" viewBox="0 0 24 24"><path d="M12 21.5s7-7.4 7-12.4a7 7 0 1 0-14 0c0 5 7 12.4 7 12.4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="9" r="2.3" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+<symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+<symbol id="ic-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9 7V4.3h6V7M6.5 7l1 13a2 2 0 0 0 2 1.8h5a2 2 0 0 0 2-1.8l1-13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+<symbol id="ic-star" viewBox="0 0 24 24"><path d="M12 3.3l2.7 6 6.5.6-4.9 4.4 1.5 6.4L12 17.4l-5.8 3.3 1.5-6.4-4.9-4.4 6.5-.6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+<symbol id="ic-check" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.2 12.3l2.6 2.6 5-5.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-alert" viewBox="0 0 24 24"><path d="M12 3.5 21.5 20h-19z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 9.5v4.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16.8" r="0.9" fill="currentColor"/></symbol>
+<symbol id="ic-square" viewBox="0 0 24 24"><rect x="4.2" y="4.2" width="15.6" height="15.6" rx="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+<symbol id="ic-square-check" viewBox="0 0 24 24"><rect x="4.2" y="4.2" width="15.6" height="15.6" rx="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.2 12.4l2.6 2.6 5-5.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-chevron-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-chevron-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-arrow-right" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-download" viewBox="0 0 24 24"><path d="M12 4v10M8 10l4 4 4-4M5 19h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="ic-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="ic-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="ic-video" viewBox="0 0 24 24"><rect x="3" y="6.5" width="12.5" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M15.5 10l5-2.7v9.4l-5-2.7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+<symbol id="ic-gift" viewBox="0 0 24 24"><rect x="3.5" y="9.5" width="17" height="10.5" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 9.5h17M12 9.5V20M12 9.5C10 5 6 5.3 6.3 7.4 6.5 9 9.5 9.5 12 9.5zM12 9.5c2-4.5 6-4.2 5.7-2.1-.2 1.6-3.2 2.1-5.7 2.1z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+<symbol id="ic-flag" viewBox="0 0 24 24"><path d="M6 3v18M6 4.5h11l-2.6 3.5L17 11.5H6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+<symbol id="ic-draft" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 3.2"/></symbol>
+<symbol id="ic-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="1" fill="currentColor"/></symbol>
+<symbol id="ic-lightbulb" viewBox="0 0 24 24"><path d="M9 18.5h6M9.6 21h4.8M8 15.2A5.5 5.5 0 1116 15.2c-.8.9-1.3 1.6-1.3 2.8H9.3c0-1.2-.5-1.9-1.3-2.8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+</defs>
+</svg>
+
+<div class="app">
+  <div class="mobile-topbar">
+    <button class="hamburger-btn" id="hamburgerBtn" aria-label="メニューを開く"><svg class="svgic"><use href="#ic-menu"/></svg></button>
+    <div class="side-brand">
+      <img class="side-logo" src="./assets/mofyla-logo.png" alt="MofYla logo">
+      <div><h1>MofYla</h1></div>
+    </div>
+  </div>
+  <div class="nav-overlay" id="navOverlay"></div>
+
+  <nav class="sidebar" id="sidebar">
+    <div class="side-brand">
+      <img class="side-logo" src="./assets/mofyla-logo.png" alt="MofYla logo">
+      <div>
+        <h1>MofYla</h1>
+        <span>Brand dashboard</span>
+      </div>
+      <button class="side-close" id="sideCloseBtn" aria-label="閉じる"><svg class="svgic"><use href="#ic-close"/></svg></button>
+    </div>
+    <div class="side-nav" id="sideNav">
+      <button data-page="home" class="active"><svg class="ic svgic"><use href="#ic-home"/></svg>Home</button>
+
+      <p class="side-nav-label">ブランド運営</p>
+      <button data-page="brand-tasks"><svg class="ic svgic"><use href="#ic-check-circle"/></svg>タスク</button>
+      <button data-page="brand-goals"><svg class="ic svgic"><use href="#ic-target"/></svg>目標</button>
+      <button data-page="brand-markets"><svg class="ic svgic"><use href="#ic-flag"/></svg>マルシェ</button>
+      <button data-page="brand-sales"><svg class="ic svgic"><use href="#ic-chart"/></svg>売上</button>
+      <button data-page="brand-crm"><svg class="ic svgic"><use href="#ic-chat"/></svg>お客様</button>
+      <button data-page="brand-leads"><svg class="ic svgic"><use href="#ic-pin"/></svg>営業先</button>
+      <button data-page="brand-products"><svg class="ic svgic"><use href="#ic-gift"/></svg>商品</button>
+      <button data-page="brand-ideas"><svg class="ic svgic"><use href="#ic-lightbulb"/></svg>アイデア</button>
+
+      <p class="side-nav-label">SNS運用</p>
+      <button data-page="write"><svg class="ic svgic"><use href="#ic-pencil"/></svg>投稿</button>
+      <button data-page="calendar"><svg class="ic svgic"><use href="#ic-calendar"/></svg>カレンダー</button>
+      <button data-page="ideas"><svg class="ic svgic"><use href="#ic-notebook"/></svg>ネタ帳</button>
+      <button data-page="reply"><svg class="ic svgic"><use href="#ic-chat"/></svg>コメント返信</button>
+      <button data-page="analytics"><svg class="ic svgic"><use href="#ic-chart"/></svg>分析</button>
+      <button data-page="template"><svg class="ic svgic"><use href="#ic-notebook"/></svg>テンプレート</button>
+
+      <p class="side-nav-label">その他</p>
+      <button data-page="export"><svg class="ic svgic"><use href="#ic-download"/></svg>エクスポート</button>
+      <button data-page="settings"><svg class="ic svgic"><use href="#ic-sliders"/></svg>設定</button>
+    </div>
+    <div class="side-foot">
+      <div class="side-ai-row">
+        <div class="side-ai-label"><strong>AI連携</strong><span id="aiStatusText">OFF</span></div>
+        <label class="switch">
+          <input type="checkbox" id="aiToggle">
+          <span class="track"><span class="knob"></span></span>
+        </label>
+      </div>
+
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- ============ HOME ============ -->
+
+    <section class="page active" id="page-home">
+      <div id="brandHome"></div>
+
+      <section class="daily-rabbit-card section-gap" id="dailyRabbitCard">
+        <div>
+          <p class="label-eyebrow">今日のうさぎ</p>
+          <h3 id="dailyRabbitName">今日のうさぎ</h3>
+          <p id="dailyRabbitDescription">日替わりでうさぎの種類を紹介します。</p>
+          <div class="daily-rabbit-tags" id="dailyRabbitTags"></div>
+        </div>
+      </section>
+
+      <div class="legacy-home-sns" aria-hidden="true">
+      <div class="greeting-card">
+        <div>
+          <h2 style="display:flex;align-items:center;gap:10px;"><svg class="icon-md svgic brand-mark"><use href="#ic-rabbit"/></svg><span id="greetingText">Good Morning</span></h2>
+          <p id="greetingSub">今日はどんな投稿にしますか？</p>
+        </div>
+        <span class="greeting-date" id="homeDate">--</span>
+      </div>
+
+      <div class="card section-gap">
+        <p class="label-eyebrow">今週の記録</p>
+        <div class="week-strip" id="weekStrip"></div>
+        <div class="statgrid">
+          <div class="statcard"><div class="num honey" id="streakNum">0</div><div class="lab">連続投稿日数</div></div>
+          <div class="statcard"><div class="num" id="monthRateNum">0%</div><div class="lab">今月の達成率</div></div>
+          <div class="statcard"><div class="num" id="postsThisMonthNum">0</div><div class="lab">今月の投稿数</div></div>
+        </div>
+        <a class="cal-link" data-page="calendar">カレンダーをもっと見る <svg class="svgic"><use href="#ic-arrow-right"/></svg></a>
+      </div>
+
+
+      <div class="card section-gap">
+        <p class="label-eyebrow">今日やること</p>
+        <div class="checklist" id="checklist">
+          <div class="checklist-item" data-task="seen"><span class="checkbox"><svg class="svgic"><use href="#ic-check"/></svg></span><span class="txt">今日のネタを見る</span></div>
+          <div class="checklist-item" data-task="wrote"><span class="checkbox"><svg class="svgic"><use href="#ic-check"/></svg></span><span class="txt">投稿を作る</span></div>
+          <div class="checklist-item" data-task="posted"><span class="checkbox"><svg class="svgic"><use href="#ic-check"/></svg></span><span class="txt">投稿した</span></div>
+        </div>
+      </div>
+
+      <p class="label-eyebrow">今日のおすすめ</p>
+      <div class="feature-card">
+        <div class="feature-top">
+          <div class="feature-eyebrow">
+            <span class="feature-tag" id="fIdeaTag">商品紹介</span>
+            <span class="feature-idx" id="fIdeaIdx">No. 01</span>
+          </div>
+          <h3 class="feature-title" id="fIdeaTitle">読み込み中…</h3>
+          <p class="feature-detail" id="fIdeaDetail"></p>
+          <div class="feature-meta">
+            <div class="meta-item"><span class="k">難易度</span><span class="v" id="fDifficulty">-</span></div>
+            <div class="meta-item"><span class="k">所要時間</span><span class="v" id="fMinutes">-</span></div>
+          </div>
+          <div class="feature-columns">
+            <div class="feature-block"><p class="lbl">おすすめ理由</p><ul class="reason-list" id="fReasonList"></ul></div>
+            <div class="feature-block"><p class="lbl">写真アイデア</p><p id="fPhoto">-</p></div>
+          </div>
+          <div class="feature-block" style="margin-top:12px;"><p class="lbl">投稿すると得られる効果</p><p id="fEffect">-</p></div>
+          <div class="feature-tags" id="fTags"></div>
+        </div>
+        <div class="feature-bottom">
+          <div class="feature-actions">
+            <button class="btn btn-primary" id="fWriteBtn">今日はこれを書く</button>
+            <button class="btn btn-ghost btn-small" id="fShuffleBtn">別のネタ</button>
+          </div>
+          <div class="feature-actions">
+            <button class="btn-quiet" id="fPostedBtn">投稿済みにする</button>
+            <button class="btn-quiet" id="fSkipBtn">興味ない</button>
+          </div>
+        </div>
+        <div class="paperloader" id="fLoader"><span class="flip"></span><span class="ltxt">めくっています…</span></div>
+        <div class="errbox" id="fErr" style="margin:0 32px 16px;"></div>
+      </div>
+      </div>
+    </section>
+
+    <section class="page" id="page-brand-tasks">
+      <div class="brand-page" id="brandTasks"></div>
+    </section>
+
+    <section class="page" id="page-brand-goals">
+      <div class="brand-page" id="brandGoals"></div>
+    </section>
+
+    <section class="page" id="page-brand-markets">
+      <div class="brand-page" id="brandMarkets"></div>
+    </section>
+
+    <section class="page" id="page-brand-sales">
+      <div class="brand-page" id="brandSales"></div>
+    </section>
+
+    <section class="page" id="page-brand-crm">
+      <div class="brand-page" id="brandCrm"></div>
+    </section>
+
+    <section class="page" id="page-brand-leads">
+      <div class="brand-page" id="brandLeads"></div>
+    </section>
+
+    <section class="page" id="page-brand-products">
+      <div class="brand-page" id="brandProducts"></div>
+    </section>
+
+    <section class="page" id="page-brand-ideas">
+      <div class="brand-page" id="brandIdeas"></div>
+    </section>
+
+    <!-- ============ WRITE ============ -->
+    <section class="page" id="page-write">
+      <div class="page-head"><div><h2>投稿</h2><p>下書きを一回書けば、X / Instagram 用に整えます</p></div></div>
+      <div class="card composer">
+        <textarea id="draftInput" placeholder="伝えたいことを箇条書きでも一文でもOK。例）今ある1点物のヘイラック、編み目を細かくして毛玉が引っかかりにくいよう改良中。試作段階だが、実際のうさぎで試したところ食べやすそうだった。"></textarea>
+        <div class="composer-foot">
+          <span class="hint" id="composerHint">下書きを入力して生成してください</span>
+          <button class="btn btn-primary" id="generateBtn"><svg class="icon-sm svgic"><use href="#ic-pencil"/></svg><span class="btn-label">X / Instagram 用に生成</span></button>
+        </div>
+        <div class="paperloader" id="genLoader"><span class="flip"></span><span class="ltxt">めくっています…</span></div>
+        <div class="errbox" id="genErr"></div>
+
+        <div class="chiprow" id="remixRow" style="display:none;">
+          <button class="btn-chip" data-remix="short">もっと短く</button>
+          <button class="btn-chip" data-remix="cute">もっと可愛く</button>
+          <button class="btn-chip" data-remix="polite">もっと丁寧に</button>
+          <button class="btn-chip" data-remix="lessemoji">絵文字少なめ</button>
+          <button class="btn-chip" data-remix="moretags">ハッシュタグ追加</button>
+          <button class="btn-chip" data-remix="brand">ブランド感を強く</button>
+        </div>
+
+        <div class="outputs">
+          <div class="outcard">
+            <div class="outcard-head">
+              <span class="platform"><span class="dot x"></span>X（旧Twitter）</span>
+              <span class="charcount" id="xCount">0 / 280</span>
+            </div>
+            <textarea class="result" id="xResult" placeholder="ここにX用の文章が出ます"></textarea>
+            <div class="tagpicker" id="xTagPicker"></div>
+            <div class="outcard-foot">
+              <span class="hint">短く・即時性重視</span>
+              <button class="btn-ghost btn-small btn" data-copy="xResult">コピー</button>
+            </div>
+          </div>
+          <div class="outcard">
+            <div class="outcard-head">
+              <span class="platform"><span class="dot ig"></span>Instagram</span>
+              <span class="charcount" id="igCount">0 / 2200</span>
+            </div>
+            <textarea class="result" id="igResult" placeholder="ここにInstagram用の文章が出ます"></textarea>
+            <div class="tagpicker" id="igTagPicker"></div>
+            <div class="outcard-foot">
+              <span class="hint">世界観・厳選タグ重視</span>
+              <button class="btn-ghost btn-small btn" data-copy="igResult">コピー</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="precheck">
+          <p class="precheck-title">投稿前チェック</p>
+          <div class="precheck-grid" id="precheckGrid"></div>
+        </div>
+
+        <div class="savebar">
+          <button class="btn btn-sage" id="saveHistoryBtn"><svg class="icon-sm svgic"><use href="#ic-pin"/></svg><span class="btn-label">この投稿を履歴に保存</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CALENDAR ============ -->
+    <section class="page" id="page-calendar">
+      <div class="page-head"><div><h2>カレンダー</h2><p>投稿だけでなく、ブランド活動をまるごと記録する場所です</p></div></div>
+
+      <div class="card section-gap">
+        <div class="goalring-wrap">
+          <svg class="goalring" viewBox="0 0 64 64">
+            <circle cx="32" cy="32" r="27" fill="none" stroke="var(--paper-deep)" stroke-width="7"/>
+            <circle id="goalRingFg" cx="32" cy="32" r="27" fill="none" stroke="var(--sage)" stroke-width="7" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+          </svg>
+          <div class="goalring-lab">
+            <div class="num" id="goalRateNumFull">0%</div>
+            <div class="lab">今月の目標達成率(<span id="goalPostsNumFull">0</span>/<span id="goalTargetNumFull">-</span>投稿)</div>
+          </div>
+        </div>
+        <div class="statgrid">
+          <div class="statcard"><div class="num honey" id="streakNumFull">0</div><div class="lab">連続投稿日数</div></div>
+          <div class="statcard"><div class="num" id="monthRateNumFull">0%</div><div class="lab">今月の達成率</div></div>
+          <div class="statcard"><div class="num" id="totalPostedNum">0</div><div class="lab">総投稿日数</div></div>
+          <div class="statcard"><div class="num" id="postsThisMonthNumFull">0</div><div class="lab">今月の投稿数</div></div>
+          <div class="statcard"><div class="num" id="videosThisMonthNum">0</div><div class="lab">制作動画数</div></div>
+          <div class="statcard"><div class="num" id="ideaStockNum">0</div><div class="lab">ネタ在庫数</div></div>
+        </div>
+      </div>
+
+      <div class="card section-gap">
+        <div class="cal-widget">
+          <div class="month-cal full" style="flex:1;">
+            <div class="month-cal-head">
+              <button class="cal-navbtn" id="calPrevBtn" aria-label="前の月"><svg class="svgic"><use href="#ic-chevron-left"/></svg></button>
+              <span class="month-label" id="calMonthLabel">--</span>
+              <button class="cal-navbtn" id="calNextBtn" aria-label="次の月"><svg class="svgic"><use href="#ic-chevron-right"/></svg></button>
+            </div>
+            <div class="weekday-row">
+              <span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span>
+            </div>
+            <div class="month-grid" id="calGridFull"></div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;font-size:0.72rem;color:var(--ink-soft);">
+              <span style="display:inline-flex;align-items:center;gap:4px;"><svg class="svgic" style="width:12px;height:12px;color:var(--sage-deep);"><use href="#ic-pencil"/></svg>投稿</span>
+              <span style="display:inline-flex;align-items:center;gap:4px;"><svg class="svgic" style="width:12px;height:12px;color:var(--clay);"><use href="#ic-video"/></svg>制作動画</span>
+              <span style="display:inline-flex;align-items:center;gap:4px;"><svg class="svgic" style="width:12px;height:12px;color:var(--honey);"><use href="#ic-star"/></svg>人気投稿</span>
+              <span style="display:inline-flex;align-items:center;gap:4px;"><svg class="svgic" style="width:12px;height:12px;"><use href="#ic-gift"/></svg>商品公開</span>
+              <span style="display:inline-flex;align-items:center;gap:4px;"><svg class="svgic" style="width:12px;height:12px;"><use href="#ic-flag"/></svg>イベント</span>
+              <span style="display:inline-flex;align-items:center;gap:4px;background:var(--honey-soft);padding:2px 8px;border-radius:999px;">予定あり</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="label-eyebrow">秘書からの提案</p>
+      <div class="advice-box" id="planAdviceBox">
+        <svg class="svgic"><use href="#ic-lightbulb"/></svg>
+        <p id="planAdviceText">予定を登録すると、投稿の組み立て方を提案します。</p>
+      </div>
+    </section>
+
+    <!-- ============ IDEAS LIBRARY ============ -->
+    <section class="page" id="page-ideas">
+      <div class="page-head"><div><h2>ネタ帳</h2><p>ブランド専用のネタライブラリ。投稿生成時にAIの参考にもなります</p></div></div>
+
+      <div class="togglebar">
+        <div class="lab"><strong>参考メモを生成時に利用する</strong><span>ONにすると、下の参考メモをAI生成の文脈として使います</span></div>
+        <label class="switch"><input type="checkbox" id="useRefToggle"><span class="track"><span class="knob"></span></span></label>
+      </div>
+
+      <p class="label-eyebrow">ネタ一覧</p>
+      <div class="idea-grid section-gap" id="ideaGrid"></div>
+
+      <p class="label-eyebrow">見つけたら書き留める</p>
+      <div class="card section-gap">
+        <p class="hint" style="margin:0 0 10px;">気になった投稿のURLと、なぜ気になったかを一言メモ。</p>
+        <input type="text" id="refUrlInput" class="refurl-input" placeholder="投稿のURL（任意）">
+        <textarea id="refNoteInput" placeholder="例）餌入れの断面図を見せる投稿。作り方の工夫が伝わって保存数が多そうだった。" style="min-height:70px;margin-top:8px;width:100%;border:1px solid var(--line);border-radius:var(--radius-md);padding:12px;background:var(--paper);"></textarea>
+        <div class="composer-foot">
+          <span class="hint">丸ごと真似るのではなく『なぜ良かったか』の視点をメモするのがおすすめです</span>
+          <button class="btn btn-sage" id="addRefBtn"><svg class="icon-sm svgic"><use href="#ic-plus"/></svg><span class="btn-label">メモを追加</span></button>
+        </div>
+      </div>
+      <div class="listcol" id="refList"><div class="empty-state">まだメモがありません。</div></div>
+    </section>
+
+    <!-- ============ REPLY ============ -->
+    <section class="page" id="page-reply">
+      <div class="page-head"><div><h2>コメント返信</h2><p>もらったコメントに、あたたかく丁寧な返信を</p></div></div>
+      <div class="card composer section-gap">
+        <textarea id="commentInput" placeholder="もらったコメントを貼り付けてください。例）このヘイラック可愛い！うちの子にも欲しいです"></textarea>
+        <div class="composer-foot">
+          <span class="hint" id="replyHint">コメントを入力して生成してください</span>
+          <button class="btn btn-primary" id="replyGenerateBtn"><svg class="icon-sm svgic"><use href="#ic-chat"/></svg><span class="btn-label">返信文を考える</span></button>
+        </div>
+        <div class="paperloader" id="replyLoader"><span class="flip"></span><span class="ltxt">めくっています…</span></div>
+        <div class="errbox" id="replyErr"></div>
+        <div class="outcard" style="margin-top:16px;">
+          <div class="outcard-head"><span class="platform">返信案</span></div>
+          <textarea class="result" id="replyResult" placeholder="ここに返信文の案が出ます" style="min-height:100px;"></textarea>
+          <div class="outcard-foot">
+            <span class="hint">送る前に一度読み返してから返信してください</span>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-ghost btn-small btn" id="favReplyBtn"><svg class="icon-sm svgic"><use href="#ic-star"/></svg><span class="btn-label">お気に入りに登録</span></button>
+              <button class="btn-ghost btn-small btn" data-copy="replyResult">コピー</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="label-eyebrow">お気に入り返信</p>
+      <div class="listcol section-gap" id="favReplyList"><div class="empty-state">まだお気に入りがありません。</div></div>
+
+      <p class="label-eyebrow">返信履歴</p>
+      <div class="listcol" id="replyHistList"><div class="empty-state">まだ履歴がありません。</div></div>
+    </section>
+
+    <!-- ============ ANALYTICS / HISTORY ============ -->
+    <section class="page" id="page-analytics">
+      <div class="page-head"><div><h2>分析</h2><p>投稿履歴と反応を振り返る場所。毎日見るものではありません</p></div></div>
+      <div class="hist-summary card section-gap">
+        <div><div class="num" id="statTotal">0</div><div class="lab">総投稿数</div></div>
+        <div><div class="num" id="statLikes">0</div><div class="lab">平均いいね</div></div>
+        <div><div class="num" id="statSales">0</div><div class="lab">売上につながった投稿</div></div>
+      </div>
+
+      <p class="label-eyebrow">投稿内容のバランス（直近30日）</p>
+      <div class="card section-gap">
+        <div id="balanceBars"><div class="empty-state">データが増えてくると、ここにカテゴリの偏りが表示されます。</div></div>
+      </div>
+      <div class="advice-box section-gap" id="balanceAdviceBox">
+        <svg class="svgic"><use href="#ic-lightbulb"/></svg>
+        <p id="balanceAdviceText">まだ分析するデータがありません。投稿履歴が増えると秘書からアドバイスします。</p>
+      </div>
+
+      <p class="label-eyebrow">投稿履歴</p>
+      <div class="listcol" id="historyList"><div class="empty-state">まだ履歴がありません。投稿文を保存するとここに並びます。</div></div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section class="page" id="page-settings">
+      <div class="page-head"><div><h2>設定</h2><p>AI連携の説明とデータの管理</p></div></div>
+      <div class="card section-gap">
+        <p class="label-eyebrow">AI連携</p>
+        <p style="font-size:0.88rem;color:var(--ink-soft);max-width:640px;">
+          サイドバーのスイッチでON/OFFを切り替えられます。OFFのときはテンプレートで即座に下書きを作成し、
+          ONのときはClaudeが文脈を汲んで生成します。生成後は必ず読み返してから投稿してください。
+        </p>
+      </div>
+      <div class="card section-gap">
+        <p class="label-eyebrow">今月の投稿目標</p>
+        <p style="font-size:0.88rem;color:var(--ink-soft);max-width:640px;margin-bottom:12px;">
+          カレンダーページの達成率リングに反映されます。
+        </p>
+        <div class="mini-field" style="max-width:160px;">
+          <label>目標投稿数（今月）</label>
+          <input type="number" min="1" id="monthlyGoalInput" value="12">
+        </div>
+      </div>
+      <div class="card">
+        <p class="label-eyebrow">データの管理</p>
+        <p style="font-size:0.88rem;color:var(--ink-soft);max-width:640px;margin-bottom:14px;">
+          このツールに保存したデータ（投稿履歴・参考メモ・返信履歴・チェックリスト・活動記録）をすべて削除します。元に戻せません。
+        </p>
+        <button class="btn btn-ghost" id="resetAllBtn"><svg class="icon-sm svgic"><use href="#ic-trash"/></svg><span class="btn-label">データを全て削除</span></button>
+      </div>
+    </section>
+
+    <section class="page" id="page-template">
+      <div class="page-head"><div><p class="eyebrow">Templates</p><h2>投稿テンプレート</h2><p>商品紹介、制作動画、イベント告知などを管理して、投稿文のたたき台を作れます。</p></div><button class="btn btn-primary" id="templateAddBtn"><svg class="icon-sm svgic"><use href="#ic-plus"/></svg><span class="btn-label">追加</span></button></div>
+      <div class="panel section-gap"><div class="mini-field-grid"><div class="mini-field"><label>テンプレート名</label><input id="templateName" type="text" placeholder="商品紹介"></div><div class="mini-field"><label>ジャンル</label><input id="templateCategory" type="text" placeholder="商品紹介"></div></div><div class="mini-field"><label>本文</label><textarea id="templateBody" rows="5" placeholder="今日は {topic} を紹介します。\nこだわり: {point}\n#MofYla"></textarea></div><div class="mini-field-grid"><div class="mini-field"><label>話題</label><input id="templateTopic" type="text" placeholder="新作のうさぎ用アイテム"></div><div class="mini-field"><label>こだわり</label><input id="templatePoint" type="text" placeholder="やさしい丸みと洗いやすさ"></div></div><div class="toolbar"><button class="btn btn-sage" id="templateSaveBtn">保存</button><button class="btn btn-ghost" id="templateGenerateBtn">投稿へ生成</button></div></div>
+      <div class="idea-grid section-gap" id="templateList"></div>
+    </section>
+
+    <section class="page" id="page-export">
+      <div class="page-head"><div><p class="eyebrow">Backup</p><h2>エクスポート / 復元</h2><p>ローカル保存された秘書データをJSONで退避・復元できます。</p></div></div>
+            <div class="panel section-gap">
+        <div class="toolbar"><button class="btn btn-primary" id="backupJsonBtn">JSONバックアップ</button><button class="btn btn-sage" id="restoreJsonBtn">JSON復元</button><button class="btn btn-ghost" id="exportSettingsBtn">設定エクスポート</button><button class="btn btn-ghost" id="exportHistoryBtn">投稿履歴エクスポート</button></div>
+        <input type="file" id="restoreFileInput" accept="application/json" hidden>
+        <textarea id="exportPreview" class="result" rows="12" placeholder="ここにエクスポート内容が表示されます"></textarea>
+      </div>
+      <div class="panel section-gap">
+        <div class="page-head"><div><p class="eyebrow">Cloud Sync</p><h2>半自動共有</h2><p>Google Apps Script経由でJSONをクラウド保存し、別デバイスへ復元できます。</p></div></div>
+        <div class="mini-field-grid">
+          <div class="mini-field"><label>Apps Script URL</label><input id="cloudSyncUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec"></div>
+          <div class="mini-field"><label>同期キー</label><input id="cloudSyncKey" type="password" placeholder="自分だけの合言葉"></div>
+        </div>
+        <label class="metric-check" style="margin:8px 0 12px;"><input type="checkbox" id="cloudAutoUploadToggle"> 入力変更後に自動アップロード</label>
+        <div class="toolbar"><button class="btn btn-primary" id="cloudUploadBtn">クラウドに保存</button><button class="btn btn-sage" id="cloudDownloadBtn">クラウドから取得</button><button class="btn btn-ghost" id="cloudInstallBtn">取得データをインストール</button></div>
+        <p class="hint" id="cloudSyncStatus">未設定です。Apps Script URLと同期キーを入力してください。</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast">保存しました</div>
+
+<div class="modal-overlay" id="dayModalOverlay">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="dayModalTitle">--</h3>
+      <button class="modal-close" id="dayModalClose" aria-label="閉じる"><svg class="svgic"><use href="#ic-close"/></svg></button>
+    </div>
+    <div class="modal-body" id="dayModalBody"></div>
+  </div>
+</div>
+
+
+
+<script type="module" src="./src/app.js?v=cloud-sync-form-20260705"></script>
+</body>
+</html>
+
+
+
+
+
