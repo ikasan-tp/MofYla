@@ -719,33 +719,37 @@ function renderDocumentPreview(document){
   }
   const priceHeads = showPrices ? '<th>単価</th><th>金額</th>' : '';
   const priceFootColspan = showPrices ? 4 : 2;
-  return `<div class="invoice-sheet document-sheet ${isDelivery ? `delivery-sheet ${document.receiptCopy === true && showPrices ? 'has-receipt' : ''}` : 'invoice-kind'}" id="invoiceSheet">
-    <div class="invoice-head">
-      <div>
-        <h1>${documentLabel(document.type)}</h1>
-        <p class="document-lead">${isDelivery ? '上記の通り納品いたしました。' : '下記の通りご請求申し上げます。'}</p>
+  return `<div class="invoice-sheet document-sheet delivery-sheet invoice-two-block delivery-two-block ${document.receiptCopy === true && showPrices ? 'has-receipt' : ''}" id="invoiceSheet">
+    <section class="invoice-block invoice-main-block">
+      <div class="invoice-head">
+        <div>
+          <h1>納品書</h1>
+          <p class="document-lead">上記の通り納品いたしました。</p>
+        </div>
+        <div class="invoice-meta">${documentHeaderMeta(document)}</div>
       </div>
-      <div class="invoice-meta">${documentHeaderMeta(document)}</div>
-    </div>
-    <div class="invoice-parties">
-      <div class="invoice-billto"><span>${isDelivery ? '納品先' : 'ご請求先'}</span><strong>${escapeHtml(document.billTo || document.store || 'お客様')} 御中</strong></div>
-      ${documentIssuerBlock(profile, false)}
-    </div>
-    <div class="document-info-grid">
-      ${document.subject ? `<div><span>件名</span><strong>${escapeHtml(document.subject)}</strong></div>` : ''}
-      ${document.destination ? `<div><span>納品場所</span><strong>${escapeHtml(document.destination)}</strong></div>` : ''}
-      ${periodLabel ? `<div><span>対象期間</span><strong>${periodLabel}</strong></div>` : ''}
-      ${isDelivery ? `<div class="document-qty-total"><span>納品数量</span><strong>合計${totals.qty}点</strong></div>` : ''}
-    </div>
-    ${isDelivery ? `<div class="delivery-total-highlight">納品数量　合計${totals.qty}点${showPrices ? ` / ${yen(totals.total)}（税込）` : ''}</div>` : `<div class="invoice-total-highlight">ご請求金額　${yen(totals.total)}（税込）</div>`}
-    <table class="invoice-table document-table ${showPrices ? '' : 'hide-prices'}">
-      <thead><tr><th>品名</th><th>数量</th><th>単位</th>${priceHeads}<th class="no-print"></th></tr></thead>
-      <tbody>${items.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${safeNumber(item.qty)}</td><td>${escapeHtml(item.unit || '個')}</td>${showPrices ? `<td>${yen(item.price)}</td><td>${yen(safeNumber(item.qty) * safeNumber(item.price))}</td>` : ''}<td class="no-print"><button class="btn btn-ghost btn-small" data-action="edit-document-item" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-document-item" data-id="${item.id}">削除</button></td></tr>`).join('') || `<tr><td colspan="${showPrices ? 6 : 4}">明細がありません。「明細を追加」から入力するか、卸し実績のある店舗で作成してください。</td></tr>`}</tbody>
-      ${showPrices ? `<tfoot><tr><td colspan="${priceFootColspan}">小計</td><td colspan="2">${yen(totals.subtotal)}</td></tr><tr><td colspan="${priceFootColspan}">消費税（${safeNumber(document.taxRate)}%）</td><td colspan="2">${yen(totals.tax)}</td></tr><tr class="invoice-grand-total"><td colspan="${priceFootColspan}">合計</td><td colspan="2">${yen(totals.total)}</td></tr></tfoot>` : ''}
-    </table>
-    ${document.notes ? `<div class="invoice-notes"><p>備考</p><p>${escapeHtml(document.notes)}</p></div>` : ''}
-    ${isDelivery ? '<div class="receipt-stamp"><span>受領印</span></div>' : sellerProfileLines(profile, true).includes('invoice-bank') ? `<div class="document-bank-wrap">${sellerProfileLines(profile, true).match(/<div class="invoice-bank">[\s\S]*<\/div>/)?.[0] || ''}</div>` : ''}
-    ${receiptCopyBlock(document, totals, profile)}
+      <div class="invoice-parties">
+        <div class="invoice-billto"><span>納品先</span><strong>${escapeHtml(document.billTo || document.store || 'お客様')} 御中</strong></div>
+        ${documentIssuerBlock(profile, false)}
+      </div>
+      <div class="document-info-grid">
+        ${document.subject ? `<div><span>件名</span><strong>${escapeHtml(document.subject)}</strong></div>` : ''}
+        ${document.destination ? `<div><span>納品場所</span><strong>${escapeHtml(document.destination)}</strong></div>` : ''}
+        ${periodLabel ? `<div><span>対象期間</span><strong>${periodLabel}</strong></div>` : ''}
+        <div class="document-qty-total"><span>納品数量</span><strong>合計${totals.qty}点</strong></div>
+      </div>
+      <div class="delivery-total-highlight">納品数量　合計${totals.qty}点${showPrices ? ` / ${yen(totals.total)}（税込）` : ''}</div>
+    </section>
+    <section class="invoice-block invoice-detail-block">
+      <table class="invoice-table document-table ${showPrices ? '' : 'hide-prices'}">
+        <thead><tr><th>品名</th><th>数量</th><th>単位</th>${priceHeads}<th class="no-print"></th></tr></thead>
+        <tbody>${items.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${safeNumber(item.qty)}</td><td>${escapeHtml(item.unit || '個')}</td>${showPrices ? `<td>${yen(item.price)}</td><td>${yen(safeNumber(item.qty) * safeNumber(item.price))}</td>` : ''}<td class="no-print"><button class="btn btn-ghost btn-small" data-action="edit-document-item" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-document-item" data-id="${item.id}">削除</button></td></tr>`).join('') || `<tr><td colspan="${showPrices ? 6 : 4}">明細がありません。「明細を追加」から入力するか、卸し実績のある店舗で作成してください。</td></tr>`}</tbody>
+        ${showPrices ? `<tfoot><tr><td colspan="${priceFootColspan}">小計</td><td colspan="2">${yen(totals.subtotal)}</td></tr><tr><td colspan="${priceFootColspan}">消費税（${safeNumber(document.taxRate)}%）</td><td colspan="2">${yen(totals.tax)}</td></tr><tr class="invoice-grand-total"><td colspan="${priceFootColspan}">合計</td><td colspan="2">${yen(totals.total)}</td></tr></tfoot>` : ''}
+      </table>
+      ${document.notes ? `<div class="invoice-notes"><p>備考</p><p>${escapeHtml(document.notes)}</p></div>` : ''}
+      <div class="receipt-stamp"><span>受領印</span></div>
+      ${receiptCopyBlock(document, totals, profile)}
+    </section>
   </div>`;
 }
 function renderDocumentHistory(){
