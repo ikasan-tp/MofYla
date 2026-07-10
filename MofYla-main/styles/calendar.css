@@ -1,6 +1,0 @@
-﻿.month-grid [draggable="true"], .week-day[draggable="true"]{cursor:grab;}
-.month-grid .drop-target, .week-day.drop-target{outline:2px dashed var(--sage);outline-offset:-4px;background:var(--sage-soft);}
-.assistant-card{border:1px solid var(--line);background:var(--card);border-radius:var(--radius-md);padding:16px;box-shadow:var(--shadow);}
-.assistant-list{display:grid;gap:10px;margin-top:12px;}
-.assistant-plan{display:grid;grid-template-columns:92px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px;background:#fffdf8;}
-@media (max-width:680px){.assistant-plan{grid-template-columns:1fr}.assistant-plan .btn{width:100%;}}

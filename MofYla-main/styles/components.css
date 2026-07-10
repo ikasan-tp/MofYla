@@ -1,6 +1,0 @@
-﻿.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
-.mini-field select{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:var(--card);color:var(--ink);}
-.autosave-dot{font-size:.75rem;color:var(--sage-deep);margin-left:8px;}
-.sns-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px;}
-.sns-tabs button{border:1px solid var(--line);border-radius:999px;padding:7px 12px;background:var(--card);font-weight:700;color:var(--ink-soft);}
-.sns-tabs button.active{background:var(--sage);border-color:var(--sage);color:white;}
