@@ -519,7 +519,7 @@ function renderInvoice(){
   const draft = state.invoiceDraft;
   const profile = state.sellerProfile || {};
   const history = asArray(state.invoices).slice().sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-  const historySection = archiveDetails('請求書履歴', history, invoiceHistoryCard);
+  const historySection = history.length ? `<div class="no-print">${archiveDetails('請求書履歴', history, invoiceHistoryCard)}</div>` : '';
   const actions = `<button class="btn btn-ghost btn-small" data-action="edit-seller-profile">発行者情報</button><button class="btn btn-primary" data-action="${draft ? 'edit-invoice-header' : 'generate-invoice'}">${draft ? '請求書情報を編集' : '請求書を作成'}</button>`;
   if(!draft){
     root.innerHTML = `${pageHead('請求書','卸し先ごとの請求書を、卸し実績から自動で作成できます。', actions)}${empty('まだ請求書がありません。「請求書を作成」から店舗と期間を選んでください。')}${historySection}`;

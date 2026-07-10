@@ -440,19 +440,19 @@
 .invoice-meta{font-size:.82rem;color:var(--ink-soft);}
 .invoice-meta div{display:flex;justify-content:space-between;gap:16px;margin-bottom:4px;}
 .invoice-parties{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:nowrap;margin-bottom:14px;}
-.invoice-billto{max-width:50%;min-width:0;}
-.invoice-billto strong{font-size:1.15rem;display:inline-block;border-bottom:2px solid var(--ink);padding-bottom:5px;}
-.invoice-seller{text-align:right;font-size:.82rem;color:var(--ink-soft);max-width:50%;min-width:0;}
-.invoice-seller p{margin:2px 0;}
+.invoice-billto{max-width:50%;min-width:0;overflow-wrap:anywhere;}
+.invoice-billto strong{font-size:1.15rem;display:inline-block;border-bottom:2px solid var(--ink);padding-bottom:5px;max-width:100%;overflow-wrap:anywhere;}
+.invoice-seller{text-align:right;font-size:.82rem;color:var(--ink-soft);max-width:50%;min-width:0;overflow-wrap:anywhere;}
+.invoice-seller p{margin:2px 0;overflow-wrap:anywhere;}
 .invoice-logo{width:44px;height:44px;object-fit:contain;display:inline-block;margin-bottom:6px;}
 .invoice-total-highlight{background:var(--sage-soft);color:var(--sage-deep);border-radius:12px;padding:14px 18px;font-size:1.2rem;font-weight:800;margin:16px 0;}
-.invoice-table{width:100%;border-collapse:collapse;margin-top:12px;}
-.invoice-table th,.invoice-table td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;font-size:.86rem;}
+.invoice-table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:12px;}
+.invoice-table th,.invoice-table td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;font-size:.86rem;overflow-wrap:anywhere;}
 .invoice-table th{color:var(--ink-soft);font-weight:700;}
 .invoice-table td:nth-child(2),.invoice-table td:nth-child(3),.invoice-table td:nth-child(4),
 .invoice-table th:nth-child(2),.invoice-table th:nth-child(3),.invoice-table th:nth-child(4){text-align:right;}
 .invoice-grand-total td{font-weight:800;font-size:1.02rem;border-top:2px solid var(--ink);}
-.invoice-notes,.invoice-bank{margin-top:18px;font-size:.84rem;color:var(--ink-soft);}
+.invoice-notes,.invoice-bank{margin-top:18px;font-size:.84rem;color:var(--ink-soft);overflow-wrap:anywhere;}
 .invoice-notes p:first-child,.invoice-bank p:first-child{font-weight:800;color:var(--ink);margin-bottom:4px;}
 
 @media print{
