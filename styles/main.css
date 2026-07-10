@@ -405,6 +405,9 @@ button.btn:disabled{opacity:0.5;cursor:progress;}
 .dot.x{background:var(--ink);}
 .dot.ig{background:var(--clay);}
 .outcard textarea.result{min-height:150px;background:#fff;font-size:0.88rem;}
+.export-preview-wrap{margin-top:14px;}
+.export-preview-wrap.is-hidden{display:none;}
+.export-preview-wrap textarea.result{width:100%;min-height:180px;background:#fff;font-size:0.82rem;font-family:'IBM Plex Mono',monospace;border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px;}
 .charcount{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--ink-faint);}
 .charcount.warn{color:var(--honey);}
 .charcount.over{color:#B23B3B;}

@@ -463,8 +463,8 @@
       <div class="page-head"><div><p class="eyebrow">Backup</p><h2>エクスポート / 復元</h2><p>ローカル保存された秘書データをJSONで退避・復元できます。</p></div></div>
             <div class="panel section-gap">
         <div class="toolbar"><button class="btn btn-primary" id="backupJsonBtn">JSONバックアップ</button><button class="btn btn-sage" id="restoreJsonBtn">JSON復元</button><button class="btn btn-ghost" id="exportSettingsBtn">設定エクスポート</button><button class="btn btn-ghost" id="exportHistoryBtn">投稿履歴エクスポート</button></div>
+        <p class="hint">バックアップ・エクスポートはJSONファイルとしてダウンロードされます。復元はファイルを選んで読み込みます。</p>
         <input type="file" id="restoreFileInput" accept="application/json" hidden>
-        <textarea id="exportPreview" class="result" rows="12" placeholder="ここにエクスポート内容が表示されます"></textarea>
       </div>
       <div class="panel section-gap">
         <div class="page-head"><div><p class="eyebrow">Cloud Sync</p><h2>半自動共有</h2><p>Google Apps Script経由でJSONをクラウド保存し、別デバイスへ復元できます。</p></div></div>
@@ -475,6 +475,10 @@
         <label class="metric-check" style="margin:8px 0 12px;"><input type="checkbox" id="cloudAutoUploadToggle"> 入力変更後に自動アップロード</label>
         <div class="toolbar"><button class="btn btn-primary" id="cloudUploadBtn">クラウドに保存</button><button class="btn btn-sage" id="cloudDownloadBtn">クラウドから取得</button><button class="btn btn-ghost" id="cloudInstallBtn">取得データをインストール</button></div>
         <p class="hint" id="cloudSyncStatus">未設定です。Apps Script URLと同期キーを入力してください。</p>
+        <div class="export-preview-wrap is-hidden">
+          <p class="hint">クラウドから取得した内容（確認用）</p>
+          <textarea id="exportPreview" class="result" rows="10" placeholder="ここにエクスポート内容が表示されます"></textarea>
+        </div>
       </div>
     </section>
   </main>

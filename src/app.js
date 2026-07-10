@@ -1575,7 +1575,23 @@ function wireExport(){
     const entries = listed.values.filter(item => !item.key.startsWith('setting:cloud'));
     return Object.fromEntries(entries.map(item => [item.key, item.value]));
   }
-  async function show(data){ preview.value = JSON.stringify(data, null, 2); await navigator.clipboard?.writeText(preview.value).catch(() => {}); }
+  async function show(data){
+    preview.value = JSON.stringify(data, null, 2);
+    preview.closest('.export-preview-wrap')?.classList.remove('is-hidden');
+    await navigator.clipboard?.writeText(preview.value).catch(() => {});
+  }
+  function downloadJson(filename, data){
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast('JSONファイルをダウンロードしました');
+  }
   function setCloudStatus(message){ if(cloudStatus) cloudStatus.textContent = message; }
   function cloudConfig(){
     return {
@@ -1690,9 +1706,9 @@ function wireExport(){
     cloudAutoTimer = setTimeout(() => uploadCloud(true).catch(() => setCloudStatus('自動アップロードに失敗しました。URLと同期キーを確認してください。')), 30000);
   }
 
-  document.getElementById('backupJsonBtn')?.addEventListener('click', async () => show(await collect('')));
-  document.getElementById('exportSettingsBtn')?.addEventListener('click', async () => show(await collect('settings')));
-  document.getElementById('exportHistoryBtn')?.addEventListener('click', async () => show(await collect('activity:')));
+  document.getElementById('backupJsonBtn')?.addEventListener('click', async () => downloadJson(`mofyla-backup-${todayKey()}.json`, await collect('')));
+  document.getElementById('exportSettingsBtn')?.addEventListener('click', async () => downloadJson(`mofyla-settings-${todayKey()}.json`, await collect('settings')));
+  document.getElementById('exportHistoryBtn')?.addEventListener('click', async () => downloadJson(`mofyla-history-${todayKey()}.json`, await collect('activity:')));
   document.getElementById('restoreJsonBtn')?.addEventListener('click', () => document.getElementById('restoreFileInput').click());
   document.getElementById('restoreFileInput')?.addEventListener('change', async event => {
     const file = event.target.files[0];
