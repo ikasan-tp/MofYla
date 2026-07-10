@@ -2,7 +2,7 @@ import { Storage } from './storage.js';
 import { showToast } from './components/toast.js';
 
 const STORE_KEY = 'brand:data';
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 const todayKey = () => new Date().toISOString().slice(0, 10);
 const CUSTOMER_STATUSES = ['お問い合わせ','見積り','デザイン確認','制作中','印刷','塗装','梱包','発送','完了'];
 const LEAD_STATUSES = ['未調査','調査済','DM送信','返信待ち','商談中','サンプル送付','導入済','見送り'];
@@ -19,6 +19,9 @@ const DEMO_WORDS = ['神戸マルシェ','山田さま','うさぎネームプ�
 let state;
 let activeTaskFilter = '今日';
 let activeProductTab = 'online';
+let activeDocumentTab = 'invoice';
+let documentHistoryFilter = { type:'all', query:'', status:'', month:'' };
+let brandDashboardInitialized = false;
 
 function uid(prefix){ return `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`; }
 function yen(value){ return `${Number(value || 0).toLocaleString('ja-JP')}円`; }
@@ -52,9 +55,11 @@ function emptyState(){
     leads:[],
     products:[],
     ideas:[],
-    sellerProfile:{name:'', address:'', contact:'', bankInfo:''},
+    sellerProfile:{name:'', postalCode:'', address:'', phone:'', email:'', contact:'', invoiceRegistrationNumber:'', contactPerson:'', bankInfo:''},
     invoiceDraft:null,
-    invoices:[]
+    invoices:[],
+    documentDrafts:{invoice:null, delivery:null},
+    documents:[]
   };
 }
 
@@ -71,9 +76,15 @@ function stripDemoData(){
 function ensureShape(){
   const base = emptyState();
   state = { ...base, ...(state || {}) };
-  for(const key of ['goals','tasks','markets','sales','customers','leads','products','ideas','invoices']) state[key] = asArray(state[key]);
+  for(const key of ['goals','tasks','markets','sales','customers','leads','products','ideas','invoices','documents']) state[key] = asArray(state[key]);
   state.dailyDone = state.dailyDone && typeof state.dailyDone === 'object' ? state.dailyDone : {};
-  state.sellerProfile = state.sellerProfile && typeof state.sellerProfile === 'object' ? state.sellerProfile : {name:'', address:'', contact:'', bankInfo:''};
+  state.sellerProfile = { ...base.sellerProfile, ...(state.sellerProfile && typeof state.sellerProfile === 'object' ? state.sellerProfile : {}) };
+  state.documentDrafts = state.documentDrafts && typeof state.documentDrafts === 'object' ? state.documentDrafts : {};
+  state.documentDrafts.invoice = normalizeDocument(state.documentDrafts.invoice || state.invoiceDraft, 'invoice');
+  state.documentDrafts.delivery = normalizeDocument(state.documentDrafts.delivery, 'delivery');
+  state.invoiceDraft = state.documentDrafts.invoice;
+  migrateInvoicesToDocuments();
+  state.documents = asArray(state.documents).map(document => normalizeDocument(document, document.type)).filter(Boolean);
   state.schemaVersion = SCHEMA_VERSION;
 }
 async function load(){
@@ -91,6 +102,7 @@ async function load(){
   if(changed || savedVersion !== SCHEMA_VERSION) await save(false);
 }
 async function save(notify = true){
+  syncInvoiceCompatibility();
   await Storage.set(STORE_KEY, state);
   if(notify) showToast('保存しました');
 }
@@ -512,74 +524,221 @@ function renderIdeas(){
     <div class="brand-grid">${state.ideas.map(idea => `<div class="brand-card"><div class="brand-row"><div><span class="brand-chip">${escapeHtml(idea.priority || '中')}</span><h3>${escapeHtml(idea.title)}</h3></div><div class="brand-row"><button class="btn btn-sage btn-small" data-action="idea-to-task" data-id="${idea.id}">タスク化</button><button class="btn btn-ghost btn-small" data-action="edit-brand-idea" data-id="${idea.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-idea" data-id="${idea.id}">削除</button></div></div><p class="brand-note">${escapeHtml(idea.memo || '')}</p><p class="brand-note">${escapeHtml(idea.tags || '')} / ${idea.createdAt || ''}</p></div>`).join('') || empty()}</div>`;
 }
 
-function invoiceHistoryCard(invoice){
-  const totals = invoiceTotals(invoice.items, invoice.taxRate);
-  return `<div class="brand-card"><div class="brand-row"><div><strong>${escapeHtml(invoice.number)}</strong><p class="brand-note">${invoice.date || '-'}</p></div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="load-invoice-history" data-id="${invoice.id}">呼び出す</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-invoice-history" data-id="${invoice.id}">削除</button></div></div><p class="brand-note">合計 ${yen(totals.total)}（税込）</p></div>`;
+const DOCUMENT_TYPES = {
+  invoice:{label:'請求書', prefix:'INV', statuses:['下書き','発行済み','入金済み'], other:'delivery'},
+  delivery:{label:'納品書', prefix:'DN', statuses:['下書き','納品済み','受領確認済み'], other:'invoice'}
+};
+function safeNumber(value){ return Math.max(0, Number.isFinite(Number(value)) ? Number(value) : 0); }
+function documentLabel(type){ return DOCUMENT_TYPES[type]?.label || '帳票'; }
+function normalizeDocument(document, fallbackType = 'invoice'){
+  if(!document || typeof document !== 'object') return null;
+  const type = document.type === 'delivery' ? 'delivery' : fallbackType === 'delivery' ? 'delivery' : 'invoice';
+  const date = document.issueDate || document.date || todayKey();
+  return {
+    id:document.id || '',
+    type,
+    number:document.number || '',
+    store:document.store || '',
+    billTo:document.billTo || '',
+    issueDate:date,
+    date,
+    deliveryDate:document.deliveryDate || (type === 'delivery' ? date : ''),
+    dueDate:document.dueDate || '',
+    periodFrom:document.periodFrom || '',
+    periodTo:document.periodTo || '',
+    taxRate:safeNumber(document.taxRate ?? 10),
+    showPrices:document.showPrices !== false,
+    subject:document.subject || '',
+    destination:document.destination || '',
+    items:asArray(document.items).map(item => ({
+      id:item.id || uid('documentItem'),
+      name:item.name || '品名未設定',
+      qty:safeNumber(item.qty),
+      unit:item.unit || '個',
+      price:safeNumber(item.price)
+    })),
+    notes:document.notes || '',
+    status:document.status || DOCUMENT_TYPES[type].statuses[0],
+    createdAt:document.createdAt || '',
+    updatedAt:document.updatedAt || ''
+  };
 }
-function invoiceHistoryByStore(history){
-  const storeNames = [...new Set(history.map(inv => inv.store || inv.billTo || '店舗未設定'))].sort((a,b) => a.localeCompare(b, 'ja'));
-  return storeNames.map(store => {
-    const items = history.filter(inv => (inv.store || inv.billTo || '店舗未設定') === store);
-    return `<details class="brand-archive brand-invoice-history-group"><summary><span>${escapeHtml(store)}</span><b>${items.length}件</b></summary><div class="brand-archive-body">${items.map(invoiceHistoryCard).join('')}</div></details>`;
-  }).join('');
+function migrateInvoicesToDocuments(){
+  const existingKeys = new Set(asArray(state.documents).map(document => `${document.type || 'invoice'}:${document.id || document.number}`));
+  asArray(state.invoices).forEach(invoice => {
+    const normalized = normalizeDocument(invoice, 'invoice');
+    if(!normalized) return;
+    normalized.type = 'invoice';
+    normalized.id = normalized.id || uid('invoice');
+    normalized.createdAt = normalized.createdAt || invoice.createdAt || new Date().toISOString();
+    const key = `invoice:${invoice.id || invoice.number}`;
+    if(!existingKeys.has(key)){
+      state.documents.push(normalized);
+      existingKeys.add(key);
+    }
+  });
+}
+function syncInvoiceCompatibility(){
+  state.documentDrafts.invoice = normalizeDocument(state.documentDrafts.invoice, 'invoice');
+  state.invoiceDraft = state.documentDrafts.invoice;
+  state.invoices = asArray(state.documents).filter(document => document.type === 'invoice').map(document => ({ ...document, date:document.issueDate }));
+}
+function currentDocument(){ return normalizeDocument(state.documentDrafts?.[activeDocumentTab], activeDocumentTab); }
+function setCurrentDocument(document){
+  const normalized = normalizeDocument(document, document?.type || activeDocumentTab);
+  state.documentDrafts[normalized.type] = normalized;
+  if(normalized.type === 'invoice') state.invoiceDraft = normalized;
+}
+function nextDocumentNumber(type){
+  const prefix = DOCUMENT_TYPES[type].prefix;
+  const nums = [...asArray(state.documents), normalizeDocument(state.documentDrafts?.[type], type)]
+    .filter(document => document && document.type === type)
+    .map(document => {
+      const m = new RegExp(`^${prefix}-(\\d+)$`).exec(document.number || '');
+      return m ? Number(m[1]) : 0;
+    });
+  return `${prefix}-${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(4, '0')}`;
+}
+function documentTotals(items, taxRate){
+  const subtotal = asArray(items).reduce((sum, item) => sum + safeNumber(item.qty) * safeNumber(item.price), 0);
+  const tax = Math.round(subtotal * safeNumber(taxRate) / 100);
+  return { subtotal, tax, total:subtotal + tax, qty:asArray(items).reduce((sum, item) => sum + safeNumber(item.qty), 0) };
+}
+function documentItemsFromDeliveries(store, from, to){
+  return state.products
+    .filter(product => isWholesaleProduct(product) && productStoreName(product) === store)
+    .map(product => ({
+      id:uid('documentItem'),
+      name:product.name || '商品名未設定',
+      qty:productDelivered(product, from, to),
+      unit:'個',
+      price:safeNumber(product.wholesalePrice)
+    }))
+    .filter(item => item.qty > 0);
+}
+function sellerProfileLines(profile, forInvoice = false){
+  const lines = [
+    profile.name,
+    profile.postalCode ? `〒${profile.postalCode}` : '',
+    profile.address,
+    profile.phone ? `TEL ${profile.phone}` : '',
+    profile.email ? `MAIL ${profile.email}` : '',
+    profile.contact || '',
+    profile.invoiceRegistrationNumber ? `登録番号 ${profile.invoiceRegistrationNumber}` : '',
+    profile.contactPerson ? `担当 ${profile.contactPerson}` : ''
+  ].filter(Boolean).map(line => `<p>${escapeHtml(line)}</p>`).join('');
+  const bank = forInvoice && profile.bankInfo ? `<div class="invoice-bank"><p>お振込先</p><p>${escapeHtml(profile.bankInfo)}</p></div>` : '';
+  return `${lines || '<p>（発行者情報未設定）</p>'}${bank}`;
+}
+function renderDocumentTabs(){
+  return `<div class="document-tabs no-print">
+    ${['invoice','delivery','history'].map(tab => `<button class="${activeDocumentTab === tab ? 'active' : ''}" data-action="set-document-tab" data-value="${tab}">${tab === 'history' ? '履歴' : documentLabel(tab)}</button>`).join('')}
+  </div>`;
+}
+function renderDocumentStartCards(){
+  return `<div class="document-start-grid no-print">
+    <button class="document-start-card" data-action="start-document" data-type="invoice"><strong>請求書を作成</strong><span>商品代金を請求するための書類です</span></button>
+    <button class="document-start-card" data-action="start-document" data-type="delivery"><strong>納品書を作成</strong><span>納品した商品と数量をお知らせする書類です</span></button>
+  </div>`;
+}
+function documentHeaderMeta(document){
+  const numberLabel = document.type === 'delivery' ? '納品書番号' : '請求書番号';
+  return `<div><span>${numberLabel}</span><strong>${escapeHtml(document.number || '-')}</strong></div>
+    <div><span>発行日</span><strong>${document.issueDate || '-'}</strong></div>
+    ${document.type === 'delivery' ? `<div><span>納品日</span><strong>${document.deliveryDate || '-'}</strong></div>` : `<div><span>支払期限</span><strong>${document.dueDate || '-'}</strong></div>`}`;
+}
+function renderDocumentPreview(document){
+  const profile = state.sellerProfile || {};
+  const items = asArray(document.items);
+  const totals = documentTotals(items, document.taxRate);
+  const isDelivery = document.type === 'delivery';
+  const showPrices = !isDelivery || document.showPrices !== false;
+  const periodLabel = document.periodFrom || document.periodTo ? `${document.periodFrom || '-'} 〜 ${document.periodTo || '-'}` : '';
+  const priceHeads = showPrices ? '<th>単価</th><th>金額</th>' : '';
+  const priceFootColspan = showPrices ? 4 : 2;
+  return `<div class="invoice-sheet document-sheet ${isDelivery ? 'delivery-sheet' : 'invoice-kind'}" id="invoiceSheet">
+    <div class="invoice-head">
+      <div>
+        <img class="invoice-logo" src="./assets/mofyla-logo.png" alt="MofYla logo">
+        <h1>${documentLabel(document.type)}</h1>
+        ${isDelivery ? '<p class="document-lead">上記の通り納品いたしました。</p>' : '<p class="document-lead">下記の通りご請求申し上げます。</p>'}
+      </div>
+      <div class="invoice-meta">${documentHeaderMeta(document)}</div>
+    </div>
+    <div class="invoice-parties">
+      <div class="invoice-billto"><span>${isDelivery ? '納品先' : 'ご請求先'}</span><strong>${escapeHtml(document.billTo || document.store || 'お客様')} 御中</strong></div>
+      <div class="invoice-seller">${sellerProfileLines(profile, false)}</div>
+    </div>
+    <div class="document-info-grid">
+      ${document.subject ? `<div><span>件名</span><strong>${escapeHtml(document.subject)}</strong></div>` : ''}
+      ${document.destination ? `<div><span>納品場所</span><strong>${escapeHtml(document.destination)}</strong></div>` : ''}
+      ${periodLabel ? `<div><span>対象期間</span><strong>${periodLabel}</strong></div>` : ''}
+      ${isDelivery ? `<div class="document-qty-total"><span>納品数量</span><strong>合計${totals.qty}点</strong></div>` : ''}
+    </div>
+    ${isDelivery ? '' : `<div class="invoice-total-highlight">ご請求金額　${yen(totals.total)}（税込）</div>`}
+    <table class="invoice-table document-table ${showPrices ? '' : 'hide-prices'}">
+      <thead><tr><th>品名</th><th>数量</th><th>単位</th>${priceHeads}<th class="no-print"></th></tr></thead>
+      <tbody>${items.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${safeNumber(item.qty)}</td><td>${escapeHtml(item.unit || '個')}</td>${showPrices ? `<td>${yen(item.price)}</td><td>${yen(safeNumber(item.qty) * safeNumber(item.price))}</td>` : ''}<td class="no-print"><button class="btn btn-ghost btn-small" data-action="edit-document-item" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-document-item" data-id="${item.id}">削除</button></td></tr>`).join('') || `<tr><td colspan="${showPrices ? 6 : 4}">明細がありません。「明細を追加」から入力するか、卸し実績のある店舗で作成してください。</td></tr>`}</tbody>
+      ${showPrices ? `<tfoot><tr><td colspan="${priceFootColspan}">小計</td><td colspan="2">${yen(totals.subtotal)}</td></tr><tr><td colspan="${priceFootColspan}">消費税（${safeNumber(document.taxRate)}%）</td><td colspan="2">${yen(totals.tax)}</td></tr><tr class="invoice-grand-total"><td colspan="${priceFootColspan}">合計</td><td colspan="2">${yen(totals.total)}</td></tr></tfoot>` : ''}
+    </table>
+    ${document.notes ? `<div class="invoice-notes"><p>備考</p><p>${escapeHtml(document.notes)}</p></div>` : ''}
+    ${isDelivery ? '<div class="receipt-stamp"><span>受領印</span></div>' : sellerProfileLines(profile, true).includes('invoice-bank') ? `<div class="document-bank-wrap">${sellerProfileLines(profile, true).match(/<div class="invoice-bank">[\s\S]*<\/div>/)?.[0] || ''}</div>` : ''}
+  </div>`;
+}
+function renderDocumentHistory(){
+  const query = documentHistoryFilter.query.trim().toLowerCase();
+  const filtered = asArray(state.documents)
+    .filter(document => documentHistoryFilter.type === 'all' || document.type === documentHistoryFilter.type)
+    .filter(document => !query || [document.store, document.billTo, document.number].some(value => String(value || '').toLowerCase().includes(query)))
+    .filter(document => !documentHistoryFilter.status || document.status === documentHistoryFilter.status)
+    .filter(document => !documentHistoryFilter.month || (document.issueDate || '').startsWith(documentHistoryFilter.month))
+    .sort((a,b) => (b.updatedAt || b.createdAt || b.issueDate || '').localeCompare(a.updatedAt || a.createdAt || a.issueDate || ''));
+  const statusOptions = [...new Set(Object.values(DOCUMENT_TYPES).flatMap(type => type.statuses))];
+  return `<div class="document-history no-print">
+    <div class="document-history-filters">
+      <select data-action="filter-document-history" data-filter="type"><option value="all">すべて</option><option value="invoice" ${documentHistoryFilter.type === 'invoice' ? 'selected' : ''}>請求書のみ</option><option value="delivery" ${documentHistoryFilter.type === 'delivery' ? 'selected' : ''}>納品書のみ</option></select>
+      <input data-action="filter-document-history" data-filter="query" value="${escapeHtml(documentHistoryFilter.query)}" placeholder="店舗名・宛名・帳票番号で検索">
+      <select data-action="filter-document-history" data-filter="status"><option value="">ステータスすべて</option>${statusOptions.map(status => `<option value="${escapeHtml(status)}" ${documentHistoryFilter.status === status ? 'selected' : ''}>${escapeHtml(status)}</option>`).join('')}</select>
+      <input type="month" data-action="filter-document-history" data-filter="month" value="${escapeHtml(documentHistoryFilter.month)}">
+    </div>
+    <div class="brand-archive-body">${filtered.map(documentHistoryCard).join('') || empty('条件に合う帳票はありません。')}</div>
+  </div>`;
+}
+function documentHistoryCard(document){
+  const totals = documentTotals(document.items, document.taxRate);
+  const amount = document.type === 'delivery' && document.showPrices === false ? '価格非表示' : yen(totals.total);
+  return `<div class="brand-card document-history-card">
+    <div class="brand-row"><div><span class="document-badge ${document.type}">${documentLabel(document.type)}</span><strong>${escapeHtml(document.number || '-')}</strong><p class="brand-note">${escapeHtml(document.store || document.billTo || '店舗未設定')}</p></div><span class="brand-chip">${escapeHtml(document.status || '下書き')}</span></div>
+    <p class="brand-note">発行日 ${document.issueDate || '-'} / ${document.type === 'delivery' ? `納品日 ${document.deliveryDate || '-'}` : `支払期限 ${document.dueDate || '-'}`}</p>
+    <p class="brand-note">${amount} / 明細 ${asArray(document.items).length}件</p>
+    <div class="brand-row document-card-actions">
+      <button class="btn btn-ghost btn-small" data-action="open-document-history" data-id="${document.id}">開く</button>
+      <button class="btn btn-ghost btn-small" data-action="edit-document-history" data-id="${document.id}">編集</button>
+      <button class="btn btn-ghost btn-small" data-action="duplicate-document" data-id="${document.id}">複製</button>
+      <button class="btn btn-primary btn-small" data-action="print-document-history" data-id="${document.id}">印刷・PDF保存</button>
+      <button class="btn btn-sage btn-small" data-action="convert-document" data-id="${document.id}">${documentLabel(DOCUMENT_TYPES[document.type].other)}へ変換</button>
+      <button class="btn btn-ghost btn-small brand-danger" data-action="delete-document-history" data-id="${document.id}">削除</button>
+    </div>
+  </div>`;
 }
 function renderInvoice(){
   const root = document.getElementById('brandInvoice');
   if(!root) return;
-  const draft = state.invoiceDraft;
-  const profile = state.sellerProfile || {};
-  const history = asArray(state.invoices).slice().sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-  const historySection = history.length ? `<div class="no-print section-gap"><h3>請求書履歴</h3>${invoiceHistoryByStore(history)}</div>` : '';
-  const actions = `<button class="btn btn-ghost btn-small" data-action="edit-seller-profile">発行者情報</button><button class="btn btn-primary" data-action="${draft ? 'edit-invoice-header' : 'generate-invoice'}">${draft ? '請求書情報を編集' : '請求書を作成'}</button>`;
-  if(!draft){
-    root.innerHTML = `${pageHead('請求書','卸し先ごとの請求書を、卸し実績から自動で作成できます。', actions)}${empty('まだ請求書がありません。「請求書を作成」から店舗と期間を選んでください。')}${historySection}`;
+  const draft = currentDocument();
+  const actions = `<button class="btn btn-ghost btn-small" data-action="edit-seller-profile">発行者情報</button>`;
+  if(activeDocumentTab === 'history'){
+    root.innerHTML = `${pageHead('帳票','請求書と納品書をまとめて作成・管理できます。', actions)}${renderDocumentTabs()}${renderDocumentHistory()}`;
     return;
   }
-  const items = asArray(draft.items);
-  const { subtotal, tax, total } = invoiceTotals(items, draft.taxRate);
-  const periodLabel = draft.periodFrom || draft.periodTo ? `対象期間: ${draft.periodFrom || '-'} 〜 ${draft.periodTo || '-'}` : '';
-  root.innerHTML = `${pageHead('請求書','卸し先ごとの請求書を、卸し実績から自動で作成できます。', actions)}
-    <div class="invoice-toolbar no-print">
-      <button class="btn btn-ghost btn-small" data-action="add-invoice-item">明細を追加</button>
-      <button class="btn btn-ghost btn-small brand-danger" data-action="clear-invoice">請求書をクリア</button>
-      <button class="btn btn-sage btn-small" data-action="save-invoice-history">履歴に保存</button>
-      <button class="btn btn-primary btn-small" data-action="print-invoice">A4で印刷する</button>
-    </div>
-    <details class="brand-archive invoice-archive" id="invoiceArchive" open>
-      <summary class="no-print"><span>請求書プレビュー</span><b>${escapeHtml(draft.number || '-')}</b></summary>
-      <div class="invoice-sheet" id="invoiceSheet">
-        <div class="invoice-head">
-          <h1>請求書</h1>
-          <div class="invoice-meta">
-            <div><span>請求書番号</span><strong>${escapeHtml(draft.number || '-')}</strong></div>
-            <div><span>発行日</span><strong>${draft.date || '-'}</strong></div>
-          </div>
-        </div>
-        <div class="invoice-parties">
-          <div class="invoice-billto"><strong>${escapeHtml(draft.billTo || draft.store || 'お客様')} 御中</strong></div>
-          <div class="invoice-seller">
-            <img class="invoice-logo" src="./assets/mofyla-logo.png" alt="MofYla logo">
-            <p>${escapeHtml(profile.name || '（発行者情報未設定）')}</p>
-            <p>${escapeHtml(profile.address || '')}</p>
-            <p>${escapeHtml(profile.contact || '')}</p>
-          </div>
-        </div>
-        ${periodLabel ? `<p class="brand-note">${periodLabel}</p>` : ''}
-        <div class="invoice-total-highlight">ご請求金額　${yen(total)}（税込）</div>
-        <table class="invoice-table">
-          <thead><tr><th>品名</th><th>数量</th><th>単価</th><th>金額</th><th class="no-print"></th></tr></thead>
-          <tbody>${items.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${item.qty}</td><td>${yen(item.price)}</td><td>${yen(Number(item.qty || 0) * Number(item.price || 0))}</td><td class="no-print"><button class="btn btn-ghost btn-small" data-action="edit-invoice-item" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-invoice-item" data-id="${item.id}">削除</button></td></tr>`).join('') || `<tr><td colspan="5">明細がありません。「明細を追加」から入力するか、卸し実績のある店舗で請求書を作り直してください。</td></tr>`}</tbody>
-          <tfoot>
-            <tr><td colspan="3">小計</td><td colspan="2">${yen(subtotal)}</td></tr>
-            <tr><td colspan="3">消費税（${draft.taxRate || 0}%）</td><td colspan="2">${yen(tax)}</td></tr>
-            <tr class="invoice-grand-total"><td colspan="3">合計</td><td colspan="2">${yen(total)}</td></tr>
-          </tfoot>
-        </table>
-        ${draft.notes ? `<div class="invoice-notes"><p>備考</p><p>${escapeHtml(draft.notes)}</p></div>` : ''}
-        ${profile.bankInfo ? `<div class="invoice-bank"><p>お振込先</p><p>${escapeHtml(profile.bankInfo)}</p></div>` : ''}
-      </div>
-    </details>
-    ${historySection}`;
+  const label = documentLabel(activeDocumentTab);
+  const toolbar = draft ? `<div class="invoice-toolbar no-print">
+    <button class="btn btn-ghost btn-small" data-action="edit-document-header">${label}情報を編集</button>
+    <button class="btn btn-ghost btn-small" data-action="add-document-item">明細を追加</button>
+    <button class="btn btn-ghost btn-small brand-danger" data-action="clear-document">${label}をクリア</button>
+    <button class="btn btn-sage btn-small" data-action="save-document-history">${label}を履歴に保存</button>
+    <button class="btn btn-primary btn-small" data-action="print-document">印刷・PDF保存</button>
+  </div>` : renderDocumentStartCards();
+  root.innerHTML = `${pageHead('帳票','請求書・納品書を、卸し実績から自動で作成できます。', actions)}${renderDocumentTabs()}${toolbar}${draft ? `<details class="brand-archive invoice-archive" id="invoiceArchive" open><summary class="no-print"><span>${label}プレビュー</span><b>${escapeHtml(draft.number || '-')}</b></summary><div class="document-preview-scroll">${renderDocumentPreview(draft)}</div></details>` : ''}${asArray(state.documents).length ? `<div class="no-print section-gap"><h3>最近の帳票</h3>${renderDocumentHistory()}</div>` : ''}`;
 }
 
 function renderAll(){ renderHome(); renderTasks(); renderGoals(); renderMarkets(); renderSales(); renderCrm(); renderLeads(); renderProducts(); renderIdeas(); renderInvoice(); }
@@ -732,10 +891,15 @@ function productDeliveryForm(productId){
 function ideaForm(idea = {}){ openForm(idea.id ? 'アイデア編集' : 'アイデア追加', [{name:'title',label:'タイトル',full:true},{name:'memo',label:'メモ',type:'textarea',full:true},{name:'tags',label:'タグ'},{name:'priority',label:'優先度',type:'select',options:['高','中','低']}], idea, async data => { upsert('ideas', {...idea, ...data, id:idea.id || uid('idea'), createdAt:idea.createdAt || todayKey()}); await save(); }); }
 
 function sellerProfileForm(){
-  openForm('請求書の発行者情報', [
+  openForm('発行者情報', [
     {name:'name',label:'事業者名／屋号'},
+    {name:'postalCode',label:'郵便番号'},
     {name:'address',label:'住所',full:true},
+    {name:'phone',label:'電話番号'},
+    {name:'email',label:'メールアドレス'},
     {name:'contact',label:'連絡先（電話・メールなど）',full:true},
+    {name:'invoiceRegistrationNumber',label:'適格請求書発行事業者登録番号'},
+    {name:'contactPerson',label:'担当者名'},
     {name:'bankInfo',label:'振込先情報',type:'textarea',full:true}
   ], state.sellerProfile, async data => {
     state.sellerProfile = { ...state.sellerProfile, ...data };
@@ -801,6 +965,165 @@ function exportDeliveriesCsv(){
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+function defaultDocument(type){
+  const stores = wholesaleStoreNames();
+  const issueDate = todayKey();
+  return {
+    type,
+    number:nextDocumentNumber(type),
+    store:stores[0] || '',
+    billTo:stores[0] || '',
+    issueDate,
+    date:issueDate,
+    deliveryDate:type === 'delivery' ? issueDate : '',
+    dueDate:type === 'invoice' ? issueDate : '',
+    periodFrom:'',
+    periodTo:'',
+    taxRate:10,
+    showPrices:true,
+    subject:type === 'delivery' ? '納品商品' : '',
+    destination:'',
+    items:[],
+    notes:'',
+    status:DOCUMENT_TYPES[type].statuses[0]
+  };
+}
+function documentHeaderForm(type = activeDocumentTab){
+  const draft = normalizeDocument(state.documentDrafts?.[type], type) || defaultDocument(type);
+  const stores = wholesaleStoreNames();
+  const isNew = !state.documentDrafts?.[type];
+  const commonFields = [
+    {name:'store',label:type === 'delivery' ? '納品先の店舗' : '宛先の店舗',type:'select',options:stores.map(s => ({value:s, label:s}))},
+    {name:'billTo',label:'宛名（空欄なら店舗名を使用）'},
+    {name:'number',label:`${documentLabel(type)}番号`},
+    {name:'issueDate',label:'発行日',type:'date'},
+    {name:'periodFrom',label:'対象期間（開始）',type:'date'},
+    {name:'periodTo',label:'対象期間（終了）',type:'date'}
+  ];
+  const invoiceFields = [
+    {name:'dueDate',label:'支払期限',type:'date'},
+    {name:'taxRate',label:'消費税率（%）',type:'number'},
+    {name:'status',label:'ステータス',type:'select',options:DOCUMENT_TYPES.invoice.statuses},
+    {name:'notes',label:'備考',type:'textarea',full:true}
+  ];
+  const deliveryFields = [
+    {name:'deliveryDate',label:'納品日',type:'date'},
+    {name:'subject',label:'件名または取引名'},
+    {name:'destination',label:'納品場所'},
+    {name:'taxRate',label:'消費税率（%）',type:'number'},
+    {name:'showPrices',label:'単価・金額を表示する',type:'select',options:[{value:'true',label:'表示する'},{value:'false',label:'表示しない'}]},
+    {name:'status',label:'ステータス',type:'select',options:DOCUMENT_TYPES.delivery.statuses},
+    {name:'notes',label:'備考',type:'textarea',full:true}
+  ];
+  openForm(isNew ? `${documentLabel(type)}を作成` : `${documentLabel(type)}情報を編集`, [...commonFields, ...(type === 'invoice' ? invoiceFields : deliveryFields)], {...draft, showPrices:String(draft.showPrices !== false)}, async data => {
+    const store = data.store || draft.store || '';
+    const items = isNew ? documentItemsFromDeliveries(store, data.periodFrom, data.periodTo) : draft.items;
+    setCurrentDocument({
+      ...draft,
+      ...data,
+      type,
+      store,
+      billTo:data.billTo || store,
+      issueDate:data.issueDate || todayKey(),
+      date:data.issueDate || todayKey(),
+      taxRate:safeNumber(data.taxRate),
+      showPrices:data.showPrices !== 'false',
+      status:data.status || DOCUMENT_TYPES[type].statuses[0],
+      items
+    });
+    await save();
+  });
+}
+function documentItemForm(item = {}){
+  const draft = currentDocument();
+  if(!draft) return;
+  openForm(item.id ? '明細を編集' : '明細を追加', [
+    {name:'name',label:'品名'},
+    {name:'qty',label:'数量',type:'number'},
+    {name:'unit',label:'単位'},
+    {name:'price',label:'単価',type:'number'}
+  ], {unit:'個', ...item}, async data => {
+    const next = { id:item.id || uid('documentItem'), name:data.name || '品名未設定', qty:safeNumber(data.qty), unit:data.unit || '個', price:safeNumber(data.price) };
+    draft.items = asArray(draft.items);
+    const index = draft.items.findIndex(old => old.id === next.id);
+    if(index >= 0) draft.items[index] = next; else draft.items.push(next);
+    setCurrentDocument(draft);
+    await save();
+  });
+}
+async function saveDocumentToHistory(){
+  const draft = currentDocument();
+  if(!draft) return;
+  if(!draft.number){ showToast(`${documentLabel(draft.type)}番号を入力してください`); return; }
+  const now = new Date().toISOString();
+  const existingIndex = asArray(state.documents).findIndex(document => document.id === draft.id || (document.type === draft.type && document.number === draft.number));
+  const saved = normalizeDocument({ ...draft, id:draft.id || uid(draft.type), createdAt:draft.createdAt || now, updatedAt:now }, draft.type);
+  if(existingIndex >= 0) state.documents[existingIndex] = { ...state.documents[existingIndex], ...saved, id:state.documents[existingIndex].id };
+  else state.documents.push(saved);
+  setCurrentDocument(saved);
+  await save();
+  showToast(`${documentLabel(saved.type)}を履歴に保存しました`);
+  renderAll();
+}
+function loadDocumentFromHistory(id, tab = null){
+  const document = asArray(state.documents).find(item => item.id === id);
+  if(!document) return null;
+  const draft = normalizeDocument(document, document.type);
+  setCurrentDocument(draft);
+  activeDocumentTab = tab || draft.type;
+  save();
+  renderAll();
+  return draft;
+}
+async function duplicateDocument(id){
+  const source = asArray(state.documents).find(item => item.id === id);
+  if(!source) return;
+  const copy = normalizeDocument({
+    ...source,
+    id:'',
+    number:nextDocumentNumber(source.type),
+    issueDate:todayKey(),
+    date:todayKey(),
+    deliveryDate:source.type === 'delivery' ? todayKey() : '',
+    dueDate:source.type === 'invoice' ? todayKey() : '',
+    status:DOCUMENT_TYPES[source.type].statuses[0],
+    createdAt:'',
+    updatedAt:''
+  }, source.type);
+  copy.items = asArray(copy.items).map(item => ({ ...item, id:uid('documentItem') }));
+  setCurrentDocument(copy);
+  activeDocumentTab = copy.type;
+  await save();
+  renderAll();
+}
+async function convertDocument(id){
+  const source = asArray(state.documents).find(item => item.id === id) || currentDocument();
+  if(!source) return;
+  const type = DOCUMENT_TYPES[source.type].other;
+  const converted = normalizeDocument({
+    type,
+    number:nextDocumentNumber(type),
+    store:source.store,
+    billTo:source.billTo,
+    issueDate:todayKey(),
+    date:todayKey(),
+    deliveryDate:type === 'delivery' ? todayKey() : '',
+    dueDate:type === 'invoice' ? todayKey() : '',
+    periodFrom:source.periodFrom,
+    periodTo:source.periodTo,
+    taxRate:source.taxRate,
+    showPrices:true,
+    subject:source.subject,
+    destination:source.destination,
+    items:asArray(source.items).map(item => ({ ...item, id:uid('documentItem'), unit:item.unit || '個' })),
+    notes:source.notes,
+    status:DOCUMENT_TYPES[type].statuses[0]
+  }, type);
+  setCurrentDocument(converted);
+  activeDocumentTab = type;
+  await save();
+  renderAll();
 }
 function invoiceItemsFromDeliveries(store, from, to){
   return state.products
@@ -917,43 +1240,60 @@ async function handleClick(event){
   if(action === 'delete-product') removeBy('products', id, '商品');
   if(action === 'delete-idea') removeBy('ideas', id, 'アイデア');
   if(action === 'edit-seller-profile') sellerProfileForm();
-  if(action === 'generate-invoice') invoiceHeaderForm();
-  if(action === 'edit-invoice-header') invoiceHeaderForm();
-  if(action === 'add-invoice-item') invoiceItemForm();
-  if(action === 'edit-invoice-item'){ const item = asArray(state.invoiceDraft?.items).find(i => i.id === id); if(item) invoiceItemForm(item); }
-  if(action === 'delete-invoice-item'){
-    if(state.invoiceDraft && confirm('この明細を削除します。よろしいですか？')){
-      state.invoiceDraft.items = asArray(state.invoiceDraft.items).filter(i => i.id !== id);
+  if(action === 'set-document-tab'){ activeDocumentTab = value; renderAll(); }
+  if(action === 'start-document'){ activeDocumentTab = el.dataset.type; documentHeaderForm(activeDocumentTab); }
+  if(action === 'edit-document-header' || action === 'generate-invoice' || action === 'edit-invoice-header') documentHeaderForm(activeDocumentTab === 'history' ? 'invoice' : activeDocumentTab);
+  if(action === 'add-document-item' || action === 'add-invoice-item') documentItemForm();
+  if(action === 'edit-document-item' || action === 'edit-invoice-item'){ const item = asArray(currentDocument()?.items).find(i => i.id === id); if(item) documentItemForm(item); }
+  if(action === 'delete-document-item' || action === 'delete-invoice-item'){
+    const draft = currentDocument();
+    if(draft && confirm('この明細を削除します。よろしいですか？')){
+      draft.items = asArray(draft.items).filter(i => i.id !== id);
+      setCurrentDocument(draft);
       await save();
       renderAll();
     }
   }
-  if(action === 'clear-invoice'){
-    if(confirm('作成中の請求書をクリアします。よろしいですか？')){
-      state.invoiceDraft = null;
+  if(action === 'clear-document' || action === 'clear-invoice'){
+    const type = activeDocumentTab === 'history' ? 'invoice' : activeDocumentTab;
+    if(confirm(`作成中の${documentLabel(type)}をクリアします。よろしいですか？`)){
+      state.documentDrafts[type] = null;
+      if(type === 'invoice') state.invoiceDraft = null;
       await save();
       renderAll();
     }
   }
-  if(action === 'print-invoice'){ const archive = document.getElementById('invoiceArchive'); if(archive) archive.open = true; window.print(); }
-  if(action === 'save-invoice-history') await saveInvoiceToHistory();
-  if(action === 'load-invoice-history') loadInvoiceFromHistory(id);
-  if(action === 'delete-invoice-history'){
-    if(confirm('この請求書の履歴を削除します。よろしいですか？')){
-      state.invoices = asArray(state.invoices).filter(inv => inv.id !== id);
+  if(action === 'print-document' || action === 'print-invoice'){ const archive = document.getElementById('invoiceArchive'); if(archive) archive.open = true; window.print(); }
+  if(action === 'save-document-history' || action === 'save-invoice-history') await saveDocumentToHistory();
+  if(action === 'open-document-history' || action === 'edit-document-history' || action === 'load-invoice-history') loadDocumentFromHistory(id);
+  if(action === 'print-document-history'){ const draft = loadDocumentFromHistory(id); if(draft) setTimeout(() => window.print(), 80); }
+  if(action === 'duplicate-document') await duplicateDocument(id);
+  if(action === 'convert-document') await convertDocument(id);
+  if(action === 'delete-document-history' || action === 'delete-invoice-history'){
+    if(confirm('この帳票の履歴を削除します。よろしいですか？')){
+      state.documents = asArray(state.documents).filter(document => document.id !== id);
       await save();
       renderAll();
     }
   }
   if(action === 'export-deliveries-csv') exportDeliveriesCsv();
 }
+function handleDocumentFilter(event){
+  const el = event.target.closest('[data-action="filter-document-history"]');
+  if(!el) return;
+  const filter = el.dataset.filter;
+  documentHistoryFilter[filter] = el.value;
+  renderAll();
+}
 let titleBeforePrint = '';
 window.addEventListener('beforeprint', () => {
   const archive = document.getElementById('invoiceArchive');
   if(archive) archive.open = true;
-  if(state?.invoiceDraft){
+  const draft = currentDocument();
+  if(draft){
     titleBeforePrint = document.title;
-    document.title = `請求書_${state.invoiceDraft.number || ''}`;
+    const store = String(draft.store || draft.billTo || '').replace(/[\\/:*?"<>|]/g, '');
+    document.title = `${documentLabel(draft.type)}_${draft.number || ''}${store ? `_${store}` : ''}`;
   }
 });
 window.addEventListener('afterprint', () => {
@@ -962,6 +1302,11 @@ window.addEventListener('afterprint', () => {
 
 export async function initBrandDashboard(){
   await load();
-  document.addEventListener('click', handleClick);
+  if(!brandDashboardInitialized){
+    document.addEventListener('click', handleClick);
+    document.addEventListener('change', handleDocumentFilter);
+    document.addEventListener('input', handleDocumentFilter);
+    brandDashboardInitialized = true;
+  }
   renderAll();
 }
