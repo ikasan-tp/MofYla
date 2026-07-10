@@ -686,7 +686,7 @@ function renderDocumentPreview(document){
   const periodLabel = document.periodFrom || document.periodTo ? `${document.periodFrom || '-'} 〜 ${document.periodTo || '-'}` : '';
   const priceHeads = showPrices ? '<th>単価</th><th>金額</th>' : '';
   const priceFootColspan = showPrices ? 4 : 2;
-  return `<div class="invoice-sheet document-sheet ${isDelivery ? 'delivery-sheet' : 'invoice-kind'}" id="invoiceSheet">
+  return `<div class="invoice-sheet document-sheet ${isDelivery ? `delivery-sheet ${document.receiptCopy === true && showPrices ? 'has-receipt' : ''}` : 'invoice-kind'}" id="invoiceSheet">
     <div class="invoice-head">
       <div>
         <h1>${documentLabel(document.type)}</h1>
