@@ -467,6 +467,46 @@
 .document-qty-total{background:var(--sage-soft)!important;border-color:var(--sage)!important;}
 .document-qty-total strong{font-size:1.12rem;color:var(--sage-deep);}
 .invoice-total-highlight{background:var(--sage-soft);color:var(--sage-deep);border-radius:10px;padding:16px 18px;font-size:1.24rem;font-weight:900;margin:18px 0;}
+.invoice-kind{padding:34px 36px;min-height:auto;background:#fffdf9;color:#3d3030;}
+.invoice-layout-head{display:grid;grid-template-columns:1.2fr .8fr;gap:44px;margin-bottom:26px;align-items:start;}
+.invoice-title-side h1{margin:0 0 34px;font-size:2.25rem;letter-spacing:.06em;font-weight:500;color:#564343;}
+.invoice-kind .invoice-billto{max-width:none;margin-bottom:8px;}
+.invoice-kind .invoice-billto strong{font-size:1.08rem;font-weight:500;border-bottom:2px solid #7a6767;padding-bottom:6px;display:inline-block;min-width:340px;color:#4b3939;}
+.invoice-message,.invoice-period{margin:8px 0 0;font-size:.82rem;color:#463838;}
+.invoice-issuer-side{font-size:.78rem;color:#3f3434;}
+.invoice-kind .invoice-meta{font-size:.78rem;min-width:0;margin-bottom:24px;color:#3f3434;}
+.invoice-kind .invoice-meta div{display:block;margin-bottom:4px;border-bottom:none;padding-bottom:0;}
+.invoice-kind .invoice-meta span{font-weight:700;}
+.invoice-seller-plain{text-align:left;max-width:none;color:#3f3434;}
+.invoice-seller-plain p{margin:3px 0;}
+.invoice-person{margin-top:18px!important;}
+.invoice-total-card{display:inline-flex;align-items:center;gap:24px;background:#fff;border:1px solid #f4eeee;padding:17px 24px;margin:2px 0 24px;min-width:410px;}
+.invoice-total-card span{font-weight:700;color:#6a5555;}
+.invoice-total-card strong{font-size:1.55rem;color:#4a3737;line-height:1;}
+.invoice-total-card em{font-style:normal;font-weight:700;color:#4a3737;}
+.delivery-total-card strong{font-size:1.3rem;}
+.delivery-total-card em{font-size:.9rem;color:#6a5555;}
+.invoice-kind .invoice-table{margin-top:0;}
+.invoice-quote-table th,.invoice-quote-table td{border:1px solid #9d8f8f!important;padding:8px 10px;font-size:.78rem;}
+.invoice-quote-table th{background:#655050!important;color:#fff!important;text-align:center!important;font-weight:800;}
+.invoice-quote-table td{background:#fff!important;color:#211919;}
+.invoice-quote-table td:nth-child(1){text-align:left!important;}
+.invoice-quote-table td:nth-child(n+2),.invoice-quote-table th:nth-child(n+2){text-align:right;}
+.invoice-quote-table td:nth-child(3),.invoice-quote-table th:nth-child(3){text-align:center;}
+.invoice-empty-row td{height:30px;}
+.invoice-lower{display:grid;grid-template-columns:1fr 170px;gap:24px;align-items:start;margin-top:14px;}
+.invoice-notes-plain{border-top:none;padding-top:0;margin-top:0;color:#3f3434;min-height:72px;}
+.invoice-notes-plain p:first-child{font-weight:800;margin:0 0 8px;color:#3f3434;}
+.invoice-summary-table{width:170px;border-collapse:collapse;margin-left:auto;font-size:.78rem;}
+.invoice-summary-table th,.invoice-summary-table td{border:1px solid #d6cccc;padding:10px 12px;}
+.invoice-summary-table th{background:#655050;color:#fff;text-align:left;width:86px;}
+.invoice-summary-table td{text-align:right;background:#fff;}
+.invoice-bank-box{display:grid;grid-template-columns:110px 1fr;align-items:stretch;border:none;padding:0;margin-top:20px;background:#fff;}
+.invoice-bank-box p{margin:0;padding:12px 18px;}
+.invoice-bank-box p:first-child{background:#655050;color:#fff;text-align:center;font-weight:800;}
+.invoice-bank-box p:last-child{background:#fff;white-space:pre-wrap;}
+.invoice-bank-box::after{content:'※お振込手数料は貴社にてご負担いただきますようお願い申し上げます。';grid-column:2;font-size:.68rem;text-align:right;padding:8px 18px 12px;color:#3f3434;}
+.receipt-stamp{margin:18px 0 0 auto;width:120px;height:64px;border:1px solid #9d8f8f;display:flex;align-items:flex-start;justify-content:center;color:#655050;font-weight:800;font-size:.82rem;padding-top:8px;background:#fff;}
 .delivery-sheet .invoice-head{border-bottom-color:#d9c9b3;}
 .delivery-sheet .invoice-head h1{color:#7a6247;}
 .invoice-table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:14px;}
@@ -502,8 +542,10 @@
 }
 
 @media (max-width:720px){
-  .document-start-grid,.document-history-filters,.invoice-parties,.document-info-grid{grid-template-columns:1fr;}
+  .document-start-grid,.document-history-filters,.invoice-parties,.document-info-grid,.invoice-layout-head,.invoice-lower{grid-template-columns:1fr;}
   .invoice-sheet{min-width:720px;padding:28px;}
   .document-tabs button{flex:1;min-width:96px;}
   .invoice-seller{text-align:left;}
+  .invoice-total-card{min-width:0;width:100%;box-sizing:border-box;}
+  .invoice-summary-table{margin-left:0;}
 }
