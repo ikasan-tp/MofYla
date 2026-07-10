@@ -300,7 +300,10 @@ function renderGoals(){
   if(!root) return;
   const majorGoals = state.goals.filter(goal => goal.type === '大目標');
   const orphans = state.goals.filter(goal => goal.type !== '大目標' && !majorGoals.some(major => major.id === goal.parentId));
-  const goalCard = (goal, isChild) => `<div class="brand-card ${isChild ? 'brand-goal-child' : ''}"><div class="brand-row"><div><span class="brand-chip">${escapeHtml(goal.type || '目標')}</span><h3>${escapeHtml(goal.title)}</h3></div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="edit-goal" data-id="${goal.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-goal" data-id="${goal.id}">削除</button></div></div><p class="brand-note">${goal.dueDate ? `期限: ${goal.dueDate}` : '期限なし'}</p>${progressBar(goalProgress(goal))}<p class="brand-note">完了率 ${goalProgress(goal)}%</p><p class="brand-note">${escapeHtml(goal.memo || '')}</p></div>`;
+  const goalCard = (goal, isChild) => `<div class="brand-card brand-goal-card ${isChild ? 'brand-goal-child' : ''}">
+    <div class="brand-goal-card-head"><span class="brand-chip">${escapeHtml(goal.type || '目標')}</span><h3 title="${escapeHtml(goal.title)}">${escapeHtml(goal.title)}</h3></div>
+    <div class="brand-goal-card-actions"><button class="btn btn-ghost btn-small" data-action="edit-goal" data-id="${goal.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-goal" data-id="${goal.id}">削除</button></div>
+    <p class="brand-note">${goal.dueDate ? `期限: ${goal.dueDate}` : '期限なし'}</p>${progressBar(goalProgress(goal))}<p class="brand-note">完了率 ${goalProgress(goal)}%</p><p class="brand-note">${escapeHtml(goal.memo || '')}</p></div>`;
   const groups = majorGoals.map(major => {
     const children = goalChildren(major);
     return `<section class="brand-goal-group">${goalCard(major, false)}${children.length ? `<div class="brand-goal-children">${children.map(child => goalCard(child, true)).join('')}</div>` : ''}</section>`;
