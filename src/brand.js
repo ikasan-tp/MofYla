@@ -514,7 +514,14 @@ function renderIdeas(){
 
 function invoiceHistoryCard(invoice){
   const totals = invoiceTotals(invoice.items, invoice.taxRate);
-  return `<div class="brand-card"><div class="brand-row"><div><strong>${escapeHtml(invoice.number)}</strong><p class="brand-note">${invoice.date || '-'} / ${escapeHtml(invoice.store || invoice.billTo || '-')}</p></div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="load-invoice-history" data-id="${invoice.id}">呼び出す</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-invoice-history" data-id="${invoice.id}">削除</button></div></div><p class="brand-note">合計 ${yen(totals.total)}（税込）</p></div>`;
+  return `<div class="brand-card"><div class="brand-row"><div><strong>${escapeHtml(invoice.number)}</strong><p class="brand-note">${invoice.date || '-'}</p></div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="load-invoice-history" data-id="${invoice.id}">呼び出す</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-invoice-history" data-id="${invoice.id}">削除</button></div></div><p class="brand-note">合計 ${yen(totals.total)}（税込）</p></div>`;
+}
+function invoiceHistoryByStore(history){
+  const storeNames = [...new Set(history.map(inv => inv.store || inv.billTo || '店舗未設定'))].sort((a,b) => a.localeCompare(b, 'ja'));
+  return storeNames.map(store => {
+    const items = history.filter(inv => (inv.store || inv.billTo || '店舗未設定') === store);
+    return `<details class="brand-archive brand-invoice-history-group"><summary><span>${escapeHtml(store)}</span><b>${items.length}件</b></summary><div class="brand-archive-body">${items.map(invoiceHistoryCard).join('')}</div></details>`;
+  }).join('');
 }
 function renderInvoice(){
   const root = document.getElementById('brandInvoice');
@@ -522,7 +529,7 @@ function renderInvoice(){
   const draft = state.invoiceDraft;
   const profile = state.sellerProfile || {};
   const history = asArray(state.invoices).slice().sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-  const historySection = history.length ? `<div class="no-print">${archiveDetails('請求書履歴', history, invoiceHistoryCard)}</div>` : '';
+  const historySection = history.length ? `<div class="no-print section-gap"><h3>請求書履歴</h3>${invoiceHistoryByStore(history)}</div>` : '';
   const actions = `<button class="btn btn-ghost btn-small" data-action="edit-seller-profile">発行者情報</button><button class="btn btn-primary" data-action="${draft ? 'edit-invoice-header' : 'generate-invoice'}">${draft ? '請求書情報を編集' : '請求書を作成'}</button>`;
   if(!draft){
     root.innerHTML = `${pageHead('請求書','卸し先ごとの請求書を、卸し実績から自動で作成できます。', actions)}${empty('まだ請求書がありません。「請求書を作成」から店舗と期間を選んでください。')}${historySection}`;
