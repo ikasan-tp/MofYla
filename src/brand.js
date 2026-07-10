@@ -548,6 +548,7 @@ function normalizeDocument(document, fallbackType = 'invoice'){
     periodTo:document.periodTo || '',
     taxRate:safeNumber(document.taxRate ?? 10),
     showPrices:document.showPrices !== false,
+    receiptCopy:document.receiptCopy === true,
     subject:document.subject || '',
     destination:document.destination || '',
     items:asArray(document.items).map(item => ({
@@ -647,107 +648,71 @@ function documentHeaderMeta(document){
     <div><span>発行日</span><strong>${document.issueDate || '-'}</strong></div>
     ${document.type === 'delivery' ? `<div><span>納品日</span><strong>${document.deliveryDate || '-'}</strong></div>` : `<div><span>支払期限</span><strong>${document.dueDate || '-'}</strong></div>`}`;
 }
+function documentIssuerBlock(profile, forInvoice = false){
+  return `<div class="invoice-seller">
+    <div class="document-stamp-logo"><img src="./assets/mofyla-logo.png" alt="MofYla logo"></div>
+    ${sellerProfileLines(profile, forInvoice)}
+  </div>`;
+}
+function receiptCopyBlock(document, totals, profile){
+  if(document.type !== 'delivery' || document.receiptCopy !== true || document.showPrices === false) return '';
+  return `<div class="receipt-copy">
+    <div class="receipt-cut-line"><span>切り取り</span></div>
+    <div class="receipt-copy-grid">
+      <div class="receipt-copy-main">
+        <div class="receipt-copy-meta"><span>領収日 ${document.issueDate || '-'}</span><span>番号 ${escapeHtml(document.number || '-')}</span></div>
+        <h2>領収書 控え</h2>
+        <p class="receipt-copy-to">${escapeHtml(document.billTo || document.store || 'お客様')}　様</p>
+        <p>下記金額を領収いたしました。</p>
+        <div class="receipt-copy-amount">${yen(totals.total)}</div>
+        <p>但し　${escapeHtml(document.subject || '商品代金')}　として</p>
+      </div>
+      <div class="receipt-copy-issuer">
+        <div class="document-stamp-logo"><img src="./assets/mofyla-logo.png" alt="MofYla logo"></div>
+        <p><strong>${escapeHtml(profile.name || 'MofYla')}</strong></p>
+        ${profile.postalCode ? `<p>${escapeHtml(`〒${profile.postalCode}`)}</p>` : ''}
+        ${profile.address ? `<p>${escapeHtml(profile.address)}</p>` : ''}
+        ${profile.phone ? `<p>${escapeHtml(`TEL ${profile.phone}`)}</p>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
 function renderDocumentPreview(document){
   const profile = state.sellerProfile || {};
   const items = asArray(document.items);
   const totals = documentTotals(items, document.taxRate);
   const isDelivery = document.type === 'delivery';
-  if(!isDelivery){
-    const periodLabel = document.periodFrom || document.periodTo ? `対象期間: ${document.periodFrom || '-'} 〜 ${document.periodTo || '-'}` : '';
-    const blankRows = Math.max(0, 5 - items.length);
-    return `<div class="invoice-sheet document-sheet invoice-kind" id="invoiceSheet">
-      <div class="invoice-layout-head">
-        <div class="invoice-title-side">
-          <h1>請求書</h1>
-          <div class="invoice-billto"><strong>${escapeHtml(document.billTo || document.store || 'お客様')}　御中</strong></div>
-          <p class="invoice-message">下記のとおり、ご請求申し上げます。</p>
-          ${periodLabel ? `<p class="invoice-period">${periodLabel}</p>` : ''}
-        </div>
-        <div class="invoice-issuer-side">
-          <div class="invoice-meta compact">
-            <div><span>請求番号：</span><strong>${escapeHtml(document.number || '-')}</strong></div>
-            <div><span>請求日：</span><strong>${document.issueDate || '-'}</strong></div>
-            ${document.dueDate ? `<div><span>支払期限：</span><strong>${document.dueDate}</strong></div>` : ''}
-          </div>
-          <div class="invoice-seller invoice-seller-plain">
-            <p><strong>${escapeHtml(profile.name || '（発行者情報未設定）')}</strong></p>
-            ${profile.postalCode ? `<p>${escapeHtml(`〒${profile.postalCode}`)}</p>` : ''}
-            ${profile.address ? `<p>${escapeHtml(profile.address)}</p>` : ''}
-            ${profile.phone ? `<p>${escapeHtml(`TEL：${profile.phone}`)}</p>` : ''}
-            ${profile.email ? `<p>${escapeHtml(`MAIL：${profile.email}`)}</p>` : ''}
-            ${profile.contact ? `<p>${escapeHtml(profile.contact)}</p>` : ''}
-            ${profile.invoiceRegistrationNumber ? `<p>${escapeHtml(`登録番号：${profile.invoiceRegistrationNumber}`)}</p>` : ''}
-            ${profile.contactPerson ? `<p class="invoice-person">${escapeHtml(`担当：${profile.contactPerson}`)}</p>` : ''}
-          </div>
-        </div>
-      </div>
-      <div class="invoice-total-card"><span>合計金額</span><strong>${yen(totals.total)}</strong><em>（税込）</em></div>
-      <table class="invoice-table invoice-quote-table">
-        <thead><tr><th>品名・項目</th><th>数量</th><th>単位</th><th>単価（税抜）</th><th>金額（税抜）</th><th class="no-print"></th></tr></thead>
-        <tbody>${items.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${safeNumber(item.qty)}</td><td>${escapeHtml(item.unit || '個')}</td><td>${yen(item.price)}</td><td>${yen(safeNumber(item.qty) * safeNumber(item.price))}</td><td class="no-print"><button class="btn btn-ghost btn-small" data-action="edit-document-item" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-document-item" data-id="${item.id}">削除</button></td></tr>`).join('')}${Array.from({ length:blankRows }).map(() => '<tr class="invoice-empty-row"><td></td><td></td><td></td><td></td><td></td><td class="no-print"></td></tr>').join('')}</tbody>
-      </table>
-      <div class="invoice-lower">
-        <div class="invoice-notes invoice-notes-plain"><p>備考</p>${document.notes ? `<p>${escapeHtml(document.notes)}</p>` : ''}</div>
-        <table class="invoice-summary-table">
-          <tbody>
-            <tr><th>小計</th><td>${yen(totals.subtotal)}</td></tr>
-            <tr><th>消費税（${safeNumber(document.taxRate)}%）</th><td>${yen(totals.tax)}</td></tr>
-            <tr><th>合計</th><td>${yen(totals.total)}</td></tr>
-          </tbody>
-        </table>
-      </div>
-      ${profile.bankInfo ? `<div class="invoice-bank invoice-bank-box"><p>振込先</p><p>${escapeHtml(profile.bankInfo)}</p></div>` : ''}
-    </div>`;
-  }
   const showPrices = document.showPrices !== false;
-  const periodLabel = document.periodFrom || document.periodTo ? `対象期間: ${document.periodFrom || '-'} 〜 ${document.periodTo || '-'}` : '';
-  const blankRows = Math.max(0, 5 - items.length);
-  const priceHeads = showPrices ? '<th>単価（税抜）</th><th>金額（税抜）</th>' : '';
-  const blankCells = showPrices ? '<td></td><td></td><td></td><td></td><td></td><td class="no-print"></td>' : '<td></td><td></td><td></td><td class="no-print"></td>';
-  return `<div class="invoice-sheet document-sheet invoice-kind delivery-sheet" id="invoiceSheet">
-    <div class="invoice-layout-head">
-      <div class="invoice-title-side">
-        <h1>納品書</h1>
-        <div class="invoice-billto"><strong>${escapeHtml(document.billTo || document.store || 'お客様')}　御中</strong></div>
-        <p class="invoice-message">下記のとおり、納品いたしました。</p>
-        ${document.subject ? `<p class="invoice-period">件名：${escapeHtml(document.subject)}</p>` : ''}
-        ${document.destination ? `<p class="invoice-period">納品場所：${escapeHtml(document.destination)}</p>` : ''}
-        ${periodLabel ? `<p class="invoice-period">${periodLabel}</p>` : ''}
+  const periodLabel = document.periodFrom || document.periodTo ? `${document.periodFrom || '-'} 〜 ${document.periodTo || '-'}` : '';
+  const priceHeads = showPrices ? '<th>単価</th><th>金額</th>' : '';
+  const priceFootColspan = showPrices ? 4 : 2;
+  return `<div class="invoice-sheet document-sheet ${isDelivery ? 'delivery-sheet' : 'invoice-kind'}" id="invoiceSheet">
+    <div class="invoice-head">
+      <div>
+        <h1>${documentLabel(document.type)}</h1>
+        <p class="document-lead">${isDelivery ? '上記の通り納品いたしました。' : '下記の通りご請求申し上げます。'}</p>
       </div>
-      <div class="invoice-issuer-side">
-        <div class="invoice-meta compact">
-          <div><span>納品番号：</span><strong>${escapeHtml(document.number || '-')}</strong></div>
-          <div><span>発行日：</span><strong>${document.issueDate || '-'}</strong></div>
-          <div><span>納品日：</span><strong>${document.deliveryDate || '-'}</strong></div>
-        </div>
-        <div class="invoice-seller invoice-seller-plain">
-          <p><strong>${escapeHtml(profile.name || '（発行者情報未設定）')}</strong></p>
-          ${profile.postalCode ? `<p>${escapeHtml(`〒${profile.postalCode}`)}</p>` : ''}
-          ${profile.address ? `<p>${escapeHtml(profile.address)}</p>` : ''}
-          ${profile.phone ? `<p>${escapeHtml(`TEL：${profile.phone}`)}</p>` : ''}
-          ${profile.email ? `<p>${escapeHtml(`MAIL：${profile.email}`)}</p>` : ''}
-          ${profile.contact ? `<p>${escapeHtml(profile.contact)}</p>` : ''}
-          ${profile.invoiceRegistrationNumber ? `<p>${escapeHtml(`登録番号：${profile.invoiceRegistrationNumber}`)}</p>` : ''}
-          ${profile.contactPerson ? `<p class="invoice-person">${escapeHtml(`担当：${profile.contactPerson}`)}</p>` : ''}
-        </div>
-      </div>
+      <div class="invoice-meta">${documentHeaderMeta(document)}</div>
     </div>
-    <div class="invoice-total-card delivery-total-card"><span>納品数量</span><strong>合計${totals.qty}点</strong>${showPrices ? `<em>金額 ${yen(totals.total)}（税込）</em>` : '<em>単価・金額は非表示</em>'}</div>
-    <table class="invoice-table invoice-quote-table ${showPrices ? '' : 'hide-prices'}">
-      <thead><tr><th>品名・項目</th><th>数量</th><th>単位</th>${priceHeads}<th class="no-print"></th></tr></thead>
-      <tbody>${items.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${safeNumber(item.qty)}</td><td>${escapeHtml(item.unit || '個')}</td>${showPrices ? `<td>${yen(item.price)}</td><td>${yen(safeNumber(item.qty) * safeNumber(item.price))}</td>` : ''}<td class="no-print"><button class="btn btn-ghost btn-small" data-action="edit-document-item" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-document-item" data-id="${item.id}">削除</button></td></tr>`).join('')}${Array.from({ length:blankRows }).map(() => `<tr class="invoice-empty-row">${blankCells}</tr>`).join('')}</tbody>
+    <div class="invoice-parties">
+      <div class="invoice-billto"><span>${isDelivery ? '納品先' : 'ご請求先'}</span><strong>${escapeHtml(document.billTo || document.store || 'お客様')} 御中</strong></div>
+      ${documentIssuerBlock(profile, false)}
+    </div>
+    <div class="document-info-grid">
+      ${document.subject ? `<div><span>件名</span><strong>${escapeHtml(document.subject)}</strong></div>` : ''}
+      ${document.destination ? `<div><span>納品場所</span><strong>${escapeHtml(document.destination)}</strong></div>` : ''}
+      ${periodLabel ? `<div><span>対象期間</span><strong>${periodLabel}</strong></div>` : ''}
+      ${isDelivery ? `<div class="document-qty-total"><span>納品数量</span><strong>合計${totals.qty}点</strong></div>` : ''}
+    </div>
+    ${isDelivery ? `<div class="delivery-total-highlight">納品数量　合計${totals.qty}点${showPrices ? ` / ${yen(totals.total)}（税込）` : ''}</div>` : `<div class="invoice-total-highlight">ご請求金額　${yen(totals.total)}（税込）</div>`}
+    <table class="invoice-table document-table ${showPrices ? '' : 'hide-prices'}">
+      <thead><tr><th>品名</th><th>数量</th><th>単位</th>${priceHeads}<th class="no-print"></th></tr></thead>
+      <tbody>${items.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${safeNumber(item.qty)}</td><td>${escapeHtml(item.unit || '個')}</td>${showPrices ? `<td>${yen(item.price)}</td><td>${yen(safeNumber(item.qty) * safeNumber(item.price))}</td>` : ''}<td class="no-print"><button class="btn btn-ghost btn-small" data-action="edit-document-item" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-document-item" data-id="${item.id}">削除</button></td></tr>`).join('') || `<tr><td colspan="${showPrices ? 6 : 4}">明細がありません。「明細を追加」から入力するか、卸し実績のある店舗で作成してください。</td></tr>`}</tbody>
+      ${showPrices ? `<tfoot><tr><td colspan="${priceFootColspan}">小計</td><td colspan="2">${yen(totals.subtotal)}</td></tr><tr><td colspan="${priceFootColspan}">消費税（${safeNumber(document.taxRate)}%）</td><td colspan="2">${yen(totals.tax)}</td></tr><tr class="invoice-grand-total"><td colspan="${priceFootColspan}">合計</td><td colspan="2">${yen(totals.total)}</td></tr></tfoot>` : ''}
     </table>
-    <div class="invoice-lower">
-      <div class="invoice-notes invoice-notes-plain"><p>備考</p>${document.notes ? `<p>${escapeHtml(document.notes)}</p>` : ''}</div>
-      ${showPrices ? `<table class="invoice-summary-table">
-        <tbody>
-          <tr><th>小計</th><td>${yen(totals.subtotal)}</td></tr>
-          <tr><th>消費税（${safeNumber(document.taxRate)}%）</th><td>${yen(totals.tax)}</td></tr>
-          <tr><th>合計</th><td>${yen(totals.total)}</td></tr>
-        </tbody>
-      </table>` : '<div></div>'}
-    </div>
-    <div class="receipt-stamp"><span>受領印</span></div>
+    ${document.notes ? `<div class="invoice-notes"><p>備考</p><p>${escapeHtml(document.notes)}</p></div>` : ''}
+    ${isDelivery ? '<div class="receipt-stamp"><span>受領印</span></div>' : sellerProfileLines(profile, true).includes('invoice-bank') ? `<div class="document-bank-wrap">${sellerProfileLines(profile, true).match(/<div class="invoice-bank">[\s\S]*<\/div>/)?.[0] || ''}</div>` : ''}
+    ${receiptCopyBlock(document, totals, profile)}
   </div>`;
 }
 function renderDocumentHistory(){
@@ -1047,6 +1012,7 @@ function defaultDocument(type){
     periodTo:'',
     taxRate:10,
     showPrices:true,
+    receiptCopy:false,
     subject:type === 'delivery' ? '納品商品' : '',
     destination:'',
     items:[],
@@ -1078,10 +1044,11 @@ function documentHeaderForm(type = activeDocumentTab){
     {name:'destination',label:'納品場所'},
     {name:'taxRate',label:'消費税率（%）',type:'number'},
     {name:'showPrices',label:'単価・金額を表示する',type:'select',options:[{value:'true',label:'表示する'},{value:'false',label:'表示しない'}]},
+    {name:'receiptCopy',label:'領収書控えを付ける',type:'select',options:[{value:'false',label:'付けない'},{value:'true',label:'付ける'}]},
     {name:'status',label:'ステータス',type:'select',options:DOCUMENT_TYPES.delivery.statuses},
     {name:'notes',label:'備考',type:'textarea',full:true}
   ];
-  openForm(isNew ? `${documentLabel(type)}を作成` : `${documentLabel(type)}情報を編集`, [...commonFields, ...(type === 'invoice' ? invoiceFields : deliveryFields)], {...draft, showPrices:String(draft.showPrices !== false)}, async data => {
+  openForm(isNew ? `${documentLabel(type)}を作成` : `${documentLabel(type)}情報を編集`, [...commonFields, ...(type === 'invoice' ? invoiceFields : deliveryFields)], {...draft, showPrices:String(draft.showPrices !== false), receiptCopy:String(draft.receiptCopy === true)}, async data => {
     const store = data.store || draft.store || '';
     const items = isNew ? documentItemsFromDeliveries(store, data.periodFrom, data.periodTo) : draft.items;
     setCurrentDocument({
@@ -1094,6 +1061,7 @@ function documentHeaderForm(type = activeDocumentTab){
       date:data.issueDate || todayKey(),
       taxRate:safeNumber(data.taxRate),
       showPrices:data.showPrices !== 'false',
+      receiptCopy:data.receiptCopy === 'true',
       status:data.status || DOCUMENT_TYPES[type].statuses[0],
       items
     });
