@@ -1,5 +1,6 @@
 import { Storage } from './storage.js';
 import { showToast } from './components/toast.js';
+import { RABBIT_BREEDS, breedCode } from './services/rabbitBreeds.js';
 
 const STORE_KEY = 'brand:data';
 const SCHEMA_VERSION = 6;
@@ -9,6 +10,15 @@ const LEAD_STATUSES = ['未調査','調査済','DM送信','返信待ち','商談
 const LEAD_POTENTIALS = ['未設定','高','中','低'];
 const WHOLESALE_STATUSES = ['商談中','納品準備中','納品済み','受注中','追加発注待ち','取り扱い終了'];
 const CATEGORIES = ['ネームプレート','コースター','キーホルダー','その他'];
+const CATEGORY_CODES = { 'ネームプレート':'NP', 'コースター':'CS', 'キーホルダー':'KH', 'その他':'OT' };
+const DEFAULT_COLOR_PALETTE = [
+  { id:'color-c001', code:'C001', name:'White', hex:'#FFFFFF' },
+  { id:'color-c002', code:'C002', name:'Ivory', hex:'#F5EAD6' },
+  { id:'color-c003', code:'C003', name:'Milk Tea', hex:'#C9A27E' },
+  { id:'color-c004', code:'C004', name:'Ash Gray', hex:'#A9A9A9' },
+  { id:'color-c005', code:'C005', name:'Chocolate', hex:'#5C3A21' },
+  { id:'color-c006', code:'C006', name:'Black', hex:'#1A1A1A' }
+];
 const TASK_FILTERS = ['今日','期限近い','マルシェ関連','制作','SNS','事務作業','完了済み'];
 const DAILY_TASKS = [
   { id:'daily-sns-post', title:'SNS投稿を1件確認する', memo:'投稿作成、予約、投稿済みチェックのどれか1つでOK。', priority:'中', energy:'軽い', category:'SNS', minutes:15 },
@@ -57,7 +67,8 @@ function emptyState(){
     sellerProfile:{name:'', contactPerson:'', postalCode:'', address:'', phone:'', email:'', bankName:'', branchName:'', accountType:'普通', accountNumber:'', accountHolder:''},
     invoiceDraft:null,
     invoices:[],
-    coupons:[]
+    coupons:[],
+    colorPalette:DEFAULT_COLOR_PALETTE.map(c => ({...c}))
   };
 }
 
@@ -74,7 +85,8 @@ function stripDemoData(){
 function ensureShape(){
   const base = emptyState();
   state = { ...base, ...(state || {}) };
-  for(const key of ['goals','tasks','markets','sales','customers','customerProfiles','leads','products','ideas','invoices','coupons']) state[key] = asArray(state[key]);
+  for(const key of ['goals','tasks','markets','sales','customers','customerProfiles','leads','products','ideas','invoices','coupons','colorPalette']) state[key] = asArray(state[key]);
+  if(!state.colorPalette.length) state.colorPalette = DEFAULT_COLOR_PALETTE.map(c => ({...c}));
   state.dailyDone = state.dailyDone && typeof state.dailyDone === 'object' ? state.dailyDone : {};
   state.sellerProfile = state.sellerProfile && typeof state.sellerProfile === 'object' ? state.sellerProfile : {name:'', contactPerson:'', postalCode:'', address:'', phone:'', email:'', bankName:'', branchName:'', accountType:'普通', accountNumber:'', accountHolder:''};
   state.schemaVersion = SCHEMA_VERSION;
@@ -265,6 +277,34 @@ function productDelivered(product, from, to){
 }
 function productStoreName(product){ return product.storeName || product.shopName || product.wholesaleStore || '店舗未設定'; }
 function wholesaleStoreNames(){ return [...new Set(state.products.filter(isWholesaleProduct).map(productStoreName))].sort((a,b)=>a.localeCompare(b,'ja')); }
+function nextProductSku(category, breedName){
+  const catCode = CATEGORY_CODES[category] || 'OT';
+  const brCode = breedCode(breedName);
+  const prefix = `MY-${catCode}-${brCode}-`;
+  const pattern = new RegExp(`^${prefix}(\\d+)`);
+  const nums = state.products.map(p => { const m = pattern.exec(p.sku || ''); return m ? Number(m[1]) : 0; });
+  const max = nums.length ? Math.max(...nums) : 0;
+  return `${prefix}${String(max + 1).padStart(3, '0')}`;
+}
+function colorLabel(colorId){
+  const color = state.colorPalette.find(c => c.id === colorId);
+  return color ? `${color.code} ${color.name}` : '';
+}
+function nextColorCode(){
+  const nums = state.colorPalette.map(c => { const m = /^C(\d+)/.exec(c.code || ''); return m ? Number(m[1]) : 0; });
+  const max = nums.length ? Math.max(...nums) : 0;
+  return `C${String(max + 1).padStart(3, '0')}`;
+}
+function colorPaletteForm(color = {}){
+  openForm(color.id ? 'カラー編集' : 'カラー追加', [
+    {name:'code',label:'カラー番号（空欄なら自動採番）'},
+    {name:'name',label:'カラー名'},
+    {name:'hex',label:'カラーコード',type:'color'}
+  ], { hex:'#CCCCCC', ...color }, async data => {
+    upsert('colorPalette', {...color, ...data, code:data.code || color.code || nextColorCode(), id:color.id || uid('color')});
+    await save();
+  });
+}
 
 function renderHome(){
   const root = document.getElementById('brandHome');
@@ -519,7 +559,7 @@ function renderProducts(){
         <div class="brand-product-title">
           <h3>${escapeHtml(product.name || '商品名未設定')}</h3>
           ${product.sku ? `<p class="brand-product-sku">${escapeHtml(product.sku)}</p>` : ''}
-          <p>${escapeHtml(product.category || 'カテゴリ未設定')} / ${escapeHtml(product.status || '未設定')}</p>
+          <p>${escapeHtml(product.category || 'カテゴリ未設定')} / ${escapeHtml(product.status || '未設定')}${product.breed ? ` / ${escapeHtml(product.breed)}` : ''}${colorLabel(product.colorId) ? ` / ${colorLabel(product.colorId)}` : ''}</p>
         </div>
         <div class="brand-product-actions">
           <button class="btn btn-ghost btn-small" data-action="edit-product" data-id="${product.id}">編集</button>
@@ -551,6 +591,13 @@ function renderProducts(){
     <div class="brand-status-tile"><strong>${yen(totalValue)}</strong><span>${activeProductTab === 'wholesale' ? '累計卸し金額' : '在庫金額目安'}</span></div>
   </div>`;
   const wholesaleToolbar = activeProductTab === 'wholesale' ? `<div class="brand-toolbar"><button class="btn btn-ghost btn-small" data-action="export-deliveries-csv">卸し実績をCSV出力</button></div>` : '';
+  const colorSection = `<details class="brand-archive brand-color-palette section-gap">
+    <summary><span>カラー管理</span><b>${state.colorPalette.length}色</b></summary>
+    <div class="brand-archive-body">
+      <div class="brand-color-list">${state.colorPalette.map(c => `<div class="brand-color-chip"><span class="brand-color-swatch" style="background:${escapeHtml(c.hex || '#ccc')}"></span><strong>${escapeHtml(c.code)}</strong><span>${escapeHtml(c.name)}</span><button class="btn btn-ghost btn-small" data-action="edit-color" data-id="${c.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-color" data-id="${c.id}">削除</button></div>`).join('') || empty('カラーがまだありません。')}</div>
+      <button class="btn btn-sage btn-small" data-action="new-color" style="margin-top:10px;">カラー追加</button>
+    </div>
+  </details>`;
   const content = activeProductTab === 'wholesale'
     ? stores.map(store => {
         const items = wholesaleProducts.filter(product => productStore(product) === store);
@@ -558,7 +605,7 @@ function renderProducts(){
         return `<details class="brand-archive brand-wholesale-group" open><summary><span>${escapeHtml(store)}</span><b>${items.length}商品 / 累計卸し${stock}</b></summary><div class="brand-product-grid">${items.map(productCard).join('')}</div></details>`;
       }).join('') || empty('卸し商品はまだありません。商品追加から管理区分を「卸し商品」にして登録できます。')
     : `<div class="brand-product-grid">${onlineProducts.map(productCard).join('') || empty('ネット販売在庫はまだありません。')}</div>`;
-  root.innerHTML = `${pageHead('商品管理','卸し商品とネット販売在庫を分けて管理します。', '<button class="btn btn-primary" data-action="new-product">追加</button>')}${tabs}${summary}${wholesaleToolbar}${content}`;
+  root.innerHTML = `${pageHead('商品管理','卸し商品とネット販売在庫を分けて管理します。', '<button class="btn btn-primary" data-action="new-product">追加</button>')}${tabs}${summary}${wholesaleToolbar}${colorSection}${content}`;
 }
 
 function renderIdeas(){
@@ -872,8 +919,10 @@ function productForm(product = {}){
   const commonFields = [
     {name:'salesChannel',label:'管理区分',type:'select',options:[{value:'online',label:'ネット販売在庫'},{value:'wholesale',label:'卸し商品'}]},
     {name:'name',label:'商品名'},
-    {name:'sku',label:'商品番号'},
     {name:'category',label:'商品カテゴリ',type:'select',options:CATEGORIES},
+    {name:'breed',label:'兎種',type:'select',options:RABBIT_BREEDS.map(b => b.name)},
+    {name:'sku',label:'商品番号（自動採番・編集可）'},
+    {name:'colorId',label:'カラー',type:'select',options:state.colorPalette.map(c => ({value:c.id, label:`${c.code} ${c.name}`}))},
     {name:'cost',label:'原価',type:'number'},
     {name:'minutes',label:'制作時間目安',type:'number'}
   ];
@@ -893,7 +942,14 @@ function productForm(product = {}){
     {name:'wholesaleMemo',label:'卸しメモ',type:'textarea',full:true}
   ];
   const fields = [...commonFields, ...(channel === 'wholesale' ? wholesaleFields : onlineFields)];
-  openForm(product.id ? '商品編集' : '商品追加', fields, {salesChannel:channel, ...product}, async data => {
+  const defaultCategory = product.category || CATEGORIES[0];
+  const defaultBreed = product.breed || RABBIT_BREEDS[0].name;
+  const initialValues = {
+    salesChannel:channel, category:defaultCategory, breed:defaultBreed,
+    sku:product.sku || (product.id ? '' : nextProductSku(defaultCategory, defaultBreed)),
+    ...product
+  };
+  openForm(product.id ? '商品編集' : '商品追加', fields, initialValues, async data => {
     const salesChannel = data.salesChannel || 'online';
     upsert('products', {
       ...product, ...data, id:product.id || uid('product'), salesChannel,
@@ -907,6 +963,23 @@ function productForm(product = {}){
     activeProductTab = salesChannel === 'wholesale' ? 'wholesale' : 'online';
     await save();
   });
+  if(!product.id) wireProductSkuAutoFill();
+}
+function wireProductSkuAutoFill(){
+  const overlay = document.querySelector('.brand-modal-overlay');
+  if(!overlay) return;
+  const categorySelect = overlay.querySelector('[name="category"]');
+  const breedSelect = overlay.querySelector('[name="breed"]');
+  const skuInput = overlay.querySelector('[name="sku"]');
+  if(!categorySelect || !breedSelect || !skuInput) return;
+  skuInput.dataset.autofilled = 'true';
+  skuInput.addEventListener('input', () => { skuInput.dataset.autofilled = 'false'; });
+  const recompute = () => {
+    if(skuInput.dataset.autofilled !== 'true') return;
+    skuInput.value = nextProductSku(categorySelect.value, breedSelect.value);
+  };
+  categorySelect.addEventListener('change', recompute);
+  breedSelect.addEventListener('change', recompute);
 }
 function productDeliveryForm(productId){
   const product = findBy('products', productId);
@@ -1183,6 +1256,16 @@ async function handleClick(event){
     }
   }
   if(action === 'export-deliveries-csv') exportDeliveriesCsv();
+  if(action === 'new-color') colorPaletteForm();
+  if(action === 'edit-color') colorPaletteForm(findBy('colorPalette', id));
+  if(action === 'delete-color'){
+    const inUse = state.products.some(p => p.colorId === id);
+    if(confirm(inUse ? 'このカラーは商品で使用中です。削除します。よろしいですか？' : 'このカラーを削除します。よろしいですか？')){
+      state.colorPalette = state.colorPalette.filter(c => c.id !== id);
+      await save();
+      renderAll();
+    }
+  }
 }
 let titleBeforePrint = '';
 window.addEventListener('beforeprint', () => {
