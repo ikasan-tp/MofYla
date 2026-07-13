@@ -518,6 +518,7 @@ function renderProducts(){
       <div class="brand-product-head">
         <div class="brand-product-title">
           <h3>${escapeHtml(product.name || '商品名未設定')}</h3>
+          ${product.sku ? `<p class="brand-product-sku">${escapeHtml(product.sku)}</p>` : ''}
           <p>${escapeHtml(product.category || 'カテゴリ未設定')} / ${escapeHtml(product.status || '未設定')}</p>
         </div>
         <div class="brand-product-actions">
@@ -871,6 +872,7 @@ function productForm(product = {}){
   const commonFields = [
     {name:'salesChannel',label:'管理区分',type:'select',options:[{value:'online',label:'ネット販売在庫'},{value:'wholesale',label:'卸し商品'}]},
     {name:'name',label:'商品名'},
+    {name:'sku',label:'商品番号'},
     {name:'category',label:'商品カテゴリ',type:'select',options:CATEGORIES},
     {name:'cost',label:'原価',type:'number'},
     {name:'minutes',label:'制作時間目安',type:'number'}
@@ -979,7 +981,7 @@ function loadInvoiceFromHistory(id){
   renderAll();
 }
 function exportDeliveriesCsv(){
-  const rows = [['店舗名','商品名','日付','数量','単価','金額','メモ']];
+  const rows = [['店舗名','商品番号','商品名','日付','数量','単価','金額','メモ']];
   state.products
     .filter(isWholesaleProduct)
     .slice()
@@ -988,7 +990,7 @@ function exportDeliveriesCsv(){
       asArray(product.deliveries).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(d => {
         const price = Number(product.wholesalePrice || 0);
         const qty = Number(d.qty || 0);
-        rows.push([productStoreName(product), product.name || '', d.date || '', qty, price, qty * price, d.memo || '']);
+        rows.push([productStoreName(product), product.sku || '', product.name || '', d.date || '', qty, price, qty * price, d.memo || '']);
       });
     });
   if(rows.length === 1){ showToast('卸し実績がまだありません'); return; }
