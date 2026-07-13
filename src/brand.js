@@ -49,6 +49,7 @@ function emptyState(){
     markets:[],
     sales:[],
     customers:[],
+    customerProfiles:[],
     leads:[],
     products:[],
     ideas:[],
@@ -71,7 +72,7 @@ function stripDemoData(){
 function ensureShape(){
   const base = emptyState();
   state = { ...base, ...(state || {}) };
-  for(const key of ['goals','tasks','markets','sales','customers','leads','products','ideas','invoices']) state[key] = asArray(state[key]);
+  for(const key of ['goals','tasks','markets','sales','customers','customerProfiles','leads','products','ideas','invoices']) state[key] = asArray(state[key]);
   state.dailyDone = state.dailyDone && typeof state.dailyDone === 'object' ? state.dailyDone : {};
   state.sellerProfile = state.sellerProfile && typeof state.sellerProfile === 'object' ? state.sellerProfile : {name:'', contactPerson:'', postalCode:'', address:'', phone:'', email:'', bankName:'', branchName:'', accountType:'普通', accountNumber:'', accountHolder:''};
   state.schemaVersion = SCHEMA_VERSION;
@@ -88,6 +89,7 @@ async function load(){
     changed = true;
     return { ...lead, potential:'未設定' };
   });
+  if(migrateCustomerProfiles()) changed = true;
   if(changed || savedVersion !== SCHEMA_VERSION) await save(false);
 }
 async function save(notify = true){
@@ -176,6 +178,31 @@ function normalizeMarket(market){
   }));
   return market;
 }
+function migrateCustomerProfiles(){
+  state.customerProfiles = asArray(state.customerProfiles);
+  let changed = false;
+  const byName = new Map(state.customerProfiles.map(p => [p.name, p]));
+  state.customers.forEach(order => {
+    if(order.customerId && state.customerProfiles.some(p => p.id === order.customerId)) return;
+    const name = order.customerName || '名前未設定';
+    let profile = byName.get(name);
+    if(!profile){
+      profile = { id:uid('customerProfile'), name, sns:order.sns || '', line:order.line || '', email:order.email || '', memo:'' };
+      state.customerProfiles.push(profile);
+      byName.set(name, profile);
+    }
+    order.customerId = profile.id;
+    changed = true;
+  });
+  return changed;
+}
+function customerDisplayName(order){
+  const profile = state.customerProfiles.find(p => p.id === order.customerId);
+  return profile?.name || order.customerName || '名前未設定';
+}
+function customerProfile(order){
+  return state.customerProfiles.find(p => p.id === order.customerId) || null;
+}
 
 function marketProductTotals(market){
   const items = asArray(market.productItems);
@@ -214,7 +241,7 @@ function taskItem(task, compact = false){
 function customerCard(customer){
   const d = daysUntil(customer.dueDate);
   return `<div class="brand-item">
-    <div class="brand-row"><strong>${escapeHtml(customer.customerName || '名前未設定')} / ${escapeHtml(customer.productName || '商品未設定')}</strong><span class="brand-chip ${d !== null && d <= 3 ? 'warn' : ''}">納期まで${d ?? '-'}日</span></div>
+    <div class="brand-row"><strong>${escapeHtml(customerDisplayName(customer))} / ${escapeHtml(customer.productName || '商品未設定')}</strong><span class="brand-chip ${d !== null && d <= 3 ? 'warn' : ''}">納期まで${d ?? '-'}日</span></div>
     <div class="brand-meter"><span>${escapeHtml(customer.status || '未設定')} / ${customerProgress(customer)}%</span>${progressBar(customerProgress(customer))}</div>
     <p class="brand-note">${escapeHtml(customer.nextAction || customer.memo || '')}</p>
   </div>`;
@@ -370,12 +397,12 @@ function customerOpsCard(customer){
       <div class="brand-ops-head">
         <div>
           <span class="brand-chip ok">${escapeHtml(customer.status || '未設定')}</span>
-          <h3>${escapeHtml(customer.customerName || '名前未設定')}</h3>
+          <h3>${escapeHtml(customerDisplayName(customer))}</h3>
           <p>${escapeHtml(customer.orderNo || '-')} / ${escapeHtml(customer.productName || '-')} / ${yen(customer.amount)}</p>
         </div>
         <div class="brand-product-actions">
-          <button class="btn btn-ghost btn-small" data-action="edit-customer" data-id="${customer.id}">編集</button>
-          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-customer" data-id="${customer.id}">削除</button>
+          <button class="btn btn-ghost btn-small" data-action="edit-order" data-id="${customer.id}">編集</button>
+          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-order" data-id="${customer.id}">削除</button>
         </div>
       </div>
       <div class="brand-meter"><span>制作進捗 ${customerProgress(customer)}%</span>${progressBar(customerProgress(customer))}</div>
@@ -422,15 +449,41 @@ function leadOpsCard(lead){
     </article>`;
 }
 
+function customerProfileSummaryLine(profile){
+  return [profile.sns ? `SNS: ${escapeHtml(profile.sns)}` : '', profile.line ? `LINE: ${escapeHtml(profile.line)}` : '', profile.email ? escapeHtml(profile.email) : ''].filter(Boolean).join(' / ') || '連絡先未登録';
+}
 function renderCrm(){
   const root = document.getElementById('brandCrm');
   if(!root) return;
   const counts = customerCounts();
   const activeCustomers = state.customers.filter(customer => customer.status !== '完了');
   const archivedCustomers = state.customers.filter(customer => customer.status === '完了');
-  root.innerHTML = `${pageHead('お客様管理','注文ごとの現在地が見えるよう、進捗バーとステータスで追います。', '<button class="btn btn-primary" data-action="new-customer">追加</button>')}
+  const profiles = asArray(state.customerProfiles).slice().sort((a,b) => a.name.localeCompare(b.name, 'ja'));
+  const profileGroups = profiles.map(profile => {
+    const orders = activeCustomers.filter(o => o.customerId === profile.id);
+    return `<details class="brand-archive brand-customer-group" open>
+      <summary><span>${escapeHtml(profile.name)}</span><b>${orders.length}件</b></summary>
+      <div class="brand-archive-body">
+        <div class="brand-card brand-customer-profile-card">
+          <div class="brand-row">
+            <div><strong>${escapeHtml(profile.name)}</strong><p class="brand-note">${customerProfileSummaryLine(profile)}</p>${profile.memo ? `<p class="brand-note">${escapeHtml(profile.memo)}</p>` : ''}</div>
+            <div class="brand-row">
+              <button class="btn btn-sage btn-small" data-action="new-order" data-id="${profile.id}">注文追加</button>
+              <button class="btn btn-ghost btn-small" data-action="edit-customer-profile" data-id="${profile.id}">編集</button>
+              <button class="btn btn-ghost btn-small brand-danger" data-action="delete-customer-profile" data-id="${profile.id}">削除</button>
+            </div>
+          </div>
+        </div>
+        ${orders.length ? `<div class="brand-ops-grid">${orders.map(customerOpsCard).join('')}</div>` : empty('この方の進行中の注文はまだありません。')}
+      </div>
+    </details>`;
+  }).join('');
+  const orphanOrders = activeCustomers.filter(o => !profiles.some(p => p.id === o.customerId));
+  const orphanSection = orphanOrders.length ? `<section class="brand-wholesale-group"><div class="brand-mini-head"><h3>未分類の注文</h3></div><div class="brand-ops-grid">${orphanOrders.map(customerOpsCard).join('')}</div></section>` : '';
+  const bodyContent = profileGroups + orphanSection;
+  root.innerHTML = `${pageHead('お客様管理','お客様ごとに、注文の現在地をまとめて見ます。', '<button class="btn btn-primary" data-action="new-customer-profile">顧客追加</button>')}
     <div class="brand-status-summary">${CUSTOMER_STATUSES.map(status => `<div class="brand-status-tile"><strong>${counts[status]}</strong><span>${status}</span></div>`).join('')}</div>
-    <div class="brand-ops-grid">${activeCustomers.map(customerOpsCard).join('') || empty()}</div>
+    ${bodyContent || empty('まだお客様がいません。「顧客追加」から登録してください。')}
     ${archiveDetails('完了アーカイブ', archivedCustomers, customerOpsCard)}`;
 }
 
@@ -690,20 +743,34 @@ function marketProductForm(marketId, item = {}){
 }
 function saleForm(){ openForm('売上追加', [{name:'date',label:'日付',type:'date'},{name:'category',label:'カテゴリ',type:'select',options:CATEGORIES},{name:'amount',label:'金額',type:'number'},{name:'memo',label:'メモ',type:'textarea',full:true}], {date:todayKey()}, async data => { state.sales.push({...data, id:uid('sale')}); await save(); }); }
 function salesGoalForm(){ openForm('月間売上目標', [{name:'salesMonth',label:'対象月',type:'month'},{name:'monthlySalesGoal',label:'月間目標',type:'number'}], state, async data => { state.salesMonth = data.salesMonth; state.monthlySalesGoal = Number(data.monthlySalesGoal || 0); await save(); }); }
-function customerForm(customer = {}){ openForm(customer.id ? '注文編集' : '注文追加', [
-  {type:'section',label:'基本情報'},
-  {name:'customerName',label:'お客様名'},{name:'sns',label:'SNSアカウント'},{name:'line',label:'LINE'},{name:'email',label:'メール'},
-  {type:'section',label:'ペット情報'},
-  {name:'petName',label:'ペット名'},{name:'petType',label:'種類'},{name:'petNote',label:'ペット備考',type:'textarea',full:true},
-  {type:'section',label:'注文と進捗'},
-  {name:'orderNo',label:'受付番号'},{name:'productName',label:'商品名'},{name:'quantity',label:'数量',type:'number'},{name:'amount',label:'金額',type:'number'},
-  {name:'paid',label:'入金状況',type:'select',options:['未入金','入金済','一部入金']},{name:'dueDate',label:'納期',type:'date'},{name:'status',label:'制作状況',type:'select',options:CUSTOMER_STATUSES},
-  {name:'nextAction',label:'次に確認すること',full:true},{name:'memo',label:'メモ',type:'textarea',full:true}
-], customer, async data => {
-  const completedAt = data.status === '完了' ? (customer.completedAt || todayKey()) : customer.completedAt;
-  upsert('customers', {...customer, ...data, completedAt, id:customer.id || uid('customer')});
-  await save();
-}); }
+function customerProfileForm(profile = {}){
+  openForm(profile.id ? 'お客様編集' : 'お客様追加', [
+    {name:'name',label:'お客様名'},
+    {name:'sns',label:'SNSアカウント'},
+    {name:'line',label:'LINE'},
+    {name:'email',label:'メール'},
+    {name:'memo',label:'メモ',type:'textarea',full:true}
+  ], profile, async data => {
+    upsert('customerProfiles', {...profile, ...data, id:profile.id || uid('customerProfile')});
+    await save();
+  });
+}
+function orderForm(customerId, order = {}){
+  const profile = state.customerProfiles.find(p => p.id === customerId);
+  if(!profile) return;
+  openForm(order.id ? '注文編集' : '注文追加', [
+    {type:'section',label:'ペット情報'},
+    {name:'petName',label:'ペット名'},{name:'petType',label:'種類'},{name:'petNote',label:'ペット備考',type:'textarea',full:true},
+    {type:'section',label:'注文と進捗'},
+    {name:'orderNo',label:'受付番号'},{name:'productName',label:'商品名'},{name:'quantity',label:'数量',type:'number'},{name:'amount',label:'金額',type:'number'},
+    {name:'paid',label:'入金状況',type:'select',options:['未入金','入金済','一部入金']},{name:'dueDate',label:'納期',type:'date'},{name:'status',label:'制作状況',type:'select',options:CUSTOMER_STATUSES},
+    {name:'nextAction',label:'次に確認すること',full:true},{name:'memo',label:'メモ',type:'textarea',full:true}
+  ], order, async data => {
+    const completedAt = data.status === '完了' ? (order.completedAt || todayKey()) : order.completedAt;
+    upsert('customers', {...order, ...data, completedAt, customerId:profile.id, id:order.id || uid('customer')});
+    await save();
+  });
+}
 function leadForm(lead = {}){ openForm(lead.id ? '営業先編集' : '営業先追加', [
   {type:'section',label:'店舗情報'},
   {name:'shopName',label:'店舗名'},{name:'area',label:'地域'},{name:'hp',label:'HP'},{name:'instagram',label:'Instagram'},
@@ -955,8 +1022,19 @@ async function handleClick(event){
   }
   if(action === 'new-sale') saleForm();
   if(action === 'edit-sales-goal') salesGoalForm();
-  if(action === 'new-customer') customerForm();
-  if(action === 'edit-customer') customerForm(findBy('customers', id));
+  if(action === 'new-customer-profile') customerProfileForm();
+  if(action === 'edit-customer-profile') customerProfileForm(findBy('customerProfiles', id));
+  if(action === 'delete-customer-profile'){
+    const hasOrders = state.customers.some(o => o.customerId === id);
+    const message = hasOrders ? 'このお客様を削除します。紐づく注文は「未分類の注文」に残ります。よろしいですか？' : 'このお客様を削除します。よろしいですか？';
+    if(confirm(message)){
+      state.customerProfiles = state.customerProfiles.filter(p => p.id !== id);
+      await save();
+      renderAll();
+    }
+  }
+  if(action === 'new-order') orderForm(id);
+  if(action === 'edit-order') orderForm(findBy('customers', id)?.customerId, findBy('customers', id));
   if(action === 'new-lead') leadForm();
   if(action === 'edit-lead') leadForm(findBy('leads', id));
   if(action === 'new-product') productForm();
@@ -977,7 +1055,7 @@ async function handleClick(event){
   if(action === 'delete-goal') removeBy('goals', id, '目標');
   if(action === 'delete-market') removeBy('markets', id, 'マルシェ');
   if(action === 'delete-sale') removeBy('sales', id, '売上');
-  if(action === 'delete-customer') removeBy('customers', id, 'お客様');
+  if(action === 'delete-order') removeBy('customers', id, '注文');
   if(action === 'delete-lead') removeBy('leads', id, '営業先');
   if(action === 'delete-product') removeBy('products', id, '商品');
   if(action === 'delete-idea') removeBy('ideas', id, 'アイデア');
