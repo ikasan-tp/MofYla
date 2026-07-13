@@ -461,7 +461,7 @@
 .invoice-table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:12px;}
 .invoice-table th,.invoice-table td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;font-size:.84rem;overflow-wrap:anywhere;}
 .invoice-table th{color:var(--ink-soft);font-weight:700;}
-.invoice-table th:first-child,.invoice-table td:first-child{width:34px;text-align:center;color:var(--ink-soft);}
+.invoice-table th:first-child,.invoice-table td:first-child{width:40px;padding-left:4px;padding-right:4px;text-align:center;color:var(--ink-soft);white-space:nowrap;overflow-wrap:normal;}
 .invoice-table td:nth-child(3),.invoice-table td:nth-child(4),.invoice-table td:nth-child(5),
 .invoice-table th:nth-child(3),.invoice-table th:nth-child(4),.invoice-table th:nth-child(5){text-align:right;}
 .invoice-bottom{display:flex;gap:24px;align-items:flex-start;margin-top:14px;flex-wrap:wrap;}
@@ -489,3 +489,14 @@
   .invoice-sheet{box-shadow:none;border:none;max-width:none;margin:0;padding:12mm;box-sizing:border-box;}
   @page{size:A4;margin:10mm;}
 }
+
+/* ---------- Coupons ---------- */
+.coupon-lookup{background:var(--sage-soft);border-color:rgba(137,161,124,.4);}
+.coupon-lookup-input{
+  width:100%;margin-top:8px;padding:12px 14px;border-radius:12px;border:1px solid rgba(137,161,124,.5);
+  background:#fffefb;font-size:1rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.04em;
+}
+.coupon-lookup-input:focus{outline:2px solid var(--sage);outline-offset:1px;}
+#couponLookupResult{margin-top:10px;display:grid;gap:10px;}
+#couponLookupResult:empty{margin-top:0;}
+.coupon-code{font-family:'IBM Plex Mono',monospace;letter-spacing:.03em;font-size:1.1rem;margin:4px 0 0;}
