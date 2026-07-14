@@ -533,11 +533,11 @@
 .brand-color-swatch{width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.15);flex:none;}
 .brand-color-chip strong{font-family:'IBM Plex Mono',monospace;font-size:.74rem;color:var(--ink);}
 .brand-color-chip span{color:var(--ink-soft);}
-.brand-checkbox-group{display:flex;flex-wrap:wrap;gap:8px;}
-.brand-checkbox-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;background:#fff;padding:6px 12px;font-size:.82rem;cursor:pointer;}
+.brand-checkbox-group{display:flex;flex-wrap:wrap;gap:6px;}
+.brand-checkbox-pill{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;background:#fff;padding:3px 10px;font-size:.76rem;cursor:pointer;line-height:1.6;}
 .brand-checkbox-pill:has(input:checked){border-color:var(--sage);background:var(--sage-soft);color:var(--sage-deep);font-weight:700;}
 .brand-checkbox-pill:has(input:disabled:not(:checked)){opacity:.4;cursor:not-allowed;}
-.brand-checkbox-pill input{margin:0;accent-color:var(--sage);}
+.brand-checkbox-pill input{margin:0;padding:0;border:0;background:none;accent-color:var(--sage);width:13px;height:13px;min-height:0;min-width:0;flex:none;}
 .brand-product-colors{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;}
 .brand-product-color-chip{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;color:var(--ink-soft);font-weight:700;}
 .brand-product-color-chip .brand-color-swatch{width:12px;height:12px;}
