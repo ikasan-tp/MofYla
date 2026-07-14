@@ -369,15 +369,30 @@ function renderGoals(){
   if(!root) return;
   const majorGoals = state.goals.filter(goal => goal.type === '大目標');
   const orphans = state.goals.filter(goal => goal.type !== '大目標' && !majorGoals.some(major => major.id === goal.parentId));
-  const goalCard = (goal, isChild) => `<div class="brand-card brand-goal-card ${isChild ? 'brand-goal-child' : ''}">
-    <div class="brand-goal-card-head"><span class="brand-chip">${escapeHtml(goal.type || '目標')}</span><h3 title="${escapeHtml(goal.title)}">${escapeHtml(goal.title)}</h3></div>
-    <div class="brand-goal-card-actions"><button class="btn btn-ghost btn-small" data-action="edit-goal" data-id="${goal.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-goal" data-id="${goal.id}">削除</button></div>
-    <p class="brand-note">${goal.dueDate ? `期限: ${goal.dueDate}` : '期限なし'}</p>${progressBar(goalProgress(goal))}<p class="brand-note">完了率 ${goalProgress(goal)}%</p><p class="brand-note">${escapeHtml(goal.memo || '')}</p></div>`;
-  const groups = majorGoals.map(major => {
-    const children = goalChildren(major);
-    return `<section class="brand-goal-group">${goalCard(major, false)}${children.length ? `<div class="brand-goal-children">${children.map(child => goalCard(child, true)).join('')}</div>` : ''}</section>`;
-  }).join('');
-  const orphanSection = orphans.length ? `<section class="brand-goal-group"><div class="brand-mini-head"><h3>未分類</h3></div><div class="brand-goal-children">${orphans.map(goal => goalCard(goal, true)).join('')}</div></section>` : '';
+  const childRow = child => `<div class="brand-goal-child-row">
+    <div class="brand-goal-child-row-head"><div class="brand-card-title"><span class="brand-chip">${escapeHtml(child.type || '目標')}</span><h4 title="${escapeHtml(child.title)}">${escapeHtml(child.title)}</h4></div>
+    <div class="brand-card-actions"><button class="btn btn-ghost btn-small" data-action="edit-goal" data-id="${child.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-goal" data-id="${child.id}">削除</button></div></div>
+    <div class="brand-goal-meta-row"><span>${child.dueDate ? `期限: ${child.dueDate}` : '期限なし'}</span><b>${goalProgress(child)}%</b></div>
+    ${progressBar(goalProgress(child))}
+    ${child.memo ? `<p class="brand-note">${escapeHtml(child.memo)}</p>` : ''}
+  </div>`;
+  const cluster = (major, children) => `<article class="brand-card brand-goal-cluster">
+    <div class="brand-goal-cluster-head">
+      <div class="brand-card-title"><span class="brand-chip">${escapeHtml(major.type || '目標')}</span><h3 title="${escapeHtml(major.title)}">${escapeHtml(major.title)}</h3></div>
+      <div class="brand-card-actions"><button class="btn btn-ghost btn-small" data-action="edit-goal" data-id="${major.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-goal" data-id="${major.id}">削除</button></div>
+      <div class="brand-goal-meta-row"><span>${major.dueDate ? `期限: ${major.dueDate}` : '期限なし'}</span><b>完了率 ${goalProgress(major)}%</b></div>
+      ${progressBar(goalProgress(major))}
+      ${major.memo ? `<p class="brand-note">${escapeHtml(major.memo)}</p>` : ''}
+    </div>
+    ${children.length
+      ? `<div class="brand-goal-cluster-children"><p class="brand-goal-cluster-children-label">中目標・小タスク（${children.length}）</p>${children.map(childRow).join('')}</div>`
+      : `<p class="brand-goal-empty-children">まだ中目標・小タスクがありません。追加から「親目標」にこの大目標を選ぶと、ここに表示されます。</p>`}
+  </article>`;
+  const groups = majorGoals.map(major => cluster(major, goalChildren(major))).join('');
+  const orphanSection = orphans.length ? `<article class="brand-card brand-goal-cluster brand-goal-cluster-unassigned">
+    <div class="brand-goal-cluster-head"><div class="brand-card-title"><span class="brand-chip">未分類</span><h3>親目標が未設定</h3></div></div>
+    <div class="brand-goal-cluster-children">${orphans.map(childRow).join('')}</div>
+  </article>` : '';
   const content = groups || orphanSection ? `<div class="brand-goal-tree">${groups}${orphanSection}</div>` : empty();
   root.innerHTML = `${pageHead('目標管理','大目標ごとに、関連する中目標・小タスクをまとめて見ます。', '<button class="btn btn-primary" data-action="new-goal">追加</button>')}${content}`;
 }

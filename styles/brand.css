@@ -45,17 +45,24 @@
 .brand-wholesale-store{display:inline-flex;align-self:flex-start;border-radius:999px;background:var(--sage-soft);color:var(--sage-deep);font-size:.74rem;font-weight:800;padding:5px 9px;}
 .brand-wholesale-group{margin-top:14px;}
 .brand-wholesale-group .brand-product-grid{padding:0 15px 15px;}
-.brand-goal-tree{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,420px));gap:18px;align-items:start;}
-.brand-goal-group{display:grid;gap:10px;}
-.brand-goal-children{display:grid;gap:10px;margin-left:14px;padding-left:14px;border-left:2px solid rgba(137,161,124,.4);}
-.brand-goal-child{background:rgba(255,253,248,.7);padding:12px;}
-.brand-goal-card-head{margin-bottom:10px;}
-.brand-goal-card-head h3{
-  margin:6px 0 0;font-size:1.05rem;line-height:1.4;
+.brand-goal-tree{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,460px));gap:18px;align-items:start;}
+.brand-goal-cluster{display:flex;flex-direction:column;gap:14px;border-top:3px solid var(--sage);}
+.brand-goal-cluster-head{display:flex;flex-direction:column;gap:8px;}
+.brand-goal-cluster-head .brand-chip{background:var(--sage-soft);color:var(--sage-deep);}
+.brand-goal-cluster-head h3{
+  margin:0;font-size:1.15rem;line-height:1.4;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;
 }
-.brand-goal-card-actions{display:flex;gap:8px;margin-bottom:10px;}
-.brand-goal-child h3{font-size:.98rem;}
+.brand-goal-meta-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--ink-soft);font-size:.82rem;font-weight:700;}
+.brand-goal-meta-row b{color:var(--sage-deep);font-size:.95rem;}
+.brand-goal-cluster-children{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:14px;}
+.brand-goal-cluster-children-label{font-size:.72rem;color:var(--ink-soft);font-weight:800;letter-spacing:.02em;}
+.brand-goal-child-row{border:1px solid rgba(222,207,188,.72);border-radius:12px;background:rgba(255,253,248,.66);padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
+.brand-goal-child-row-head{display:flex;flex-direction:column;gap:6px;}
+.brand-goal-child-row-head h4{margin:0;font-size:.94rem;line-height:1.4;color:var(--ink);overflow-wrap:anywhere;}
+.brand-goal-child-row .brand-progress{height:8px;}
+.brand-goal-child-row .brand-card-actions{justify-content:flex-end;}
+.brand-goal-empty-children{color:var(--ink-soft);font-size:.82rem;border-top:1px solid var(--line);padding-top:14px;}
 .brand-ops-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px;align-items:stretch;}
 .brand-ops-card{display:flex;flex-direction:column;gap:14px;padding:18px;}
 .brand-ops-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:start;}
