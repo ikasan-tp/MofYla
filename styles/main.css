@@ -29,7 +29,7 @@ body{
   line-height:1.7;
   -webkit-font-smoothing:antialiased;
 }
-h1,h2,h3,.serif{font-family:'Comfortaa','Zen Maru Gothic','Hiragino Maru Gothic ProN',sans-serif;}
+h1,h2,h3,.serif{font-family:'M PLUS Rounded 1c','Zen Maru Gothic','Hiragino Maru Gothic ProN',sans-serif;}
 button{font-family:inherit;border:none;cursor:pointer;background:none;color:inherit;}
 textarea,input{font-family:inherit;}
 a{color:inherit;}
@@ -140,7 +140,7 @@ body::before{
 .cal-widget{display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;}
 .cal-stats{display:flex;gap:22px;flex:none;}
 .cal-stat{text-align:left;}
-.cal-stat .num{font-family:'Comfortaa','Zen Maru Gothic','Hiragino Maru Gothic ProN',sans-serif;font-size:1.9rem;font-weight:600;color:var(--sage-deep);line-height:1;}
+.cal-stat .num{font-family:'M PLUS Rounded 1c','Zen Maru Gothic','Hiragino Maru Gothic ProN',sans-serif;font-size:1.9rem;font-weight:600;color:var(--sage-deep);line-height:1;}
 .cal-stat .num.honey{color:var(--honey);}
 .cal-stat .lab{font-size:0.72rem;color:var(--ink-soft);margin-top:3px;}
 .cal-link{font-size:0.78rem;color:var(--sage-deep);font-weight:600;margin-top:12px;display:inline-flex;align-items:center;gap:5px;}
@@ -150,7 +150,7 @@ body::before{
 .month-cal{flex:1;min-width:260px;}
 .month-cal-head{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:12px;}
 .month-cal.mini .month-cal-head{justify-content:flex-start;}
-.month-label{font-family:'Comfortaa','Zen Maru Gothic','Hiragino Maru Gothic ProN',sans-serif;font-size:1.05rem;font-weight:600;min-width:110px;text-align:center;}
+.month-label{font-family:'M PLUS Rounded 1c','Zen Maru Gothic','Hiragino Maru Gothic ProN',sans-serif;font-size:1.05rem;font-weight:600;min-width:110px;text-align:center;}
 .cal-navbtn{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--ink-soft);}
 .cal-navbtn:hover{border-color:var(--sage);color:var(--sage-deep);}
 .cal-navbtn svg{width:14px;height:14px;}
@@ -176,7 +176,7 @@ body::before{
 }
 @keyframes todayPulse{0%,100%{box-shadow:0 0 0 0 rgba(190,123,98,0.28);}50%{box-shadow:0 0 0 5px rgba(190,123,98,0);}}
 .day-cell.today .daynum::after{
-  content:"Today";font-family:'Comfortaa',sans-serif;font-size:0.5rem;font-weight:700;
+  content:"Today";font-family:'M PLUS Rounded 1c',sans-serif;font-size:0.5rem;font-weight:700;
   background:var(--clay);color:#fff;padding:1px 5px;border-radius:5px;margin-left:4px;vertical-align:middle;
 }
 .day-cell.streak::before{
@@ -199,7 +199,7 @@ body::before{
 }
 .week-cell:hover{transform:translateY(-1px);}
 .week-cell .wd{font-size:0.64rem;color:var(--ink-faint);}
-.week-cell .dn{font-family:'Comfortaa',sans-serif;font-size:0.86rem;font-weight:700;}
+.week-cell .dn{font-family:'M PLUS Rounded 1c',sans-serif;font-size:0.86rem;font-weight:700;}
 .week-cell.posted{background:var(--sage);border-color:var(--sage-deep);color:#fff;}
 .week-cell.posted .wd{color:rgba(255,255,255,0.75);}
 .week-cell.today{border-color:var(--clay);border-width:2px;}
@@ -209,11 +209,11 @@ body::before{
 /* ---------- Stat cards with ring ---------- */
 .statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-top:18px;}
 .statcard{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-md);padding:12px 14px;}
-.statcard .num{font-family:'Comfortaa','Zen Maru Gothic',sans-serif;font-size:1.4rem;font-weight:700;color:var(--sage-deep);}
+.statcard .num{font-family:'M PLUS Rounded 1c','Zen Maru Gothic',sans-serif;font-size:1.4rem;font-weight:700;color:var(--sage-deep);}
 .statcard .lab{font-size:0.7rem;color:var(--ink-soft);margin-top:2px;}
 .goalring-wrap{display:flex;align-items:center;gap:14px;}
 .goalring{width:64px;height:64px;flex:none;}
-.goalring text{font-family:'Comfortaa',sans-serif;}
+.goalring text{font-family:'M PLUS Rounded 1c',sans-serif;}
 .goalring-lab .num{font-size:1.5rem;}
 
 /* ---------- Modal ---------- */
@@ -469,7 +469,7 @@ button.btn:disabled{opacity:0.5;cursor:progress;}
 
 /* history collapsible + metrics */
 .hist-summary{display:flex;gap:26px;flex-wrap:wrap;margin-bottom:20px;}
-.hist-summary .num{font-family:'Comfortaa','Zen Maru Gothic','Hiragino Maru Gothic ProN',sans-serif;font-size:1.7rem;font-weight:600;color:var(--sage-deep);}
+.hist-summary .num{font-family:'M PLUS Rounded 1c','Zen Maru Gothic','Hiragino Maru Gothic ProN',sans-serif;font-size:1.7rem;font-weight:600;color:var(--sage-deep);}
 .hist-summary .lab{font-size:0.72rem;color:var(--ink-soft);}
 details.hist-item{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:0 16px;}
 details.hist-item summary{list-style:none;cursor:pointer;padding:14px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}

@@ -99,7 +99,7 @@
 .brand-progress{height:11px;border-radius:999px;background:var(--paper-deep);overflow:hidden;}
 .brand-progress span{display:block;height:100%;width:var(--value,0%);max-width:100%;background:linear-gradient(90deg,var(--sage),var(--clay));border-radius:999px;}
 .brand-meter{display:grid;gap:7px;}
-.brand-metric{font-family:'Comfortaa','Zen Maru Gothic',sans-serif;font-size:1.55rem;font-weight:700;color:var(--sage-deep);}
+.brand-metric{font-family:'M PLUS Rounded 1c','Zen Maru Gothic',sans-serif;font-size:1.55rem;font-weight:700;color:var(--sage-deep);}
 .brand-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
 .brand-filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;}
 .brand-filter{border:1px solid var(--line);background:var(--paper);color:var(--ink-soft);border-radius:999px;padding:7px 10px;font-size:.78rem;font-weight:700;white-space:nowrap;}
@@ -122,7 +122,7 @@
 .brand-status-summary{display:flex;gap:10px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;}
 .brand-status-tile{border:1px solid var(--line);border-radius:12px;background:rgba(255,253,248,.7);padding:12px;display:grid;gap:4px;box-shadow:0 6px 18px rgba(58,50,41,.045);}
 .brand-status-tile{flex:0 0 148px;}
-.brand-status-tile strong{font-family:'Comfortaa','Zen Maru Gothic',sans-serif;font-size:1.25rem;color:var(--sage-deep);}
+.brand-status-tile strong{font-family:'M PLUS Rounded 1c','Zen Maru Gothic',sans-serif;font-size:1.25rem;color:var(--sage-deep);}
 .brand-status-tile span{font-size:.72rem;color:var(--ink-soft);font-weight:700;}
 .brand-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
 .brand-field{display:grid;gap:4px;}
@@ -177,7 +177,7 @@
 .brand-market-product-row span{display:block;color:var(--ink-soft);font-size:.76rem;font-weight:700;margin-top:2px;}
 .brand-market-product-row p{margin:5px 0 0;color:var(--ink-soft);font-size:.8rem;}
 .brand-sales-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:start;margin-bottom:14px;background:linear-gradient(135deg,rgba(255,253,248,.96),rgba(255,242,223,.82));}
-.brand-sales-hero h3{font-family:'Comfortaa','Zen Maru Gothic',sans-serif;font-size:clamp(1.8rem,4vw,2.45rem);line-height:1.1;margin:10px 0 6px;color:var(--sage-deep);}
+.brand-sales-hero h3{font-family:'M PLUS Rounded 1c','Zen Maru Gothic',sans-serif;font-size:clamp(1.8rem,4vw,2.45rem);line-height:1.1;margin:10px 0 6px;color:var(--sage-deep);}
 .brand-sales-hero p{margin:0;color:var(--ink-soft);font-weight:700;}
 .brand-sales-progress{grid-column:1/-1;}
 .brand-sales-section{margin-top:14px;}
@@ -185,10 +185,10 @@
 .brand-sales-categories{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;}
 .brand-sales-categories div{border:1px solid var(--line);border-radius:12px;background:rgba(255,253,248,.76);padding:12px;display:grid;gap:6px;box-shadow:0 6px 18px rgba(58,50,41,.045);}
 .brand-sales-categories span{font-size:.74rem;color:var(--ink-soft);font-weight:800;}
-.brand-sales-categories strong{font-family:'Comfortaa','Zen Maru Gothic',sans-serif;font-size:1.08rem;color:var(--ink);}
+.brand-sales-categories strong{font-family:'M PLUS Rounded 1c','Zen Maru Gothic',sans-serif;font-size:1.08rem;color:var(--ink);}
 .brand-sales-list{display:grid;gap:8px;}
 .brand-sales-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;border:1px solid rgba(222,207,188,.76);border-radius:12px;background:rgba(255,253,248,.72);padding:11px 12px;}
-.brand-sales-row strong{display:block;font-family:'Comfortaa','Zen Maru Gothic',sans-serif;font-size:1rem;color:var(--ink);}
+.brand-sales-row strong{display:block;font-family:'M PLUS Rounded 1c','Zen Maru Gothic',sans-serif;font-size:1rem;color:var(--ink);}
 .brand-sales-row span{display:block;color:var(--ink-soft);font-size:.78rem;font-weight:700;margin-top:2px;}
 .brand-sales-row p{margin:6px 0 0;color:var(--ink-soft);font-size:.82rem;}
 
@@ -533,3 +533,11 @@
 .brand-color-swatch{width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.15);flex:none;}
 .brand-color-chip strong{font-family:'IBM Plex Mono',monospace;font-size:.74rem;color:var(--ink);}
 .brand-color-chip span{color:var(--ink-soft);}
+.brand-checkbox-group{display:flex;flex-wrap:wrap;gap:8px;}
+.brand-checkbox-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;background:#fff;padding:6px 12px;font-size:.82rem;cursor:pointer;}
+.brand-checkbox-pill:has(input:checked){border-color:var(--sage);background:var(--sage-soft);color:var(--sage-deep);font-weight:700;}
+.brand-checkbox-pill:has(input:disabled:not(:checked)){opacity:.4;cursor:not-allowed;}
+.brand-checkbox-pill input{margin:0;accent-color:var(--sage);}
+.brand-product-colors{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;}
+.brand-product-color-chip{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;color:var(--ink-soft);font-weight:700;}
+.brand-product-color-chip .brand-color-swatch{width:12px;height:12px;}

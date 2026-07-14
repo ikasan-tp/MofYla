@@ -290,6 +290,12 @@ function colorLabel(colorId){
   const color = state.colorPalette.find(c => c.id === colorId);
   return color ? `${color.code} ${color.name}` : '';
 }
+function productColorIds(product){ return asArray(product.colorIds).length ? product.colorIds : (product.colorId ? [product.colorId] : []); }
+function productColorSwatches(product){
+  const colors = productColorIds(product).map(id => state.colorPalette.find(c => c.id === id)).filter(Boolean);
+  if(!colors.length) return '';
+  return `<div class="brand-product-colors">${colors.map(c => `<span class="brand-product-color-chip" title="${escapeHtml(c.code)} ${escapeHtml(c.name)}"><span class="brand-color-swatch" style="background:${escapeHtml(c.hex || '#ccc')}"></span>${escapeHtml(c.name)}</span>`).join('')}</div>`;
+}
 function nextColorCode(){
   const nums = state.colorPalette.map(c => { const m = /^C(\d+)/.exec(c.code || ''); return m ? Number(m[1]) : 0; });
   const max = nums.length ? Math.max(...nums) : 0;
@@ -522,9 +528,9 @@ function renderCrm(){
       <summary><span>${escapeHtml(profile.name)}</span><b>${orders.length}件</b></summary>
       <div class="brand-archive-body">
         <div class="brand-card brand-customer-profile-card">
-          <div class="brand-row">
-            <div><strong>${escapeHtml(profile.name)}</strong><p class="brand-note">${customerProfileSummaryLine(profile)}</p>${profile.memo ? `<p class="brand-note">${escapeHtml(profile.memo)}</p>` : ''}</div>
-            <div class="brand-row">
+          <div class="brand-card-head">
+            <div class="brand-card-title"><strong>${escapeHtml(profile.name)}</strong><p class="brand-note">${customerProfileSummaryLine(profile)}</p>${profile.memo ? `<p class="brand-note">${escapeHtml(profile.memo)}</p>` : ''}</div>
+            <div class="brand-card-actions">
               <button class="btn btn-sage btn-small" data-action="new-order" data-id="${profile.id}">注文追加</button>
               <button class="btn btn-ghost btn-small" data-action="edit-customer-profile" data-id="${profile.id}">編集</button>
               <button class="btn btn-ghost btn-small brand-danger" data-action="delete-customer-profile" data-id="${profile.id}">削除</button>
@@ -574,7 +580,8 @@ function renderProducts(){
         <div class="brand-product-title">
           <h3>${escapeHtml(product.name || '商品名未設定')}</h3>
           ${product.sku ? `<p class="brand-product-sku">${escapeHtml(product.sku)}</p>` : ''}
-          <p>${escapeHtml(product.category || 'カテゴリ未設定')} / ${escapeHtml(product.status || '未設定')}${product.breed ? ` / ${escapeHtml(product.breed)}` : ''}${colorLabel(product.colorId) ? ` / ${colorLabel(product.colorId)}` : ''}</p>
+          <p>${escapeHtml(product.category || 'カテゴリ未設定')}</p>
+          ${productColorSwatches(product)}
         </div>
         <div class="brand-product-actions">
           <button class="btn btn-ghost btn-small" data-action="edit-product" data-id="${product.id}">編集</button>
@@ -744,11 +751,34 @@ function openForm(title, fields, values, onSubmit){
   overlay.className = 'brand-modal-overlay';
   overlay.innerHTML = `<div class="brand-modal"><div class="brand-modal-head"><h3>${title}</h3><button class="modal-close" type="button" data-close-brand>×</button></div><form class="brand-modal-body"><div class="brand-form-grid">${fields.map(fieldHtml).join('')}</div><div class="toolbar" style="margin-top:16px;"><button class="btn btn-primary" type="submit">保存</button><button class="btn btn-ghost" type="button" data-close-brand>キャンセル</button></div></form></div>`;
   document.body.appendChild(overlay);
-  fields.forEach(field => { const el = overlay.querySelector(`[name="${field.name}"]`); if(el) el.value = values[field.name] ?? field.default ?? ''; });
+  fields.forEach(field => {
+    if(field.type === 'checkboxGroup'){
+      const selected = asArray(values[field.name]);
+      const boxes = [...overlay.querySelectorAll(`input[name="${field.name}"]`)];
+      boxes.forEach(box => { box.checked = selected.includes(box.value); });
+      if(field.max){
+        const enforce = () => {
+          const checkedCount = boxes.filter(box => box.checked).length;
+          boxes.forEach(box => { if(!box.checked) box.disabled = checkedCount >= field.max; });
+        };
+        boxes.forEach(box => box.addEventListener('change', enforce));
+        enforce();
+      }
+      return;
+    }
+    const el = overlay.querySelector(`[name="${field.name}"]`);
+    if(el) el.value = values[field.name] ?? field.default ?? '';
+  });
   overlay.addEventListener('click', event => { if(event.target.closest('[data-close-brand]')) overlay.remove(); });
   overlay.querySelector('form').addEventListener('submit', async event => {
     event.preventDefault();
-    await onSubmit(Object.fromEntries(new FormData(event.currentTarget).entries()));
+    const formData = new FormData(event.currentTarget);
+    const data = {};
+    fields.forEach(field => {
+      if(field.type === 'section') return;
+      data[field.name] = field.type === 'checkboxGroup' ? formData.getAll(field.name) : formData.get(field.name);
+    });
+    await onSubmit(data);
     overlay.remove();
     renderAll();
   });
@@ -758,6 +788,7 @@ function fieldHtml(field){
   const cls = `brand-field ${field.full ? 'full' : ''}`;
   if(field.type === 'textarea') return `<div class="${cls}"><label>${field.label}</label><textarea name="${field.name}"></textarea></div>`;
   if(field.type === 'select') return `<div class="${cls}"><label>${field.label}</label><select name="${field.name}">${field.options.map(option => `<option value="${escapeHtml(option.value ?? option)}">${escapeHtml(option.label ?? option)}</option>`).join('')}</select></div>`;
+  if(field.type === 'checkboxGroup') return `<div class="${cls} full"><label>${field.label}</label><div class="brand-checkbox-group">${field.options.map(option => `<label class="brand-checkbox-pill"><input type="checkbox" name="${field.name}" value="${escapeHtml(option.value ?? option)}"><span>${escapeHtml(option.label ?? option)}</span></label>`).join('')}</div></div>`;
   return `<div class="${cls}"><label>${field.label}</label><input name="${field.name}" type="${field.type || 'text'}"></div>`;
 }
 function optionsFrom(items, labelKey){ return [{value:'', label:'なし'}, ...items.map(item => ({ value:item.id, label:item[labelKey] || item.title || item.name || item.id }))]; }
@@ -873,13 +904,13 @@ function couponCard(coupon){
   const customer = state.customerProfiles.find(p => p.id === coupon.customerId);
   const discountLabel = coupon.discountType === 'amount' ? `${yen(coupon.discountValue)}引き` : `${coupon.discountValue || 0}%引き`;
   return `<div class="brand-card coupon-card">
-      <div class="brand-row">
-        <div>
+      <div class="brand-card-head">
+        <div class="brand-card-title">
           <span class="brand-chip ${couponStatusClass(status)}">${status}</span>
           <h3 class="coupon-code">${escapeHtml(coupon.code)}</h3>
           <p class="brand-note">${discountLabel}${coupon.expiryDate ? ` / 期限 ${coupon.expiryDate}` : ' / 無期限'}${customer ? ` / ${escapeHtml(customer.name)}` : ''}</p>
         </div>
-        <div class="brand-row">
+        <div class="brand-card-actions">
           ${status === '未使用' ? `<button class="btn btn-sage btn-small" data-action="mark-coupon-used" data-id="${coupon.id}">使用済みにする</button>` : ''}
           <button class="btn btn-ghost btn-small" data-action="edit-coupon" data-id="${coupon.id}">編集</button>
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-coupon" data-id="${coupon.id}">削除</button>
@@ -937,7 +968,7 @@ function productForm(product = {}){
     {name:'category',label:'商品カテゴリ',type:'select',options:CATEGORIES},
     {name:'breed',label:'兎種',type:'select',options:RABBIT_BREEDS.map(b => b.name)},
     {name:'sku',label:'商品番号（自動採番・編集可）'},
-    {name:'colorId',label:'カラー',type:'select',options:state.colorPalette.map(c => ({value:c.id, label:`${c.code} ${c.name}`}))},
+    {name:'colorIds',label:'カラー（最大4色まで選択可）',type:'checkboxGroup',max:4,options:state.colorPalette.map(c => ({value:c.id, label:`${c.code} ${c.name}`}))},
     {name:'cost',label:'原価',type:'number'},
     {name:'minutes',label:'制作時間目安',type:'number'}
   ];
@@ -962,12 +993,14 @@ function productForm(product = {}){
   const initialValues = {
     salesChannel:channel, category:defaultCategory, breed:defaultBreed,
     sku:product.sku || (product.id ? '' : nextProductSku(defaultCategory, defaultBreed)),
+    colorIds:asArray(product.colorIds).length ? product.colorIds : (product.colorId ? [product.colorId] : []),
     ...product
   };
   openForm(product.id ? '商品編集' : '商品追加', fields, initialValues, async data => {
     const salesChannel = data.salesChannel || 'online';
     upsert('products', {
       ...product, ...data, id:product.id || uid('product'), salesChannel,
+      colorIds:asArray(data.colorIds).slice(0, 4), colorId:undefined,
       price:Number(data.price ?? product.price ?? 0),
       wholesalePrice:Number(data.wholesalePrice ?? product.wholesalePrice ?? 0),
       cost:Number(data.cost || 0),
@@ -1274,7 +1307,7 @@ async function handleClick(event){
   if(action === 'new-color') colorPaletteForm();
   if(action === 'edit-color') colorPaletteForm(findBy('colorPalette', id));
   if(action === 'delete-color'){
-    const inUse = state.products.some(p => p.colorId === id);
+    const inUse = state.products.some(p => asArray(p.colorIds).includes(id) || p.colorId === id);
     if(confirm(inUse ? 'このカラーは商品で使用中です。削除します。よろしいですか？' : 'このカラーを削除します。よろしいですか？')){
       state.colorPalette = state.colorPalette.filter(c => c.id !== id);
       await save();
