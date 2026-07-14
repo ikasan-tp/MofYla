@@ -23,6 +23,18 @@
 .brand-product-sku{font-family:'IBM Plex Mono',monospace;font-size:.72rem !important;color:var(--sage-deep) !important;letter-spacing:.02em;margin-bottom:4px !important;}
 .brand-product-actions{display:flex;gap:8px;justify-content:flex-end;white-space:nowrap;}
 .brand-product-actions .btn{min-width:64px;}
+.brand-card-head{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.brand-card-title{display:grid;gap:4px;min-width:0;}
+.brand-card-title h3{margin:0;font-size:1.02rem;line-height:1.45;overflow-wrap:anywhere;}
+.brand-card-title strong{font-size:1rem;color:var(--ink);overflow-wrap:anywhere;}
+.brand-card-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
+.brand-item .brand-card-head,.brand-market-card .brand-card-head{margin-bottom:0;}
+.brand-item .brand-card-head{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;}
+.brand-item .brand-card-title,.brand-item .brand-checkline{min-width:0;}
+@media (max-width:420px){
+  .brand-item .brand-card-head{flex-direction:column;align-items:stretch;}
+  .brand-item .brand-card-actions{justify-content:flex-start;}
+}
 .brand-product-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:auto;}
 .brand-product-metrics span{display:grid;gap:2px;border-radius:12px;background:var(--paper-deep);padding:9px 8px;min-width:0;}
 .brand-product-metrics b{font-size:.85rem;color:var(--ink);line-height:1.2;overflow-wrap:anywhere;}
@@ -129,6 +141,8 @@
   .brand-detail-grid{grid-template-columns:1fr;}
   .brand-check-grid{grid-template-columns:1fr;}
   .brand-product-actions{justify-content:flex-start;}
+  .brand-card-head{grid-template-columns:1fr;}
+  .brand-card-actions{justify-content:flex-start;}
   .brand-hero{padding:18px;}
   .brand-card{padding:14px;}
 }
