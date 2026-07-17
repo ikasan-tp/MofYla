@@ -502,6 +502,61 @@
 .invoice-bank-table td{color:var(--ink);font-weight:700;}
 .invoice-footer{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-top:18px;padding-top:12px;border-top:1px solid var(--line);font-size:.78rem;color:var(--ink-soft);}
 
+/* ---------- Meeting records ---------- */
+.brand-meeting-card{gap:14px;}
+.brand-meeting-filter-card{margin-bottom:14px;background:rgba(255,253,248,.72);}
+.brand-meeting-filters{display:grid;grid-template-columns:minmax(220px,1.4fr) repeat(5,minmax(120px,1fr)) auto;gap:10px;align-items:end;}
+.brand-meeting-filters .btn{min-height:42px;white-space:nowrap;}
+.meeting-search{min-width:0;}
+.brand-meeting-modal{width:min(920px,100%);}
+.brand-meeting-modal textarea[name="counterpartNeeds"],
+.brand-meeting-modal textarea[name="proposals"],
+.brand-meeting-modal textarea[name="decisions"]{min-height:108px;}
+.meeting-action-list{display:grid;gap:8px;}
+.meeting-action-row{
+  display:grid;
+  grid-template-columns:auto minmax(180px,1fr) minmax(120px,.55fr) 150px auto;
+  gap:8px;
+  align-items:center;
+  border:1px solid rgba(222,207,188,.72);
+  border-radius:12px;
+  background:rgba(255,253,248,.7);
+  padding:9px;
+}
+.meeting-action-row input{width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;padding:8px 9px;font-family:inherit;}
+.meeting-action-done{white-space:nowrap;font-size:.78rem;color:var(--ink-soft);font-weight:800;}
+.meeting-add-action{justify-self:start;margin-top:8px;}
+.meeting-status-check{grid-column:1/-1;border:1px solid rgba(137,161,124,.28);border-radius:12px;background:rgba(137,161,124,.08);padding:10px 12px;}
+.meeting-modal-actions{margin-top:16px;}
+.brand-multiline{margin:4px 0 0;color:var(--ink);line-height:1.75;font-size:.9rem;white-space:pre-wrap;overflow-wrap:anywhere;}
+.brand-meeting-summary-card{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+  background:linear-gradient(135deg,rgba(255,253,248,.96),rgba(232,239,224,.72));
+}
+.brand-meeting-summary-card div{min-width:0;}
+.brand-meeting-summary-card small,
+.brand-meeting-detail-block h4{display:block;color:var(--sage-deep);font-size:.75rem;font-weight:900;margin-bottom:4px;}
+.meeting-overview{margin:14px 0;}
+.brand-meeting-detail-block{
+  border-top:1px solid rgba(222,207,188,.68);
+  padding-top:13px;
+  margin-top:13px;
+}
+.brand-meeting-detail-block h4{font-size:.84rem;margin:0 0 6px;}
+.meeting-detail-actions{display:grid;gap:8px;}
+.meeting-detail-actions .brand-checkline{
+  border:1px solid rgba(222,207,188,.72);
+  border-radius:12px;
+  background:rgba(255,253,248,.66);
+  padding:10px 12px;
+}
+.meeting-detail-actions span{display:grid;gap:2px;}
+.meeting-detail-actions small{color:var(--ink-soft);font-size:.74rem;font-weight:700;}
+.meeting-detail-footer{margin-top:16px;}
+.brand-meeting-task-card{margin-top:14px;background:rgba(255,253,248,.72);}
+
 @media print{
   .sidebar,.mobile-topbar,.nav-overlay,.page-head,.invoice-toolbar,.no-print{display:none !important;}
   .main{padding:0;max-width:none;width:100%;}
@@ -510,6 +565,15 @@
   .invoice-archive .invoice-sheet,
   .invoice-sheet{box-shadow:none;border:none;max-width:none;margin:0;padding:12mm;box-sizing:border-box;}
   @page{size:A4;margin:10mm;}
+}
+
+@media (max-width:980px){
+  .brand-meeting-filters{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .brand-meeting-filters .meeting-search{grid-column:1/-1;}
+  .brand-meeting-filters .btn{justify-self:start;}
+  .meeting-action-row{grid-template-columns:1fr;}
+  .meeting-action-row .btn{justify-self:start;}
+  .brand-meeting-summary-card{grid-template-columns:1fr;}
 }
 
 /* ---------- Coupons ---------- */
