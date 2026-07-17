@@ -680,11 +680,11 @@ function meetingCard(meeting){
           <span class="brand-chip">${escapeHtml(meeting.meetingType || '-')}</span>
           <span class="brand-chip ${meetingImportanceClass(meeting.importance)}">重要度 ${escapeHtml(meeting.importance || '中')}</span>
         </div>
-        <h3>${escapeHtml(meetingCompany(meeting))}</h3>
+        <h3 title="${escapeHtml(meetingCompany(meeting))}">${escapeHtml(meetingCompany(meeting))}</h3>
         <p>${escapeHtml(meeting.attendees || '出席者未記入')}</p>
       </div>
-      <div class="brand-product-actions">
-        <button class="btn btn-sage btn-small" data-action="view-meeting" data-id="${meeting.id}">詳細を見る</button>
+      <div class="brand-product-actions meeting-card-actions">
+        <button class="btn btn-sage btn-small" data-action="view-meeting" data-id="${meeting.id}">詳細</button>
         <button class="btn btn-ghost btn-small" data-action="edit-meeting" data-id="${meeting.id}">編集</button>
         <button class="btn btn-ghost btn-small" data-action="duplicate-meeting" data-id="${meeting.id}">複製</button>
         <button class="btn btn-ghost btn-small brand-danger" data-action="delete-meeting" data-id="${meeting.id}">削除</button>
