@@ -1175,7 +1175,7 @@ function meetingForm(meeting = {}){
         <div class="brand-form-section">今後の予定</div>
         <div class="brand-field"><label>次回連絡日</label><input name="nextContactDate" type="date" value="${escapeHtml(values.nextContactDate)}"></div>
         <div class="brand-field"><label>商談結果</label><select name="result">${MEETING_RESULTS.map(result => `<option value="${escapeHtml(result)}" ${values.result === result ? 'selected' : ''}>${escapeHtml(result)}</option>`).join('')}</select></div>
-        <label class="brand-checkline full meeting-status-check"><input name="updateLeadStatus" type="checkbox"><span>営業先のステータスも更新する</span></label>
+        <label class="brand-checkline full meeting-status-check"><input name="updateLeadStatus" type="checkbox"><span><b>営業先のステータスも更新する</b><small>商談結果に合わせて営業先カードへ反映します</small></span></label>
 
         <div class="brand-form-section">その他</div>
         <div class="brand-field full"><label>自由メモ</label><textarea name="memo" placeholder="数字、温度感、補足、次回話したいことなど">${escapeHtml(values.memo)}</textarea></div>

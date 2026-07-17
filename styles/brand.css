@@ -538,7 +538,9 @@
 .brand-meeting-filters{display:grid;grid-template-columns:minmax(220px,1.4fr) repeat(5,minmax(120px,1fr)) auto;gap:10px;align-items:end;}
 .brand-meeting-filters .btn{min-height:42px;white-space:nowrap;}
 .meeting-search{min-width:0;}
-.brand-meeting-modal{width:min(920px,100%);}
+.brand-meeting-modal{width:min(920px,100%);font-family:'M PLUS Rounded 1c','Zen Maru Gothic','Zen Kaku Gothic New',sans-serif;}
+.brand-meeting-modal .brand-form-grid{gap:15px 14px;}
+.brand-meeting-modal .brand-form-section{margin-top:10px;padding-top:16px;}
 .brand-meeting-modal textarea[name="counterpartNeeds"],
 .brand-meeting-modal textarea[name="proposals"],
 .brand-meeting-modal textarea[name="decisions"]{min-height:108px;}
@@ -567,7 +569,21 @@
 }
 .meeting-action-done input{width:auto;margin:0;}
 .meeting-add-action{justify-self:start;margin-top:8px;}
-.meeting-status-check{grid-column:1/-1;border:1px solid rgba(137,161,124,.28);border-radius:12px;background:rgba(137,161,124,.08);padding:10px 12px;}
+.meeting-status-check{
+  grid-column:1/-1;
+  justify-self:start;
+  align-items:center;
+  gap:9px;
+  border:1px solid rgba(137,161,124,.28);
+  border-radius:999px;
+  background:rgba(137,161,124,.07);
+  padding:7px 12px;
+  margin-top:-2px;
+}
+.meeting-status-check input{margin:0;}
+.meeting-status-check span{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.meeting-status-check b{color:var(--sage-deep);font-size:.8rem;font-weight:900;}
+.meeting-status-check small{color:var(--ink-soft);font-size:.72rem;font-weight:700;line-height:1.35;}
 .meeting-modal-actions{margin-top:16px;}
 .brand-multiline{margin:4px 0 0;color:var(--ink);line-height:1.75;font-size:.9rem;white-space:pre-wrap;overflow-wrap:anywhere;}
 .brand-meeting-summary-card{
@@ -612,6 +628,8 @@
   .brand-meeting-filters{grid-template-columns:repeat(2,minmax(0,1fr));}
   .brand-meeting-filters .meeting-search{grid-column:1/-1;}
   .brand-meeting-filters .btn{justify-self:start;}
+  .meeting-status-check{justify-self:stretch;border-radius:12px;align-items:flex-start;}
+  .meeting-status-check span{display:grid;gap:3px;}
   .meeting-action-row{grid-template-columns:1fr;}
   .meeting-action-row .btn{justify-self:start;}
   .brand-meeting-summary-card{grid-template-columns:1fr;}
