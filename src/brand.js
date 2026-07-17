@@ -1282,7 +1282,7 @@ function meetingDetail(meeting){
       ${meetingDetailBlock('3. MofYlaからの提案', item.proposals)}
       ${meetingDetailBlock('4. 相手の反応', item.counterpartReaction)}
       ${meetingDetailBlock('5. 決定事項・保留事項', [item.decisions, item.pendingIssues ? `保留・課題:\n${item.pendingIssues}` : ''].filter(Boolean).join('\n\n'))}
-      <section class="brand-meeting-detail-block"><h4>6. 次の対応</h4><div class="meeting-detail-actions">${asArray(item.nextActions).map(action => `<label class="brand-checkline"><input type="checkbox" data-action="toggle-meeting-action" data-meeting="${item.id}" data-id="${action.id}" ${action.done ? 'checked' : ''}><span><strong>${escapeHtml(action.title || '対応内容未設定')}</strong><small>${escapeHtml(action.owner || '担当未設定')} / ${action.dueDate || '期限なし'}</small></span></label>`).join('') || empty('次の対応は未設定です。')}</div></section>
+      <section class="brand-meeting-detail-block"><h4>6. 次の対応</h4><div class="meeting-detail-actions">${asArray(item.nextActions).map(action => `<label class="brand-checkline meeting-detail-action"><input type="checkbox" data-action="toggle-meeting-action" data-meeting="${item.id}" data-id="${action.id}" ${action.done ? 'checked' : ''}><span><strong>${escapeHtml(action.title || '対応内容未設定')}</strong><small>${escapeHtml(action.owner || '担当未設定')} / ${action.dueDate || '期限なし'}</small></span></label>`).join('') || empty('次の対応は未設定です。')}</div></section>
       ${meetingDetailBlock('7. 次回連絡日', item.nextContactDate || '未設定')}
       ${meetingDetailBlock('8. その他メモ', item.memo)}
       <div class="brand-card-actions meeting-detail-footer"><button class="btn btn-ghost" data-action="edit-meeting" data-id="${item.id}">編集</button></div>

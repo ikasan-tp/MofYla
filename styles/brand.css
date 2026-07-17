@@ -619,13 +619,24 @@
 }
 .brand-meeting-detail-block h4{font-size:.84rem;margin:0 0 6px;}
 .meeting-detail-actions{display:grid;gap:8px;}
-.meeting-detail-actions .brand-checkline{
+.meeting-detail-action{
+  display:grid;
+  grid-template-columns:18px minmax(0,1fr);
+  align-items:start;
+  column-gap:10px;
   border:1px solid rgba(222,207,188,.72);
   border-radius:12px;
   background:rgba(255,253,248,.66);
-  padding:10px 12px;
+  padding:13px 16px;
 }
-.meeting-detail-actions span{display:grid;gap:2px;}
+.meeting-detail-action input{
+  width:14px;
+  height:14px;
+  margin:3px 0 0;
+  justify-self:center;
+}
+.meeting-detail-actions span{display:grid;gap:4px;min-width:0;}
+.meeting-detail-actions strong{line-height:1.45;overflow-wrap:anywhere;}
 .meeting-detail-actions small{color:var(--ink-soft);font-size:.74rem;font-weight:700;}
 .meeting-detail-footer{margin-top:16px;}
 .brand-meeting-task-card{margin-top:14px;background:rgba(255,253,248,.72);}
