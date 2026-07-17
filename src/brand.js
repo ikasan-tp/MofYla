@@ -606,8 +606,12 @@ function leadOpsCard(lead){
       <div class="brand-detail-grid">
         <div><small>最新商談日</small><strong>${latestMeeting?.meetingDate || '-'}</strong><span>${escapeHtml(latestMeeting?.meetingType || '-')}</span></div>
         <div><small>商談記録</small><strong>${leadMeetings.length}件</strong><span>${escapeHtml(latestMeeting?.result || '記録なし')}</span></div>
-        <div><small>履歴</small><strong>${latestMeeting?.nextContactDate || lead.nextContactDate || '-'}</strong><span><button class="btn btn-ghost btn-small" data-action="show-lead-meetings" data-id="${lead.id}">商談履歴を見る</button></span></div>
+        <div><small>次回連絡</small><strong>${latestMeeting?.nextContactDate || lead.nextContactDate || '-'}</strong><span>${latestMeeting?.nextContactDate ? `あと${daysUntil(latestMeeting.nextContactDate)}日` : '商談記録からも更新'}</span></div>
       </div>
+      <button class="brand-lead-meeting-link" data-action="show-lead-meetings" data-id="${lead.id}">
+        <span>商談履歴を見る</span>
+        <small>${leadMeetings.length ? `最新: ${escapeHtml(latestMeeting.result || '結果未設定')}` : 'この営業先に絞って商談記録を開く'}</small>
+      </button>
       <div class="brand-next-action"><small>次にやること</small><p>${escapeHtml(lead.nextAction || '未設定')}</p></div>
       <details class="brand-step-panel">
         <summary>営業状況を変更</summary>
