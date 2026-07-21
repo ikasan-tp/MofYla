@@ -131,7 +131,7 @@
 .brand-field label{font-size:.72rem;color:var(--ink-soft);font-weight:800;}
 .brand-field input,.brand-field textarea,.brand-field select{width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;padding:9px 10px;font-family:inherit;}
 .brand-field textarea{min-height:76px;resize:vertical;}
-.brand-modal-overlay{position:fixed;inset:0;background:rgba(58,50,41,.38);z-index:80;display:flex;align-items:center;justify-content:center;padding:18px;}
+.brand-modal-overlay{position:fixed;inset:0;background:rgba(40,34,27,.62);z-index:80;display:flex;align-items:center;justify-content:center;padding:18px;}
 .brand-modal{width:min(720px,100%);max-height:88vh;overflow:auto;background:var(--card);border-radius:var(--radius-lg);box-shadow:var(--shadow-lift);border:1px solid var(--line);}
 .brand-modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:1;}
 .brand-modal-head h3{margin:0;}
