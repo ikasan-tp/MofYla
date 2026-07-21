@@ -3,14 +3,11 @@ import { showToast } from './components/toast.js';
 import { RABBIT_BREEDS, breedCode } from './services/rabbitBreeds.js';
 
 const STORE_KEY = 'brand:data';
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 6;
 const todayKey = () => new Date().toISOString().slice(0, 10);
 const CUSTOMER_STATUSES = ['お問い合わせ','見積り','デザイン確認','制作中','印刷','塗装','梱包','発送','完了'];
 const LEAD_STATUSES = ['未調査','調査済','DM送信','返信待ち','商談中','サンプル送付','導入済','見送り'];
 const LEAD_POTENTIALS = ['未設定','高','中','低'];
-const MEETING_TYPES = ['訪問','来社','オンライン','電話','メール','イベント','その他'];
-const MEETING_IMPORTANCE = ['高','中','低'];
-const MEETING_RESULTS = ['継続対応','見積り提出','サンプル提出','社内検討待ち','先方回答待ち','契約・導入','見送り','保留'];
 const WHOLESALE_STATUSES = ['商談中','納品準備中','納品済み','受注中','追加発注待ち','取り扱い終了'];
 const CATEGORIES = ['ネームプレート','コースター','キーホルダー','その他'];
 const CATEGORY_CODES = { 'ネームプレート':'NP', 'コースター':'CS', 'キーホルダー':'KH', 'その他':'OT' };
@@ -33,7 +30,6 @@ let state;
 let activeTaskFilter = '今日';
 let activeProductTab = 'online';
 let couponQuery = '';
-let meetingFilters = { query:'', result:'', importance:'', type:'', actionState:'', month:'' };
 
 function uid(prefix){ return `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`; }
 function yen(value){ return `${Number(value || 0).toLocaleString('ja-JP')}円`; }
@@ -66,7 +62,6 @@ function emptyState(){
     customers:[],
     customerProfiles:[],
     leads:[],
-    meetings:[],
     products:[],
     ideas:[],
     sellerProfile:{name:'', contactPerson:'', postalCode:'', address:'', phone:'', email:'', bankName:'', branchName:'', accountType:'普通', accountNumber:'', accountHolder:''},
@@ -90,7 +85,7 @@ function stripDemoData(){
 function ensureShape(){
   const base = emptyState();
   state = { ...base, ...(state || {}) };
-  for(const key of ['goals','tasks','markets','sales','customers','customerProfiles','leads','meetings','products','ideas','invoices','coupons','colorPalette']) state[key] = asArray(state[key]);
+  for(const key of ['goals','tasks','markets','sales','customers','customerProfiles','leads','products','ideas','invoices','coupons','colorPalette']) state[key] = asArray(state[key]);
   if(!state.colorPalette.length) state.colorPalette = DEFAULT_COLOR_PALETTE.map(c => ({...c}));
   state.dailyDone = state.dailyDone && typeof state.dailyDone === 'object' ? state.dailyDone : {};
   state.sellerProfile = state.sellerProfile && typeof state.sellerProfile === 'object' ? state.sellerProfile : {name:'', contactPerson:'', postalCode:'', address:'', phone:'', email:'', bankName:'', branchName:'', accountType:'普通', accountNumber:'', accountHolder:''};
@@ -108,7 +103,6 @@ async function load(){
     changed = true;
     return { ...lead, potential:'未設定' };
   });
-  state.meetings = state.meetings.map(normalizeMeeting);
   if(migrateCustomerProfiles()) changed = true;
   if(changed || savedVersion !== SCHEMA_VERSION) await save(false);
 }
@@ -147,94 +141,6 @@ function dueCustomers(){ return state.customers.filter(item => item.status !== '
 function todayLeads(){ return state.leads.filter(lead => lead.nextContactDate && lead.nextContactDate <= todayKey() && !['導入済','見送り'].includes(lead.status)).sort((a,b)=>a.nextContactDate.localeCompare(b.nextContactDate)).slice(0, 4); }
 function customerCounts(){ return CUSTOMER_STATUSES.reduce((acc, status) => ({ ...acc, [status]:state.customers.filter(item => item.status === status).length }), {}); }
 function leadCounts(){ return LEAD_STATUSES.reduce((acc, status) => ({ ...acc, [status]:state.leads.filter(item => item.status === status).length }), {}); }
-function normalizeMeeting(meeting = {}){
-  return {
-    id:meeting.id || uid('meeting'),
-    leadId:meeting.leadId || '',
-    companyName:meeting.companyName || '',
-    meetingDate:meeting.meetingDate || '',
-    meetingType:meeting.meetingType || '訪問',
-    attendees:meeting.attendees || '',
-    counterpartNeeds:meeting.counterpartNeeds || '',
-    background:meeting.background || '',
-    proposals:meeting.proposals || '',
-    counterpartReaction:meeting.counterpartReaction || '',
-    decisions:meeting.decisions || '',
-    pendingIssues:meeting.pendingIssues || '',
-    nextActions:asArray(meeting.nextActions).map(action => ({
-      id:action.id || uid('meetingAction'),
-      title:action.title || '',
-      owner:action.owner || '',
-      dueDate:action.dueDate || '',
-      done:!!action.done
-    })),
-    nextContactDate:meeting.nextContactDate || '',
-    result:meeting.result || '継続対応',
-    importance:meeting.importance || '中',
-    memo:meeting.memo || '',
-    createdAt:meeting.createdAt || new Date().toISOString(),
-    updatedAt:meeting.updatedAt || meeting.createdAt || new Date().toISOString()
-  };
-}
-function meetingLeadName(lead){ return lead?.shopName || lead?.companyName || lead?.name || ''; }
-function meetingCompany(meeting){
-  const lead = state.leads.find(item => item.id === meeting.leadId);
-  return meeting.companyName || meetingLeadName(lead) || '営業先未設定';
-}
-function meetingLeadLabel(lead){
-  const parts = [meetingLeadName(lead) || '名称未設定', lead.person ? `担当: ${lead.person}` : '', lead.area || ''].filter(Boolean);
-  return parts.join(' / ');
-}
-function firstLine(value, fallback = '-'){
-  const text = String(value || '').split(/\r?\n/).map(line => line.trim()).find(Boolean);
-  if(!text) return fallback;
-  return text.length > 74 ? `${text.slice(0, 74)}...` : text;
-}
-function multiline(value, fallback = '未記入'){
-  return `<p class="brand-multiline">${escapeHtml(value || fallback)}</p>`;
-}
-function meetingImportanceClass(value){ return value === '高' ? 'warn' : value === '低' ? 'cool' : 'ok'; }
-function meetingResultToLeadStatus(result){
-  if(result === '契約・導入') return '導入済';
-  if(result === '見送り') return '見送り';
-  if(result === 'サンプル提出') return 'サンプル送付';
-  if(['継続対応','見積り提出','社内検討待ち','先方回答待ち','保留'].includes(result)) return '商談中';
-  return '';
-}
-function meetingsForLead(leadId){
-  return state.meetings.filter(meeting => meeting.leadId === leadId).sort((a,b)=>(b.meetingDate || '').localeCompare(a.meetingDate || '') || (b.updatedAt || '').localeCompare(a.updatedAt || ''));
-}
-function latestMeetingForLead(leadId){ return meetingsForLead(leadId)[0]; }
-function incompleteMeetingActions(meeting){ return asArray(meeting.nextActions).filter(action => !action.done && action.title); }
-function allMeetingActions(){
-  return state.meetings.flatMap(meeting => asArray(meeting.nextActions).filter(action => action.title).map(action => ({ ...action, meeting })));
-}
-function filteredMeetings(){
-  const q = meetingFilters.query.trim().toLowerCase();
-  return state.meetings.filter(meeting => {
-    const lead = state.leads.find(item => item.id === meeting.leadId);
-    const haystack = [
-      meetingCompany(meeting), lead?.person, meeting.attendees, meeting.counterpartNeeds, meeting.background,
-      meeting.proposals, meeting.counterpartReaction, meeting.decisions, meeting.pendingIssues, meeting.memo,
-      ...asArray(meeting.nextActions).map(action => `${action.title} ${action.owner}`)
-    ].join(' ').toLowerCase();
-    if(q && !haystack.includes(q)) return false;
-    if(meetingFilters.result && meeting.result !== meetingFilters.result) return false;
-    if(meetingFilters.importance && meeting.importance !== meetingFilters.importance) return false;
-    if(meetingFilters.type && meeting.meetingType !== meetingFilters.type) return false;
-    if(meetingFilters.month && !(meeting.meetingDate || '').startsWith(meetingFilters.month)) return false;
-    if(meetingFilters.actionState === 'open' && !incompleteMeetingActions(meeting).length) return false;
-    if(meetingFilters.actionState === 'done' && incompleteMeetingActions(meeting).length) return false;
-    return true;
-  }).sort((a,b)=>(b.meetingDate || '').localeCompare(a.meetingDate || '') || (b.updatedAt || '').localeCompare(a.updatedAt || ''));
-}
-function goMeetingPageForLead(leadId){
-  meetingFilters = { query:'', result:'', importance:'', type:'', actionState:'', month:'' };
-  const lead = state.leads.find(item => item.id === leadId);
-  meetingFilters.query = meetingLeadName(lead);
-  renderMeetings();
-  window.goPage?.('brand-meetings');
-}
 function instagramUrl(value){
   const raw = String(value || '').trim();
   if(!raw) return '';
@@ -449,12 +355,9 @@ function renderTasks(){
     return task.category === activeTaskFilter;
   }).sort((a,b)=>Number(a.done)-Number(b.done) || priorityValue(b)-priorityValue(a) || byDue(a,b));
   const completed = allTasks().filter(task => task.done);
-  const meetingActions = allMeetingActions().filter(item => !item.done).sort((a,b)=>(a.dueDate || '9999-12-31').localeCompare(b.dueDate || '9999-12-31')).slice(0, 8);
-  const meetingActionSection = meetingActions.length ? `<div class="brand-card brand-meeting-task-card"><div class="brand-mini-head"><h3>商談記録の次回対応</h3><span class="brand-chip">参照表示</span></div><div class="brand-list">${meetingActions.map(item => `<div class="brand-item"><div class="brand-row"><strong>${escapeHtml(item.title)}</strong><span class="brand-chip ${daysUntil(item.dueDate) !== null && daysUntil(item.dueDate) <= 3 ? 'warn' : ''}">${item.dueDate || '期限なし'}</span></div><p class="brand-note">${escapeHtml(meetingCompany(item.meeting))} / ${escapeHtml(item.owner || '担当未設定')}</p><div class="brand-card-actions"><button class="btn btn-ghost btn-small" data-action="view-meeting" data-id="${item.meeting.id}">商談を見る</button><button class="btn btn-sage btn-small" data-action="toggle-meeting-action-done" data-meeting="${item.meeting.id}" data-id="${item.id}">完了にする</button></div></div>`).join('')}</div></div>` : '';
   root.innerHTML = `${pageHead('タスク管理','毎日の確認と個別タスクをここで整理します。', '<button class="btn btn-primary" data-action="new-task">追加</button>')}
     <div class="brand-toolbar"><div class="brand-filters">${TASK_FILTERS.map(f => `<button class="brand-filter ${activeTaskFilter === f ? 'active' : ''}" data-action="filter-task" data-value="${f}">${f}</button>`).join('')}</div></div>
     <div class="brand-list">${filtered.map(task => taskItem(task)).join('') || empty()}</div>
-    ${activeTaskFilter === '完了済み' ? '' : meetingActionSection}
     ${activeTaskFilter === '完了済み' ? '' : archiveDetails('完了アーカイブ', completed, task => taskItem(task))}`;
 }
 
@@ -580,8 +483,6 @@ function customerOpsCard(customer){
 }
 
 function leadOpsCard(lead){
-  const leadMeetings = meetingsForLead(lead.id);
-  const latestMeeting = leadMeetings[0];
   return `<article class="brand-card brand-ops-card">
       <div class="brand-ops-head">
         <div>
@@ -603,20 +504,23 @@ function leadOpsCard(lead){
         <div><small>最終連絡</small><strong>${lead.lastContactDate || '-'}</strong><span>${escapeHtml(lead.person || '担当者未設定')}</span></div>
         <div><small>連絡先</small><strong>${escapeHtml(lead.email || lead.phone || '-')}</strong><span>${escapeHtml(lead.hp || '')}</span></div>
       </div>
-      <div class="brand-detail-grid">
-        <div><small>最新商談日</small><strong>${latestMeeting?.meetingDate || '-'}</strong><span>${escapeHtml(latestMeeting?.meetingType || '-')}</span></div>
-        <div><small>商談記録</small><strong>${leadMeetings.length}件</strong><span>${escapeHtml(latestMeeting?.result || '記録なし')}</span></div>
-        <div><small>次回連絡</small><strong>${latestMeeting?.nextContactDate || lead.nextContactDate || '-'}</strong><span>${latestMeeting?.nextContactDate ? `あと${daysUntil(latestMeeting.nextContactDate)}日` : '商談記録からも更新'}</span></div>
-      </div>
-      <button class="brand-lead-meeting-link" data-action="show-lead-meetings" data-id="${lead.id}">
-        <span>商談履歴を見る</span>
-        <small>${leadMeetings.length ? `最新: ${escapeHtml(latestMeeting.result || '結果未設定')}` : 'この営業先に絞って商談記録を開く'}</small>
-      </button>
       <div class="brand-next-action"><small>次にやること</small><p>${escapeHtml(lead.nextAction || '未設定')}</p></div>
       <details class="brand-step-panel">
         <summary>営業状況を変更</summary>
         <div class="brand-status">${LEAD_STATUSES.map(status => `<button class="brand-step ${lead.status === status ? 'active' : ''}" data-action="set-lead-status" data-id="${lead.id}" data-value="${status}">${status}</button>`).join('')}</div>
       </details>
+      <section class="brand-market-products">
+        <div class="brand-mini-head"><h3>商談記録</h3><button class="btn btn-ghost btn-small" data-action="new-negotiation" data-id="${lead.id}">記録追加</button></div>
+        <div class="brand-market-product-list">${asArray(lead.negotiations).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(n => `<div class="brand-market-product-row">
+          <div>
+            <strong>${n.date || '日付未設定'}</strong><span>${escapeHtml(n.result || '結果未記入')}</span>
+            ${n.content ? `<p>話した内容: ${escapeHtml(n.content)}</p>` : ''}
+            ${n.interest ? `<p>先方の要望・関心事: ${escapeHtml(n.interest)}</p>` : ''}
+            ${n.nextAction ? `<p>次のアクション: ${escapeHtml(n.nextAction)}</p>` : ''}
+          </div>
+          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-negotiation" data-id="${lead.id}" data-negotiation="${n.id}">削除</button>
+        </div>`).join('') || empty('まだ商談記録がありません。記録追加から入力できます。')}</div>
+      </section>
     </article>`;
 }
 
@@ -670,68 +574,6 @@ function renderLeads(){
     ${archiveDetails('完了・見送りアーカイブ', archivedLeads, leadOpsCard)}`;
 }
 
-function meetingCard(meeting){
-  const openCount = incompleteMeetingActions(meeting).length;
-  return `<article class="brand-card brand-meeting-card">
-    <div class="brand-ops-head">
-      <div>
-        <div class="brand-chiprow">
-          <span class="brand-chip ok">${meeting.meetingDate || '日付未設定'}</span>
-          <span class="brand-chip">${escapeHtml(meeting.meetingType || '-')}</span>
-          <span class="brand-chip ${meetingImportanceClass(meeting.importance)}">重要度 ${escapeHtml(meeting.importance || '中')}</span>
-        </div>
-        <h3 title="${escapeHtml(meetingCompany(meeting))}">${escapeHtml(meetingCompany(meeting))}</h3>
-        <p>${escapeHtml(meeting.attendees || '出席者未記入')}</p>
-      </div>
-      <div class="brand-product-actions meeting-card-actions">
-        <button class="btn btn-sage btn-small" data-action="view-meeting" data-id="${meeting.id}">詳細</button>
-        <button class="btn btn-ghost btn-small" data-action="edit-meeting" data-id="${meeting.id}">編集</button>
-        <button class="btn btn-ghost btn-small" data-action="duplicate-meeting" data-id="${meeting.id}">複製</button>
-        <button class="btn btn-ghost btn-small brand-danger" data-action="delete-meeting" data-id="${meeting.id}">削除</button>
-      </div>
-    </div>
-    <div class="brand-next-action"><small>相手の要望</small><p>${escapeHtml(firstLine(meeting.counterpartNeeds, '未記入'))}</p></div>
-    <div class="brand-detail-grid">
-      <div><small>商談結果</small><strong>${escapeHtml(meeting.result || '-')}</strong><span>${escapeHtml(firstLine(meeting.decisions, '決定事項未記入'))}</span></div>
-      <div><small>次回連絡日</small><strong>${meeting.nextContactDate || '-'}</strong><span>${meeting.nextContactDate ? `あと${daysUntil(meeting.nextContactDate)}日` : '-'}</span></div>
-      <div><small>未完了の次回対応</small><strong>${openCount}件</strong><span>${escapeHtml(firstLine(incompleteMeetingActions(meeting)[0]?.title, '対応なし'))}</span></div>
-    </div>
-  </article>`;
-}
-
-function renderMeetings(){
-  const root = document.getElementById('brandMeetings');
-  if(!root) return;
-  const meetings = filteredMeetings();
-  const month = todayKey().slice(0, 7);
-  const thisMonthCount = state.meetings.filter(meeting => (meeting.meetingDate || '').startsWith(month)).length;
-  const openActionCount = allMeetingActions().filter(item => !item.done).length;
-  const nearContactCount = state.meetings.filter(meeting => {
-    const d = daysUntil(meeting.nextContactDate);
-    return d !== null && d >= 0 && d <= 7;
-  }).length;
-  const activeLeadCount = new Set(state.meetings.filter(meeting => !['契約・導入','見送り'].includes(meeting.result)).map(meeting => meeting.leadId || meeting.companyName).filter(Boolean)).size;
-  root.innerHTML = `${pageHead('商談記録','打ち合わせ内容と次の対応を、営業先ごとに記録します。', '<button class="btn btn-primary" data-action="new-meeting">新しい商談記録</button>')}
-    <div class="brand-status-summary">
-      <div class="brand-status-tile"><strong>${thisMonthCount}</strong><span>今月の商談数</span></div>
-      <div class="brand-status-tile"><strong>${openActionCount}</strong><span>対応待ち件数</span></div>
-      <div class="brand-status-tile"><strong>${nearContactCount}</strong><span>次回連絡が近い件数</span></div>
-      <div class="brand-status-tile"><strong>${activeLeadCount}</strong><span>商談中の営業先数</span></div>
-    </div>
-    <div class="brand-card brand-meeting-filter-card">
-      <div class="brand-meeting-filters">
-        <div class="brand-field meeting-search"><label>検索</label><input id="meetingSearchInput" type="search" placeholder="営業先名、担当者名、本文で検索" value="${escapeHtml(meetingFilters.query)}"></div>
-        <div class="brand-field"><label>商談結果</label><select id="meetingResultFilter"><option value="">すべて</option>${MEETING_RESULTS.map(value => `<option value="${escapeHtml(value)}" ${meetingFilters.result === value ? 'selected' : ''}>${escapeHtml(value)}</option>`).join('')}</select></div>
-        <div class="brand-field"><label>重要度</label><select id="meetingImportanceFilter"><option value="">すべて</option>${MEETING_IMPORTANCE.map(value => `<option value="${escapeHtml(value)}" ${meetingFilters.importance === value ? 'selected' : ''}>${escapeHtml(value)}</option>`).join('')}</select></div>
-        <div class="brand-field"><label>商談形式</label><select id="meetingTypeFilter"><option value="">すべて</option>${MEETING_TYPES.map(value => `<option value="${escapeHtml(value)}" ${meetingFilters.type === value ? 'selected' : ''}>${escapeHtml(value)}</option>`).join('')}</select></div>
-        <div class="brand-field"><label>次回対応</label><select id="meetingActionFilter"><option value="">すべて</option><option value="open" ${meetingFilters.actionState === 'open' ? 'selected' : ''}>未完了あり</option><option value="done" ${meetingFilters.actionState === 'done' ? 'selected' : ''}>すべて完了</option></select></div>
-        <div class="brand-field"><label>月別</label><input id="meetingMonthFilter" type="month" value="${escapeHtml(meetingFilters.month)}"></div>
-        <button class="btn btn-ghost btn-small" data-action="clear-meeting-filters" type="button">絞り込みを解除</button>
-      </div>
-    </div>
-    <div class="brand-ops-grid">${meetings.map(meetingCard).join('') || empty('条件に合う商談記録はありません。「新しい商談記録」から追加できます。')}</div>`;
-}
-
 function renderProducts(){
   const root = document.getElementById('brandProducts');
   if(!root) return;
@@ -751,6 +593,7 @@ function renderProducts(){
           <h3>${escapeHtml(product.name || '商品名未設定')}</h3>
           ${product.sku ? `<p class="brand-product-sku">${escapeHtml(product.sku)}</p>` : ''}
           <p>${escapeHtml(product.category || 'カテゴリ未設定')}</p>
+          ${product.dimensions ? `<p class="brand-product-dimensions">${escapeHtml(product.dimensions)}</p>` : ''}
           ${productColorSwatches(product)}
         </div>
         <div class="brand-product-actions">
@@ -914,7 +757,7 @@ function renderInvoice(){
     ${historySection}`;
 }
 
-function renderAll(){ renderHome(); renderTasks(); renderGoals(); renderMarkets(); renderSales(); renderCrm(); renderLeads(); renderMeetings(); renderProducts(); renderIdeas(); renderInvoice(); renderCoupons(); }
+function renderAll(){ renderHome(); renderTasks(); renderGoals(); renderMarkets(); renderSales(); renderCrm(); renderLeads(); renderProducts(); renderIdeas(); renderInvoice(); renderCoupons(); }
 
 function openForm(title, fields, values, onSubmit){
   const overlay = document.createElement('div');
@@ -1130,172 +973,6 @@ function leadForm(lead = {}){ openForm(lead.id ? '営業先編集' : '営業先�
   {name:'lastContactDate',label:'最終連絡日',type:'date'},{name:'nextContactDate',label:'次回連絡予定日',type:'date'},
   {name:'nextAction',label:'次にやること',full:true},{name:'memo',label:'メモ',type:'textarea',full:true}
 ], {potential:'未設定', ...lead}, async data => { upsert('leads', {...lead, ...data, id:lead.id || uid('lead')}); await save(); }); }
-
-function meetingForm(meeting = {}){
-  const values = normalizeMeeting(meeting);
-  const leadOptions = state.leads.map(lead => `<option value="${escapeHtml(lead.id)}" data-company="${escapeHtml(meetingLeadName(lead))}" data-person="${escapeHtml(lead.person || '')}" ${values.leadId === lead.id ? 'selected' : ''}>${escapeHtml(meetingLeadLabel(lead))}</option>`).join('');
-  const actionRows = (values.nextActions.length ? values.nextActions : [{ id:uid('meetingAction'), title:'', owner:'', dueDate:'', done:false }])
-    .map(meetingActionRow).join('');
-  const overlay = document.createElement('div');
-  overlay.className = 'brand-modal-overlay';
-  overlay.innerHTML = `<div class="brand-modal brand-meeting-modal">
-    <div class="brand-modal-head"><h3>${values.id && meeting.id ? '商談記録編集' : '新しい商談記録'}</h3><button class="modal-close" type="button" data-close-brand>×</button></div>
-    <form class="brand-modal-body">
-      <div class="brand-form-grid">
-        <div class="brand-form-section">基本情報</div>
-        <div class="brand-field"><label>営業先</label><select name="leadId" id="meetingLeadSelect"><option value="">営業先を選択しない</option>${leadOptions}</select></div>
-        <div class="brand-field"><label>営業先名（必須）</label><input name="companyName" required value="${escapeHtml(values.companyName)}" placeholder="会社名・店舗名"></div>
-        <div class="brand-field"><label>商談日（必須）</label><input name="meetingDate" type="date" required value="${escapeHtml(values.meetingDate || todayKey())}"></div>
-        <div class="brand-field"><label>商談形式</label><select name="meetingType">${MEETING_TYPES.map(type => `<option value="${escapeHtml(type)}" ${values.meetingType === type ? 'selected' : ''}>${escapeHtml(type)}</option>`).join('')}</select></div>
-        <div class="brand-field"><label>出席者</label><input name="attendees" value="${escapeHtml(values.attendees)}" placeholder="先方担当者、MofYla側の参加者"></div>
-        <div class="brand-field"><label>重要度</label><select name="importance">${MEETING_IMPORTANCE.map(item => `<option value="${escapeHtml(item)}" ${values.importance === item ? 'selected' : ''}>${escapeHtml(item)}</option>`).join('')}</select></div>
-
-        <div class="brand-form-section">相手側の状況</div>
-        <div class="brand-field full"><label>今回、相手がMofYlaに求めていたこと（必須）</label><textarea name="counterpartNeeds" required placeholder="相手が今回の打ち合わせを受けてくれた理由や、MofYlaに期待していることを記録します。">${escapeHtml(values.counterpartNeeds)}</textarea></div>
-        <div class="brand-field full"><label>相談や商談に至った背景</label><textarea name="background" placeholder="きっかけ、紹介元、既存課題、導入検討の背景など">${escapeHtml(values.background)}</textarea></div>
-        <div class="brand-field full"><label>相手の課題、懸念、条件</label><textarea name="pendingIssues" placeholder="価格、数量、納期、品質、社内確認などの条件">${escapeHtml(values.pendingIssues)}</textarea></div>
-
-        <div class="brand-form-section">MofYlaからの提案</div>
-        <div class="brand-field full"><label>提案した商品、サービス、対応内容</label><textarea name="proposals" placeholder="提案商品、価格・数量、サンプル・試作・見積りの有無をまとめて記録">${escapeHtml(values.proposals)}</textarea></div>
-
-        <div class="brand-form-section">相手の反応</div>
-        <div class="brand-field full"><label>好意的だった点・懸念・追加で求められた情報</label><textarea name="counterpartReaction" placeholder="反応、質問、追加資料の希望など">${escapeHtml(values.counterpartReaction)}</textarea></div>
-
-        <div class="brand-form-section">決定事項</div>
-        <div class="brand-field full"><label>合意した内容・保留事項・見送りとなった内容</label><textarea name="decisions" placeholder="決まったこと、まだ決まっていないことを分けて記録">${escapeHtml(values.decisions)}</textarea></div>
-
-        <div class="brand-form-section">次の対応</div>
-        <div class="brand-field full">
-          <label>次回対応</label>
-          <div class="meeting-action-list" id="meetingActionList">${actionRows}</div>
-          <button class="btn btn-ghost btn-small meeting-add-action" type="button" data-action="add-meeting-action">対応を追加</button>
-          <p class="brand-note">例：商品の仕様書を送る / 卸価格の見積りを作る / サンプル制作後に連絡する</p>
-        </div>
-
-        <div class="brand-form-section">今後の予定</div>
-        <div class="brand-field"><label>次回連絡日</label><input name="nextContactDate" type="date" value="${escapeHtml(values.nextContactDate)}"></div>
-        <div class="brand-field"><label>商談結果</label><select name="result">${MEETING_RESULTS.map(result => `<option value="${escapeHtml(result)}" ${values.result === result ? 'selected' : ''}>${escapeHtml(result)}</option>`).join('')}</select></div>
-        <label class="brand-checkline full meeting-status-check"><input name="updateLeadStatus" type="checkbox"><span><b>営業先のステータスも更新する</b><small>商談結果に合わせて営業先カードへ反映します</small></span></label>
-
-        <div class="brand-form-section">その他</div>
-        <div class="brand-field full"><label>自由メモ</label><textarea name="memo" placeholder="数字、温度感、補足、次回話したいことなど">${escapeHtml(values.memo)}</textarea></div>
-      </div>
-      <div class="toolbar meeting-modal-actions"><button class="btn btn-primary" type="submit">保存</button><button class="btn btn-ghost" type="button" data-close-brand>キャンセル</button></div>
-    </form>
-  </div>`;
-  document.body.appendChild(overlay);
-  const leadSelect = overlay.querySelector('#meetingLeadSelect');
-  leadSelect?.addEventListener('change', () => {
-    const option = leadSelect.selectedOptions[0];
-    const companyInput = overlay.querySelector('[name="companyName"]');
-    const attendeesInput = overlay.querySelector('[name="attendees"]');
-    if(option?.dataset.company && !companyInput.value.trim()) companyInput.value = option.dataset.company;
-    if(option?.dataset.person && !attendeesInput.value.trim()) attendeesInput.value = option.dataset.person;
-  });
-  overlay.addEventListener('click', event => {
-    if(event.target.closest('[data-close-brand]')) overlay.remove();
-    if(event.target.closest('[data-action="add-meeting-action"]')){
-      overlay.querySelector('#meetingActionList').insertAdjacentHTML('beforeend', meetingActionRow({ id:uid('meetingAction'), title:'', owner:'', dueDate:'', done:false }));
-    }
-    if(event.target.closest('[data-action="remove-meeting-action"]')){
-      event.target.closest('.meeting-action-row')?.remove();
-    }
-  });
-  overlay.querySelector('form').addEventListener('submit', async event => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const next = normalizeMeeting({
-      ...values,
-      leadId:formData.get('leadId'),
-      companyName:String(formData.get('companyName') || '').trim(),
-      meetingDate:formData.get('meetingDate'),
-      meetingType:formData.get('meetingType'),
-      attendees:formData.get('attendees'),
-      counterpartNeeds:String(formData.get('counterpartNeeds') || '').trim(),
-      background:formData.get('background'),
-      proposals:formData.get('proposals'),
-      counterpartReaction:formData.get('counterpartReaction'),
-      decisions:formData.get('decisions'),
-      pendingIssues:formData.get('pendingIssues'),
-      nextContactDate:formData.get('nextContactDate'),
-      result:formData.get('result'),
-      importance:formData.get('importance'),
-      memo:formData.get('memo'),
-      nextActions:[...overlay.querySelectorAll('.meeting-action-row')].map(row => ({
-        id:row.dataset.id || uid('meetingAction'),
-        title:row.querySelector('[data-field="title"]').value.trim(),
-        owner:row.querySelector('[data-field="owner"]').value.trim(),
-        dueDate:row.querySelector('[data-field="dueDate"]').value,
-        done:row.querySelector('[data-field="done"]').checked
-      })).filter(action => action.title || action.owner || action.dueDate),
-      updatedAt:new Date().toISOString()
-    });
-    if(!next.meetingDate || !next.companyName || !next.counterpartNeeds){
-      showToast('商談日、営業先名、相手が求めていたことを入力してください');
-      return;
-    }
-    const lead = state.leads.find(item => item.id === next.leadId);
-    if(lead){
-      if(next.nextContactDate) lead.nextContactDate = next.nextContactDate;
-      if(formData.get('updateLeadStatus')){
-        const status = meetingResultToLeadStatus(next.result);
-        if(status) lead.status = status;
-      }
-    }
-    upsert('meetings', next);
-    await save();
-    overlay.remove();
-    renderAll();
-  });
-}
-
-function meetingActionRow(action){
-  return `<div class="meeting-action-row" data-id="${escapeHtml(action.id || uid('meetingAction'))}">
-    <label class="brand-checkline meeting-action-done"><input type="checkbox" data-field="done" ${action.done ? 'checked' : ''}><span>完了</span></label>
-    <input data-field="title" value="${escapeHtml(action.title || '')}" placeholder="対応内容">
-    <input data-field="owner" value="${escapeHtml(action.owner || '')}" placeholder="担当者">
-    <input data-field="dueDate" type="date" value="${escapeHtml(action.dueDate || '')}">
-    <button class="btn btn-ghost btn-small brand-danger" type="button" data-action="remove-meeting-action">削除</button>
-  </div>`;
-}
-
-function meetingDetail(meeting){
-  const item = normalizeMeeting(meeting);
-  const nextActionText = incompleteMeetingActions(item)[0]?.title || asArray(item.nextActions)[0]?.title || '未設定';
-  const overlay = document.createElement('div');
-  overlay.className = 'brand-modal-overlay';
-  overlay.innerHTML = `<div class="brand-modal brand-meeting-detail">
-    <div class="brand-modal-head"><h3>商談記録詳細</h3><button class="modal-close" type="button" data-close-brand>×</button></div>
-    <div class="brand-modal-body">
-      <div class="brand-card brand-meeting-summary-card">
-        <div><small>相手の要望</small>${multiline(firstLine(item.counterpartNeeds))}</div>
-        <div><small>決定事項</small>${multiline(firstLine(item.decisions))}</div>
-        <div><small>次にすること</small>${multiline(nextActionText)}</div>
-      </div>
-      <div class="brand-detail-grid meeting-overview">
-        <div><small>商談日</small><strong>${item.meetingDate || '-'}</strong><span>${escapeHtml(item.meetingType || '-')}</span></div>
-        <div><small>営業先</small><strong>${escapeHtml(meetingCompany(item))}</strong><span>${escapeHtml(item.attendees || '出席者未記入')}</span></div>
-        <div><small>結果・重要度</small><strong>${escapeHtml(item.result || '-')}</strong><span>重要度 ${escapeHtml(item.importance || '中')}</span></div>
-      </div>
-      ${meetingDetailBlock('1. 商談概要', `${item.meetingDate || '-'} / ${meetingCompany(item)} / ${item.meetingType || '-'}`)}
-      ${meetingDetailBlock('2. 相手が求めていたこと', item.counterpartNeeds)}
-      ${meetingDetailBlock('3. MofYlaからの提案', item.proposals)}
-      ${meetingDetailBlock('4. 相手の反応', item.counterpartReaction)}
-      ${meetingDetailBlock('5. 決定事項・保留事項', [item.decisions, item.pendingIssues ? `保留・課題:\n${item.pendingIssues}` : ''].filter(Boolean).join('\n\n'))}
-      <section class="brand-meeting-detail-block"><h4>6. 次の対応</h4><div class="meeting-detail-actions">${asArray(item.nextActions).map(action => `<label class="brand-checkline meeting-detail-action"><input type="checkbox" data-action="toggle-meeting-action" data-meeting="${item.id}" data-id="${action.id}" ${action.done ? 'checked' : ''}><span><strong>${escapeHtml(action.title || '対応内容未設定')}</strong><small>${escapeHtml(action.owner || '担当未設定')} / ${action.dueDate || '期限なし'}</small></span></label>`).join('') || empty('次の対応は未設定です。')}</div></section>
-      ${meetingDetailBlock('7. 次回連絡日', item.nextContactDate || '未設定')}
-      ${meetingDetailBlock('8. その他メモ', item.memo)}
-      <div class="brand-card-actions meeting-detail-footer"><button class="btn btn-ghost" data-action="edit-meeting" data-id="${item.id}">編集</button></div>
-    </div>
-  </div>`;
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', event => { if(event.target.closest('[data-close-brand]')) overlay.remove(); });
-}
-
-function meetingDetailBlock(title, body){
-  return `<section class="brand-meeting-detail-block"><h4>${escapeHtml(title)}</h4>${multiline(body)}</section>`;
-}
-
 function productForm(product = {}){
   const channel = product.salesChannel || (product.isWholesale ? 'wholesale' : activeProductTab);
   const commonFields = [
@@ -1304,6 +981,7 @@ function productForm(product = {}){
     {name:'category',label:'商品カテゴリ',type:'select',options:CATEGORIES},
     {name:'breed',label:'兎種',type:'select',options:RABBIT_BREEDS.map(b => b.name)},
     {name:'sku',label:'商品番号（自動採番・編集可）'},
+    {name:'dimensions',label:'寸法（例: W80×D80×H10mm）'},
     {name:'colorIds',label:'カラー（最大4色まで選択可）',type:'checkboxGroup',max:4,options:state.colorPalette.map(c => ({value:c.id, label:`${c.code} ${c.name}`}))},
     {name:'cost',label:'原価',type:'number'},
     {name:'minutes',label:'制作時間目安',type:'number'}
@@ -1375,6 +1053,21 @@ function productDeliveryForm(productId){
   ], {date:todayKey()}, async data => {
     product.deliveries = asArray(product.deliveries);
     product.deliveries.push({id:uid('delivery'), date:data.date || todayKey(), qty:Number(data.qty || 0), memo:data.memo || ''});
+    await save();
+  });
+}
+function negotiationForm(leadId){
+  const lead = findBy('leads', leadId);
+  if(!lead) return;
+  openForm('商談記録を追加', [
+    {name:'date',label:'商談日',type:'date'},
+    {name:'content',label:'話した内容',type:'textarea',full:true},
+    {name:'interest',label:'先方の要望・関心事',type:'textarea',full:true},
+    {name:'result',label:'結果',type:'select',options:['前向き','保留','要検討','見送り','その他']},
+    {name:'nextAction',label:'次のアクション'}
+  ], {date:todayKey()}, async data => {
+    lead.negotiations = asArray(lead.negotiations);
+    lead.negotiations.push({id:uid('negotiation'), date:data.date || todayKey(), content:data.content || '', interest:data.interest || '', result:data.result || '', nextAction:data.nextAction || ''});
     await save();
   });
 }
@@ -1534,7 +1227,7 @@ function invoiceItemForm(item = {}){
 async function handleClick(event){
   const el = event.target.closest('[data-action]');
   if(!el) return;
-  const { action, id, value, market, meeting, daily, delivery } = el.dataset;
+  const { action, id, value, market, daily, delivery, negotiation } = el.dataset;
   if(action === 'set-energy'){ state.energy = value; await save(false); renderAll(); }
   if(action === 'focus-next'){ const task = nextTask(); if(task) showToast(`次は「${task.title}」です`); }
   if(action === 'filter-task'){ activeTaskFilter = value; renderTasks(); }
@@ -1581,32 +1274,12 @@ async function handleClick(event){
   if(action === 'edit-order') orderForm(findBy('customers', id)?.customerId, findBy('customers', id));
   if(action === 'new-lead') leadForm();
   if(action === 'edit-lead') leadForm(findBy('leads', id));
-  if(action === 'show-lead-meetings') goMeetingPageForLead(id);
-  if(action === 'new-meeting') meetingForm();
-  if(action === 'edit-meeting'){ const item = findBy('meetings', id); if(item){ document.querySelector('.brand-modal-overlay')?.remove(); meetingForm(item); } }
-  if(action === 'view-meeting'){ const item = findBy('meetings', id); if(item) meetingDetail(item); }
-  if(action === 'duplicate-meeting'){
-    const item = findBy('meetings', id);
-    if(item){
-      const copy = normalizeMeeting({ ...item, id:uid('meeting'), meetingDate:todayKey(), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(), nextActions:asArray(item.nextActions).map(actionItem => ({ ...actionItem, id:uid('meetingAction'), done:false })) });
-      upsert('meetings', copy);
+  if(action === 'new-negotiation') negotiationForm(id);
+  if(action === 'delete-negotiation'){
+    const lead = findBy('leads', id);
+    if(lead && confirm('この商談記録を削除します。よろしいですか？')){
+      lead.negotiations = asArray(lead.negotiations).filter(n => n.id !== negotiation);
       await save();
-      renderAll();
-    }
-  }
-  if(action === 'delete-meeting') removeBy('meetings', id, '商談記録');
-  if(action === 'clear-meeting-filters'){
-    meetingFilters = { query:'', result:'', importance:'', type:'', actionState:'', month:'' };
-    renderMeetings();
-  }
-  if(action === 'toggle-meeting-action' || action === 'toggle-meeting-action-done'){
-    const item = findBy('meetings', meeting);
-    const nextAction = item?.nextActions?.find(actionItem => actionItem.id === id);
-    if(nextAction){
-      nextAction.done = action === 'toggle-meeting-action-done' ? true : el.checked;
-      item.updatedAt = new Date().toISOString();
-      await save();
-      document.querySelector('.brand-modal-overlay')?.remove();
       renderAll();
     }
   }
@@ -1701,21 +1374,6 @@ export async function initBrandDashboard(){
       couponQuery = event.target.value;
       renderCouponLookupResult();
     }
-    if(event.target.id === 'meetingSearchInput'){
-      const pos = event.target.selectionStart;
-      meetingFilters.query = event.target.value;
-      renderMeetings();
-      const input = document.getElementById('meetingSearchInput');
-      input?.focus();
-      input?.setSelectionRange(pos, pos);
-    }
-  });
-  document.addEventListener('change', event => {
-    if(event.target.id === 'meetingResultFilter'){ meetingFilters.result = event.target.value; renderMeetings(); }
-    if(event.target.id === 'meetingImportanceFilter'){ meetingFilters.importance = event.target.value; renderMeetings(); }
-    if(event.target.id === 'meetingTypeFilter'){ meetingFilters.type = event.target.value; renderMeetings(); }
-    if(event.target.id === 'meetingActionFilter'){ meetingFilters.actionState = event.target.value; renderMeetings(); }
-    if(event.target.id === 'meetingMonthFilter'){ meetingFilters.month = event.target.value; renderMeetings(); }
   });
   renderAll();
 }

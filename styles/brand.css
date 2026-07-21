@@ -21,6 +21,7 @@
 .brand-product-title h3{margin:0 0 4px;font-size:1.05rem;line-height:1.45;overflow-wrap:anywhere;}
 .brand-product-title p{margin:0;color:var(--ink-soft);font-size:.82rem;font-weight:700;}
 .brand-product-sku{font-family:'IBM Plex Mono',monospace;font-size:.72rem !important;color:var(--sage-deep) !important;letter-spacing:.02em;margin-bottom:4px !important;}
+.brand-product-dimensions{font-family:'IBM Plex Mono',monospace;font-size:.7rem !important;color:var(--ink-soft) !important;letter-spacing:.01em;}
 .brand-product-actions{display:flex;gap:8px;justify-content:flex-end;white-space:nowrap;}
 .brand-product-actions .btn{min-width:64px;}
 .brand-card-head{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
@@ -73,24 +74,6 @@
 .brand-detail-grid small,.brand-next-action small{color:var(--ink-soft);font-size:.68rem;font-weight:800;}
 .brand-detail-grid strong{font-size:.88rem;color:var(--ink);line-height:1.35;overflow-wrap:anywhere;}
 .brand-detail-grid span{font-size:.74rem;color:var(--ink-soft);line-height:1.35;overflow-wrap:anywhere;}
-.brand-lead-meeting-link{
-  width:100%;
-  border:1px solid rgba(137,161,124,.34);
-  border-radius:12px;
-  background:rgba(137,161,124,.08);
-  color:var(--sage-deep);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  padding:10px 12px;
-  font-family:inherit;
-  text-align:left;
-  cursor:pointer;
-}
-.brand-lead-meeting-link span{font-size:.86rem;font-weight:900;}
-.brand-lead-meeting-link small{color:var(--ink-soft);font-size:.72rem;font-weight:800;line-height:1.35;text-align:right;overflow-wrap:anywhere;}
-.brand-lead-meeting-link:hover{background:var(--sage-soft);border-color:rgba(137,161,124,.58);}
 .brand-next-action{border:1px solid rgba(222,207,188,.76);border-radius:12px;background:rgba(255,253,248,.72);padding:11px 12px;}
 .brand-next-action p{margin:4px 0 0;color:var(--ink);line-height:1.6;font-size:.9rem;}
 .brand-inline-link{color:var(--sage-deep);font-weight:800;text-decoration:none;border-bottom:1px solid rgba(96,118,79,.35);}
@@ -164,8 +147,6 @@
   .brand-ops-grid{grid-template-columns:1fr;}
   .brand-ops-head{grid-template-columns:1fr;}
   .brand-detail-grid{grid-template-columns:1fr;}
-  .brand-lead-meeting-link{align-items:flex-start;flex-direction:column;gap:4px;}
-  .brand-lead-meeting-link small{text-align:left;}
   .brand-check-grid{grid-template-columns:1fr;}
   .brand-product-actions{justify-content:flex-start;}
   .brand-card-head{grid-template-columns:1fr;}
@@ -522,125 +503,6 @@
 .invoice-bank-table td{color:var(--ink);font-weight:700;}
 .invoice-footer{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-top:18px;padding-top:12px;border-top:1px solid var(--line);font-size:.78rem;color:var(--ink-soft);}
 
-/* ---------- Meeting records ---------- */
-.brand-meeting-card{display:grid;gap:16px;padding:18px;}
-.brand-meeting-card .brand-ops-head{margin-bottom:0;}
-.brand-meeting-card .brand-ops-head > div{min-width:0;}
-.brand-meeting-card .brand-ops-head h3{
-  max-width:100%;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-.meeting-card-actions{gap:7px;align-items:flex-start;flex-wrap:nowrap;}
-.meeting-card-actions .btn{
-  min-width:0;
-  min-height:38px;
-  padding:7px 13px;
-  border-radius:999px;
-  font-size:.78rem;
-  line-height:1.2;
-}
-.brand-meeting-card .brand-next-action{padding:14px 16px;}
-.brand-meeting-card .brand-next-action p{margin-top:7px;line-height:1.75;}
-.brand-meeting-card .brand-detail-grid{gap:10px;}
-.brand-meeting-card .brand-detail-grid div{padding:13px 14px;gap:5px;}
-.brand-meeting-card .brand-detail-grid strong{font-size:.92rem;}
-.brand-meeting-card .brand-detail-grid span{line-height:1.45;}
-@media (min-width:1180px){
-  .brand-meeting-card .brand-detail-grid{grid-template-columns:1fr 1fr 1fr;}
-}
-.brand-meeting-filter-card{margin-bottom:14px;background:rgba(255,253,248,.72);}
-.brand-meeting-filters{display:grid;grid-template-columns:minmax(220px,1.4fr) repeat(5,minmax(120px,1fr)) auto;gap:10px;align-items:end;}
-.brand-meeting-filters .btn{min-height:42px;white-space:nowrap;}
-.meeting-search{min-width:0;}
-.brand-meeting-modal{width:min(920px,100%);font-family:'M PLUS Rounded 1c','Zen Maru Gothic','Zen Kaku Gothic New',sans-serif;}
-.brand-meeting-modal .brand-form-grid{gap:15px 14px;}
-.brand-meeting-modal .brand-form-section{margin-top:10px;padding-top:16px;}
-.brand-meeting-modal textarea[name="counterpartNeeds"],
-.brand-meeting-modal textarea[name="proposals"],
-.brand-meeting-modal textarea[name="decisions"]{min-height:108px;}
-.meeting-action-list{display:grid;gap:8px;}
-.meeting-action-row{
-  display:grid;
-  grid-template-columns:minmax(64px,.32fr) minmax(180px,1fr) minmax(120px,.55fr) 150px auto;
-  gap:10px;
-  align-items:center;
-  border:1px solid rgba(222,207,188,.72);
-  border-radius:12px;
-  background:rgba(255,253,248,.7);
-  padding:9px;
-}
-.meeting-action-row input{width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;padding:8px 9px;font-family:inherit;}
-.meeting-action-done{
-  align-items:center;
-  justify-content:center;
-  gap:7px;
-  min-height:38px;
-  margin:0;
-  white-space:nowrap;
-  font-size:.78rem;
-  color:var(--ink-soft);
-  font-weight:800;
-}
-.meeting-action-done input{width:auto;margin:0;}
-.meeting-add-action{justify-self:start;margin-top:8px;}
-.meeting-status-check{
-  grid-column:1/-1;
-  justify-self:start;
-  align-items:center;
-  gap:9px;
-  border:1px solid rgba(137,161,124,.28);
-  border-radius:999px;
-  background:rgba(137,161,124,.07);
-  padding:7px 12px;
-  margin-top:-2px;
-}
-.meeting-status-check input{margin:0;}
-.meeting-status-check span{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.meeting-status-check b{color:var(--sage-deep);font-size:.8rem;font-weight:900;}
-.meeting-status-check small{color:var(--ink-soft);font-size:.72rem;font-weight:700;line-height:1.35;}
-.meeting-modal-actions{margin-top:16px;}
-.brand-multiline{margin:4px 0 0;color:var(--ink);line-height:1.75;font-size:.9rem;white-space:pre-wrap;overflow-wrap:anywhere;}
-.brand-meeting-summary-card{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:12px;
-  background:linear-gradient(135deg,rgba(255,253,248,.96),rgba(232,239,224,.72));
-}
-.brand-meeting-summary-card div{min-width:0;}
-.brand-meeting-summary-card small,
-.brand-meeting-detail-block h4{display:block;color:var(--sage-deep);font-size:.75rem;font-weight:900;margin-bottom:4px;}
-.meeting-overview{margin:14px 0;}
-.brand-meeting-detail-block{
-  border-top:1px solid rgba(222,207,188,.68);
-  padding-top:13px;
-  margin-top:13px;
-}
-.brand-meeting-detail-block h4{font-size:.84rem;margin:0 0 6px;}
-.meeting-detail-actions{display:grid;gap:8px;}
-.meeting-detail-action{
-  display:grid;
-  grid-template-columns:18px minmax(0,1fr);
-  align-items:start;
-  column-gap:10px;
-  border:1px solid rgba(222,207,188,.72);
-  border-radius:12px;
-  background:rgba(255,253,248,.66);
-  padding:13px 16px;
-}
-.meeting-detail-action input{
-  width:14px;
-  height:14px;
-  margin:3px 0 0;
-  justify-self:center;
-}
-.meeting-detail-actions span{display:grid;gap:4px;min-width:0;}
-.meeting-detail-actions strong{line-height:1.45;overflow-wrap:anywhere;}
-.meeting-detail-actions small{color:var(--ink-soft);font-size:.74rem;font-weight:700;}
-.meeting-detail-footer{margin-top:16px;}
-.brand-meeting-task-card{margin-top:14px;background:rgba(255,253,248,.72);}
-
 @media print{
   .sidebar,.mobile-topbar,.nav-overlay,.page-head,.invoice-toolbar,.no-print{display:none !important;}
   .main{padding:0;max-width:none;width:100%;}
@@ -649,21 +511,6 @@
   .invoice-archive .invoice-sheet,
   .invoice-sheet{box-shadow:none;border:none;max-width:none;margin:0;padding:12mm;box-sizing:border-box;}
   @page{size:A4;margin:10mm;}
-}
-
-@media (max-width:980px){
-  .brand-meeting-filters{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .brand-meeting-filters .meeting-search{grid-column:1/-1;}
-  .brand-meeting-filters .btn{justify-self:start;}
-  .brand-meeting-card .brand-ops-head{grid-template-columns:1fr;}
-  .brand-meeting-card .brand-ops-head h3{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
-  .meeting-card-actions{justify-content:flex-start;flex-wrap:wrap;}
-  .meeting-card-actions .btn{min-height:34px;padding:7px 11px;}
-  .meeting-status-check{justify-self:stretch;border-radius:12px;align-items:flex-start;}
-  .meeting-status-check span{display:grid;gap:3px;}
-  .meeting-action-row{grid-template-columns:1fr;}
-  .meeting-action-row .btn{justify-self:start;}
-  .brand-meeting-summary-card{grid-template-columns:1fr;}
 }
 
 /* ---------- Coupons ---------- */
