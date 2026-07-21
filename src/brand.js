@@ -801,16 +801,15 @@ function negotiationDetailOverlay(negotiation){
     <div class="brand-modal-head"><h3>商談記録詳細</h3><button class="modal-close" type="button" data-close-brand>×</button></div>
     <div class="brand-modal-body brand-negotiation-detail">
       <div class="brand-negotiation-summary-row">
-        <div><small>相手の要望</small><p>${escapeHtml(negotiation.requestSummary || '未記入')}</p></div>
+        <div><small>商談概要</small><p>${negotiation.date || '-'}（${negotiationOccurrence(negotiation)}回目） / ${escapeHtml(lead?.shopName || '店舗未設定')}${negotiation.contactPerson ? `（${escapeHtml(negotiation.contactPerson)}）` : ''} / ${escapeHtml(negotiation.visitType || '種別未設定')}${negotiation.importance ? ` / 重要度${escapeHtml(negotiation.importance)}` : ''}</p></div>
       </div>
-      <div class="brand-negotiation-section"><h4>1. 商談概要</h4><p>${negotiation.date || '-'}（${negotiationOccurrence(negotiation)}回目） / ${escapeHtml(lead?.shopName || '店舗未設定')}${negotiation.contactPerson ? `（${escapeHtml(negotiation.contactPerson)}）` : ''} / ${escapeHtml(negotiation.visitType || '種別未設定')}${negotiation.importance ? ` / 重要度${escapeHtml(negotiation.importance)}` : ''}</p></div>
-      <div class="brand-negotiation-section"><h4>2. 相手が求めていたこと</h4><p>${escapeHtml(negotiation.requestSummary || '未記入')}</p></div>
-      <div class="brand-negotiation-section"><h4>3. MofYlaからの提案</h4><p>${escapeHtml(negotiation.proposal || '未記入')}</p></div>
-      <div class="brand-negotiation-section"><h4>4. 相手の反応</h4><p>${escapeHtml(negotiation.reaction || '未記入')}</p></div>
-      <div class="brand-negotiation-section"><h4>5. 決定事項・保留事項</h4><p>${escapeHtml(negotiation.decisions || '未記入')}</p>${negotiation.pending ? `<p class="brand-note">保留・課題: ${escapeHtml(negotiation.pending)}</p>` : ''}</div>
-      <div class="brand-negotiation-section"><h4>6. 次の対応</h4><label class="brand-checkline"><input type="checkbox" disabled><span>${escapeHtml(negotiation.nextAction || '未記入')}</span></label>${negotiation.nextActionAssignee ? `<p class="brand-note">担当 / ${escapeHtml(negotiation.nextActionAssignee)}</p>` : ''}</div>
-      <div class="brand-negotiation-section"><h4>7. 次回連絡日</h4><p>${negotiation.nextContactDate || '未設定'}</p></div>
-      <div class="brand-negotiation-section"><h4>8. その他メモ</h4>${negotiation.memo ? `<ul class="brand-negotiation-memo-list">${bullets(negotiation.memo)}</ul>` : '<p>未記入</p>'}</div>
+      <div class="brand-negotiation-section"><h4>1. 相手が求めていたこと</h4><p>${escapeHtml(negotiation.requestSummary || '未記入')}</p></div>
+      <div class="brand-negotiation-section"><h4>2. MofYlaからの提案</h4><p>${escapeHtml(negotiation.proposal || '未記入')}</p></div>
+      <div class="brand-negotiation-section"><h4>3. 相手の反応</h4><p>${escapeHtml(negotiation.reaction || '未記入')}</p></div>
+      <div class="brand-negotiation-section"><h4>4. 決定事項・保留事項</h4><p>${escapeHtml(negotiation.decisions || '未記入')}</p>${negotiation.pending ? `<p class="brand-note">保留・課題: ${escapeHtml(negotiation.pending)}</p>` : ''}</div>
+      <div class="brand-negotiation-section"><h4>5. 次の対応</h4><label class="brand-checkline"><input type="checkbox" disabled><span>${escapeHtml(negotiation.nextAction || '未記入')}</span></label>${negotiation.nextActionAssignee ? `<p class="brand-note">担当 / ${escapeHtml(negotiation.nextActionAssignee)}</p>` : ''}</div>
+      <div class="brand-negotiation-section"><h4>6. 次回連絡日</h4><p>${negotiation.nextContactDate || '未設定'}</p></div>
+      <div class="brand-negotiation-section"><h4>7. その他メモ</h4>${negotiation.memo ? `<ul class="brand-negotiation-memo-list">${bullets(negotiation.memo)}</ul>` : '<p>未記入</p>'}</div>
       <div class="toolbar" style="margin-top:16px;justify-content:flex-end;"><button class="btn btn-primary" type="button" data-action="edit-negotiation-from-detail" data-id="${negotiation.id}">編集</button></div>
     </div>
   </div>`;
