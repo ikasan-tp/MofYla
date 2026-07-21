@@ -760,6 +760,12 @@ function negotiationOccurrence(negotiation){
   const index = sameLeadSorted.findIndex(n => n.id === negotiation.id);
   return index >= 0 ? index + 1 : sameLeadSorted.length + 1;
 }
+function negotiationResultClass(result){
+  if(result === '前向き') return 'ok';
+  if(result === '見送り') return 'warn';
+  if(result === '保留' || result === '要検討') return 'warm';
+  return '';
+}
 function renderNegotiations(){
   const root = document.getElementById('brandNegotiations');
   if(!root) return;
@@ -767,20 +773,20 @@ function renderNegotiations(){
   const cards = records.map(n => {
     const lead = findBy('leads', n.leadId);
     const preview = n.requestSummary || n.reaction || n.nextAction || '';
-    return `<article class="brand-card">
-      <div class="brand-card-head">
-        <div class="brand-card-title">
-          <span class="brand-chip">${escapeHtml(n.result || '結果未記入')}</span>
-          <h3>${escapeHtml(lead?.shopName || '店舗未設定')}</h3>
-          <p class="brand-note">${n.date || '日付未設定'}${n.visitType ? ` / ${escapeHtml(n.visitType)}` : ''}</p>
-        </div>
+    return `<article class="brand-card brand-negotiation-card" data-action="view-negotiation" data-id="${n.id}">
+      <div class="brand-negotiation-card-head">
+        <span class="brand-chip ${negotiationResultClass(n.result)}">${escapeHtml(n.result || '結果未記入')}</span>
+        <span class="brand-note">${n.date || '日付未設定'}${n.visitType ? ` / ${escapeHtml(n.visitType)}` : ''}</span>
+      </div>
+      <h3>${escapeHtml(lead?.shopName || '店舗未設定')}</h3>
+      ${preview ? `<p class="brand-negotiation-preview">${escapeHtml(preview)}</p>` : ''}
+      <div class="brand-negotiation-card-foot">
+        <button class="btn btn-sage btn-small" data-action="view-negotiation" data-id="${n.id}">詳細を見る</button>
         <div class="brand-card-actions">
-          <button class="btn btn-sage btn-small" data-action="view-negotiation" data-id="${n.id}">詳細</button>
           <button class="btn btn-ghost btn-small" data-action="edit-negotiation" data-id="${n.id}">編集</button>
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-negotiation" data-id="${n.id}">削除</button>
         </div>
       </div>
-      ${preview ? `<p class="brand-note">${escapeHtml(preview)}</p>` : ''}
     </article>`;
   }).join('');
   root.innerHTML = `${pageHead('商談記録','店舗ごとの商談ややり取りを、時系列で記録します。', '<button class="btn btn-primary" data-action="new-negotiation">追加</button>')}
@@ -796,15 +802,8 @@ function negotiationDetailOverlay(negotiation){
     <div class="brand-modal-body brand-negotiation-detail">
       <div class="brand-negotiation-summary-row">
         <div><small>相手の要望</small><p>${escapeHtml(negotiation.requestSummary || '未記入')}</p></div>
-        <div><small>決定事項</small><p>${escapeHtml(negotiation.decisions || '未記入')}</p></div>
-        <div><small>次にすること</small><p>${escapeHtml(negotiation.nextAction || '未記入')}</p></div>
       </div>
-      <div class="brand-detail-grid">
-        <div><small>商談日</small><strong>${negotiation.date || '-'}</strong><span>${negotiationOccurrence(negotiation)}回目</span></div>
-        <div><small>営業先</small><strong>${escapeHtml(lead?.shopName || '店舗未設定')}</strong><span>${escapeHtml(negotiation.contactPerson || '')}</span></div>
-        <div><small>種別・重要度</small><strong>${escapeHtml(negotiation.visitType || '未設定')}</strong><span>重要度 ${escapeHtml(negotiation.importance || '未設定')}</span></div>
-      </div>
-      <div class="brand-negotiation-section"><h4>1. 商談概要</h4><p>${negotiation.date || '-'} / ${escapeHtml(lead?.shopName || '店舗未設定')} / ${escapeHtml(negotiation.visitType || '種別未設定')}</p></div>
+      <div class="brand-negotiation-section"><h4>1. 商談概要</h4><p>${negotiation.date || '-'}（${negotiationOccurrence(negotiation)}回目） / ${escapeHtml(lead?.shopName || '店舗未設定')}${negotiation.contactPerson ? `（${escapeHtml(negotiation.contactPerson)}）` : ''} / ${escapeHtml(negotiation.visitType || '種別未設定')}${negotiation.importance ? ` / 重要度${escapeHtml(negotiation.importance)}` : ''}</p></div>
       <div class="brand-negotiation-section"><h4>2. 相手が求めていたこと</h4><p>${escapeHtml(negotiation.requestSummary || '未記入')}</p></div>
       <div class="brand-negotiation-section"><h4>3. MofYlaからの提案</h4><p>${escapeHtml(negotiation.proposal || '未記入')}</p></div>
       <div class="brand-negotiation-section"><h4>4. 相手の反応</h4><p>${escapeHtml(negotiation.reaction || '未記入')}</p></div>
