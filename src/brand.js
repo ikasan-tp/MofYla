@@ -68,7 +68,8 @@ function emptyState(){
     invoiceDraft:null,
     invoices:[],
     coupons:[],
-    colorPalette:DEFAULT_COLOR_PALETTE.map(c => ({...c}))
+    colorPalette:DEFAULT_COLOR_PALETTE.map(c => ({...c})),
+    negotiations:[]
   };
 }
 
@@ -85,7 +86,7 @@ function stripDemoData(){
 function ensureShape(){
   const base = emptyState();
   state = { ...base, ...(state || {}) };
-  for(const key of ['goals','tasks','markets','sales','customers','customerProfiles','leads','products','ideas','invoices','coupons','colorPalette']) state[key] = asArray(state[key]);
+  for(const key of ['goals','tasks','markets','sales','customers','customerProfiles','leads','products','ideas','invoices','coupons','colorPalette','negotiations']) state[key] = asArray(state[key]);
   if(!state.colorPalette.length) state.colorPalette = DEFAULT_COLOR_PALETTE.map(c => ({...c}));
   state.dailyDone = state.dailyDone && typeof state.dailyDone === 'object' ? state.dailyDone : {};
   state.sellerProfile = state.sellerProfile && typeof state.sellerProfile === 'object' ? state.sellerProfile : {name:'', contactPerson:'', postalCode:'', address:'', phone:'', email:'', bankName:'', branchName:'', accountType:'普通', accountNumber:'', accountHolder:''};
@@ -482,6 +483,12 @@ function customerOpsCard(customer){
     </article>`;
 }
 
+function leadNegotiationSummary(leadId){
+  const records = asArray(state.negotiations).filter(n => n.leadId === leadId).slice().sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  if(!records.length) return '';
+  const latest = records[0];
+  return `<p class="brand-note">商談記録 ${records.length}件・最新 ${latest.date || '-'}${latest.result ? ` ${escapeHtml(latest.result)}` : ''}</p>`;
+}
 function leadOpsCard(lead){
   return `<article class="brand-card brand-ops-card">
       <div class="brand-ops-head">
@@ -505,22 +512,11 @@ function leadOpsCard(lead){
         <div><small>連絡先</small><strong>${escapeHtml(lead.email || lead.phone || '-')}</strong><span>${escapeHtml(lead.hp || '')}</span></div>
       </div>
       <div class="brand-next-action"><small>次にやること</small><p>${escapeHtml(lead.nextAction || '未設定')}</p></div>
+      ${leadNegotiationSummary(lead.id)}
       <details class="brand-step-panel">
         <summary>営業状況を変更</summary>
         <div class="brand-status">${LEAD_STATUSES.map(status => `<button class="brand-step ${lead.status === status ? 'active' : ''}" data-action="set-lead-status" data-id="${lead.id}" data-value="${status}">${status}</button>`).join('')}</div>
       </details>
-      <section class="brand-market-products">
-        <div class="brand-mini-head"><h3>商談記録</h3><button class="btn btn-ghost btn-small" data-action="new-negotiation" data-id="${lead.id}">記録追加</button></div>
-        <div class="brand-market-product-list">${asArray(lead.negotiations).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(n => `<div class="brand-market-product-row">
-          <div>
-            <strong>${n.date || '日付未設定'}</strong><span>${escapeHtml(n.result || '結果未記入')}</span>
-            ${n.content ? `<p>話した内容: ${escapeHtml(n.content)}</p>` : ''}
-            ${n.interest ? `<p>先方の要望・関心事: ${escapeHtml(n.interest)}</p>` : ''}
-            ${n.nextAction ? `<p>次のアクション: ${escapeHtml(n.nextAction)}</p>` : ''}
-          </div>
-          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-negotiation" data-id="${lead.id}" data-negotiation="${n.id}">削除</button>
-        </div>`).join('') || empty('まだ商談記録がありません。記録追加から入力できます。')}</div>
-      </section>
     </article>`;
 }
 
@@ -757,7 +753,34 @@ function renderInvoice(){
     ${historySection}`;
 }
 
-function renderAll(){ renderHome(); renderTasks(); renderGoals(); renderMarkets(); renderSales(); renderCrm(); renderLeads(); renderProducts(); renderIdeas(); renderInvoice(); renderCoupons(); }
+function renderAll(){ renderHome(); renderTasks(); renderGoals(); renderMarkets(); renderSales(); renderCrm(); renderLeads(); renderNegotiations(); renderProducts(); renderIdeas(); renderInvoice(); renderCoupons(); }
+
+function renderNegotiations(){
+  const root = document.getElementById('brandNegotiations');
+  if(!root) return;
+  const records = asArray(state.negotiations).slice().sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  const cards = records.map(n => {
+    const lead = findBy('leads', n.leadId);
+    return `<article class="brand-card">
+      <div class="brand-card-head">
+        <div class="brand-card-title">
+          <span class="brand-chip">${escapeHtml(n.result || '結果未記入')}</span>
+          <h3>${escapeHtml(lead?.shopName || '店舗未設定')}</h3>
+          <p class="brand-note">${n.date || '日付未設定'}</p>
+        </div>
+        <div class="brand-card-actions">
+          <button class="btn btn-ghost btn-small" data-action="edit-negotiation" data-id="${n.id}">編集</button>
+          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-negotiation" data-id="${n.id}">削除</button>
+        </div>
+      </div>
+      ${n.content ? `<p class="brand-note">話した内容: ${escapeHtml(n.content)}</p>` : ''}
+      ${n.interest ? `<p class="brand-note">先方の要望・関心事: ${escapeHtml(n.interest)}</p>` : ''}
+      ${n.nextAction ? `<p class="brand-note">次のアクション: ${escapeHtml(n.nextAction)}</p>` : ''}
+    </article>`;
+  }).join('');
+  root.innerHTML = `${pageHead('商談記録','店舗ごとの商談ややり取りを、時系列で記録します。', '<button class="btn btn-primary" data-action="new-negotiation">追加</button>')}
+    <div class="brand-grid">${cards || empty('まだ商談記録がありません。「追加」から記録してください。営業先が未登録の場合は先に営業先を追加してください。')}</div>`;
+}
 
 function openForm(title, fields, values, onSubmit){
   const overlay = document.createElement('div');
@@ -1056,18 +1079,16 @@ function productDeliveryForm(productId){
     await save();
   });
 }
-function negotiationForm(leadId){
-  const lead = findBy('leads', leadId);
-  if(!lead) return;
-  openForm('商談記録を追加', [
+function negotiationForm(negotiation = {}){
+  openForm(negotiation.id ? '商談記録編集' : '商談記録追加', [
+    {name:'leadId',label:'対象店舗',type:'select',options:optionsFrom(state.leads, 'shopName')},
     {name:'date',label:'商談日',type:'date'},
     {name:'content',label:'話した内容',type:'textarea',full:true},
     {name:'interest',label:'先方の要望・関心事',type:'textarea',full:true},
     {name:'result',label:'結果',type:'select',options:['前向き','保留','要検討','見送り','その他']},
     {name:'nextAction',label:'次のアクション'}
-  ], {date:todayKey()}, async data => {
-    lead.negotiations = asArray(lead.negotiations);
-    lead.negotiations.push({id:uid('negotiation'), date:data.date || todayKey(), content:data.content || '', interest:data.interest || '', result:data.result || '', nextAction:data.nextAction || ''});
+  ], {date:todayKey(), ...negotiation}, async data => {
+    upsert('negotiations', {...negotiation, ...data, id:negotiation.id || uid('negotiation'), createdAt:negotiation.createdAt || todayKey()});
     await save();
   });
 }
@@ -1227,7 +1248,7 @@ function invoiceItemForm(item = {}){
 async function handleClick(event){
   const el = event.target.closest('[data-action]');
   if(!el) return;
-  const { action, id, value, market, daily, delivery, negotiation } = el.dataset;
+  const { action, id, value, market, daily, delivery } = el.dataset;
   if(action === 'set-energy'){ state.energy = value; await save(false); renderAll(); }
   if(action === 'focus-next'){ const task = nextTask(); if(task) showToast(`次は「${task.title}」です`); }
   if(action === 'filter-task'){ activeTaskFilter = value; renderTasks(); }
@@ -1274,15 +1295,9 @@ async function handleClick(event){
   if(action === 'edit-order') orderForm(findBy('customers', id)?.customerId, findBy('customers', id));
   if(action === 'new-lead') leadForm();
   if(action === 'edit-lead') leadForm(findBy('leads', id));
-  if(action === 'new-negotiation') negotiationForm(id);
-  if(action === 'delete-negotiation'){
-    const lead = findBy('leads', id);
-    if(lead && confirm('この商談記録を削除します。よろしいですか？')){
-      lead.negotiations = asArray(lead.negotiations).filter(n => n.id !== negotiation);
-      await save();
-      renderAll();
-    }
-  }
+  if(action === 'new-negotiation') negotiationForm();
+  if(action === 'edit-negotiation') negotiationForm(findBy('negotiations', id));
+  if(action === 'delete-negotiation') removeBy('negotiations', id, '商談記録');
   if(action === 'new-product') productForm();
   if(action === 'edit-product') productForm(findBy('products', id));
   if(action === 'new-delivery') productDeliveryForm(id);
