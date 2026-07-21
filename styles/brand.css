@@ -140,6 +140,15 @@
 .brand-mini-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;}
 .brand-mini-head h3{margin:0;}
 .brand-empty{border:1px dashed var(--line);border-radius:12px;background:rgba(255,255,255,.5);padding:16px;text-align:center;color:var(--ink-soft);font-size:.9rem;}
+.brand-negotiation-detail{display:grid;gap:18px;}
+.brand-negotiation-summary-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+.brand-negotiation-summary-row > div{border:1px solid var(--line);border-radius:12px;background:var(--paper);padding:10px 12px;min-width:0;}
+.brand-negotiation-summary-row small{display:block;color:var(--ink-soft);font-size:.68rem;font-weight:800;margin-bottom:4px;}
+.brand-negotiation-summary-row p{margin:0;font-size:.86rem;color:var(--ink);line-height:1.5;overflow-wrap:anywhere;}
+.brand-negotiation-section{border-top:1px solid var(--line);padding-top:14px;}
+.brand-negotiation-section h4{margin:0 0 8px;font-size:.94rem;color:var(--sage-deep);}
+.brand-negotiation-section p{margin:0;color:var(--ink);line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;}
+.brand-negotiation-memo-list{margin:0;padding-left:18px;display:grid;gap:4px;color:var(--ink);line-height:1.6;}
 @media (max-width:880px){
   .brand-layout,.brand-form-grid,.brand-insight-grid{grid-template-columns:1fr;}
   .brand-product-grid{grid-template-columns:1fr;}
@@ -147,6 +156,7 @@
   .brand-ops-grid{grid-template-columns:1fr;}
   .brand-ops-head{grid-template-columns:1fr;}
   .brand-detail-grid{grid-template-columns:1fr;}
+  .brand-negotiation-summary-row{grid-template-columns:1fr;}
   .brand-check-grid{grid-template-columns:1fr;}
   .brand-product-actions{justify-content:flex-start;}
   .brand-card-head{grid-template-columns:1fr;}

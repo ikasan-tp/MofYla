@@ -755,31 +755,71 @@ function renderInvoice(){
 
 function renderAll(){ renderHome(); renderTasks(); renderGoals(); renderMarkets(); renderSales(); renderCrm(); renderLeads(); renderNegotiations(); renderProducts(); renderIdeas(); renderInvoice(); renderCoupons(); }
 
+function negotiationOccurrence(negotiation){
+  const sameLeadSorted = asArray(state.negotiations).filter(n => n.leadId === negotiation.leadId).slice().sort((a,b) => (a.date||'').localeCompare(b.date||'') || (a.createdAt||'').localeCompare(b.createdAt||''));
+  const index = sameLeadSorted.findIndex(n => n.id === negotiation.id);
+  return index >= 0 ? index + 1 : sameLeadSorted.length + 1;
+}
 function renderNegotiations(){
   const root = document.getElementById('brandNegotiations');
   if(!root) return;
   const records = asArray(state.negotiations).slice().sort((a,b) => (b.date||'').localeCompare(a.date||''));
   const cards = records.map(n => {
     const lead = findBy('leads', n.leadId);
+    const preview = n.requestSummary || n.reaction || n.nextAction || '';
     return `<article class="brand-card">
       <div class="brand-card-head">
         <div class="brand-card-title">
           <span class="brand-chip">${escapeHtml(n.result || '結果未記入')}</span>
           <h3>${escapeHtml(lead?.shopName || '店舗未設定')}</h3>
-          <p class="brand-note">${n.date || '日付未設定'}</p>
+          <p class="brand-note">${n.date || '日付未設定'}${n.visitType ? ` / ${escapeHtml(n.visitType)}` : ''}</p>
         </div>
         <div class="brand-card-actions">
+          <button class="btn btn-sage btn-small" data-action="view-negotiation" data-id="${n.id}">詳細</button>
           <button class="btn btn-ghost btn-small" data-action="edit-negotiation" data-id="${n.id}">編集</button>
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-negotiation" data-id="${n.id}">削除</button>
         </div>
       </div>
-      ${n.content ? `<p class="brand-note">話した内容: ${escapeHtml(n.content)}</p>` : ''}
-      ${n.interest ? `<p class="brand-note">先方の要望・関心事: ${escapeHtml(n.interest)}</p>` : ''}
-      ${n.nextAction ? `<p class="brand-note">次のアクション: ${escapeHtml(n.nextAction)}</p>` : ''}
+      ${preview ? `<p class="brand-note">${escapeHtml(preview)}</p>` : ''}
     </article>`;
   }).join('');
   root.innerHTML = `${pageHead('商談記録','店舗ごとの商談ややり取りを、時系列で記録します。', '<button class="btn btn-primary" data-action="new-negotiation">追加</button>')}
     <div class="brand-grid">${cards || empty('まだ商談記録がありません。「追加」から記録してください。営業先が未登録の場合は先に営業先を追加してください。')}</div>`;
+}
+function negotiationDetailOverlay(negotiation){
+  const lead = findBy('leads', negotiation.leadId);
+  const bullets = text => asArray((text || '').split('\n').map(line => line.trim()).filter(Boolean)).map(line => `<li>${escapeHtml(line)}</li>`).join('');
+  const overlay = document.createElement('div');
+  overlay.className = 'brand-modal-overlay';
+  overlay.innerHTML = `<div class="brand-modal">
+    <div class="brand-modal-head"><h3>商談記録詳細</h3><button class="modal-close" type="button" data-close-brand>×</button></div>
+    <div class="brand-modal-body brand-negotiation-detail">
+      <div class="brand-negotiation-summary-row">
+        <div><small>相手の要望</small><p>${escapeHtml(negotiation.requestSummary || '未記入')}</p></div>
+        <div><small>決定事項</small><p>${escapeHtml(negotiation.decisions || '未記入')}</p></div>
+        <div><small>次にすること</small><p>${escapeHtml(negotiation.nextAction || '未記入')}</p></div>
+      </div>
+      <div class="brand-detail-grid">
+        <div><small>商談日</small><strong>${negotiation.date || '-'}</strong><span>${negotiationOccurrence(negotiation)}回目</span></div>
+        <div><small>営業先</small><strong>${escapeHtml(lead?.shopName || '店舗未設定')}</strong><span>${escapeHtml(negotiation.contactPerson || '')}</span></div>
+        <div><small>種別・重要度</small><strong>${escapeHtml(negotiation.visitType || '未設定')}</strong><span>重要度 ${escapeHtml(negotiation.importance || '未設定')}</span></div>
+      </div>
+      <div class="brand-negotiation-section"><h4>1. 商談概要</h4><p>${negotiation.date || '-'} / ${escapeHtml(lead?.shopName || '店舗未設定')} / ${escapeHtml(negotiation.visitType || '種別未設定')}</p></div>
+      <div class="brand-negotiation-section"><h4>2. 相手が求めていたこと</h4><p>${escapeHtml(negotiation.requestSummary || '未記入')}</p></div>
+      <div class="brand-negotiation-section"><h4>3. MofYlaからの提案</h4><p>${escapeHtml(negotiation.proposal || '未記入')}</p></div>
+      <div class="brand-negotiation-section"><h4>4. 相手の反応</h4><p>${escapeHtml(negotiation.reaction || '未記入')}</p></div>
+      <div class="brand-negotiation-section"><h4>5. 決定事項・保留事項</h4><p>${escapeHtml(negotiation.decisions || '未記入')}</p>${negotiation.pending ? `<p class="brand-note">保留・課題: ${escapeHtml(negotiation.pending)}</p>` : ''}</div>
+      <div class="brand-negotiation-section"><h4>6. 次の対応</h4><label class="brand-checkline"><input type="checkbox" disabled><span>${escapeHtml(negotiation.nextAction || '未記入')}</span></label>${negotiation.nextActionAssignee ? `<p class="brand-note">担当 / ${escapeHtml(negotiation.nextActionAssignee)}</p>` : ''}</div>
+      <div class="brand-negotiation-section"><h4>7. 次回連絡日</h4><p>${negotiation.nextContactDate || '未設定'}</p></div>
+      <div class="brand-negotiation-section"><h4>8. その他メモ</h4>${negotiation.memo ? `<ul class="brand-negotiation-memo-list">${bullets(negotiation.memo)}</ul>` : '<p>未記入</p>'}</div>
+      <div class="toolbar" style="margin-top:16px;justify-content:flex-end;"><button class="btn btn-primary" type="button" data-action="edit-negotiation-from-detail" data-id="${negotiation.id}">編集</button></div>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', event => {
+    if(event.target.closest('[data-close-brand]')) overlay.remove();
+    if(event.target.closest('[data-action="edit-negotiation-from-detail"]')){ overlay.remove(); negotiationForm(negotiation); }
+  });
 }
 
 function openForm(title, fields, values, onSubmit){
@@ -1081,12 +1121,25 @@ function productDeliveryForm(productId){
 }
 function negotiationForm(negotiation = {}){
   openForm(negotiation.id ? '商談記録編集' : '商談記録追加', [
+    {type:'section', label:'基本情報'},
     {name:'leadId',label:'対象店舗',type:'select',options:optionsFrom(state.leads, 'shopName')},
+    {name:'contactPerson',label:'先方担当者'},
     {name:'date',label:'商談日',type:'date'},
-    {name:'content',label:'話した内容',type:'textarea',full:true},
-    {name:'interest',label:'先方の要望・関心事',type:'textarea',full:true},
+    {name:'visitType',label:'種別',type:'select',options:['訪問','電話','メール','DM','その他']},
+    {name:'importance',label:'重要度',type:'select',options:['高','中','低']},
     {name:'result',label:'結果',type:'select',options:['前向き','保留','要検討','見送り','その他']},
-    {name:'nextAction',label:'次のアクション'}
+    {type:'section', label:'商談内容'},
+    {name:'requestSummary',label:'相手が求めていたこと',type:'textarea',full:true},
+    {name:'proposal',label:'MofYlaからの提案',type:'textarea',full:true},
+    {name:'reaction',label:'相手の反応',type:'textarea',full:true},
+    {type:'section', label:'決定・対応'},
+    {name:'decisions',label:'決定事項',type:'textarea',full:true},
+    {name:'pending',label:'保留・課題',type:'textarea',full:true},
+    {name:'nextAction',label:'次の対応'},
+    {name:'nextActionAssignee',label:'次の対応の担当'},
+    {name:'nextContactDate',label:'次回連絡日',type:'date'},
+    {type:'section', label:'メモ'},
+    {name:'memo',label:'その他メモ（改行で箇条書き）',type:'textarea',full:true}
   ], {date:todayKey(), ...negotiation}, async data => {
     upsert('negotiations', {...negotiation, ...data, id:negotiation.id || uid('negotiation'), createdAt:negotiation.createdAt || todayKey()});
     await save();
@@ -1298,6 +1351,7 @@ async function handleClick(event){
   if(action === 'new-negotiation') negotiationForm();
   if(action === 'edit-negotiation') negotiationForm(findBy('negotiations', id));
   if(action === 'delete-negotiation') removeBy('negotiations', id, '商談記録');
+  if(action === 'view-negotiation'){ const negotiation = findBy('negotiations', id); if(negotiation) negotiationDetailOverlay(negotiation); }
   if(action === 'new-product') productForm();
   if(action === 'edit-product') productForm(findBy('products', id));
   if(action === 'new-delivery') productDeliveryForm(id);
