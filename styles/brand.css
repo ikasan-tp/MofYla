@@ -516,11 +516,11 @@
 .invoice-total-highlight strong{font-size:1.15rem;font-weight:800;}
 
 .invoice-table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:0;}
-.invoice-col-no{width:36px;}
-.invoice-col-qty{width:60px;}
-.invoice-col-price{width:92px;}
-.invoice-col-amount{width:100px;}
-.invoice-col-actions{width:104px;}
+.invoice-col-no{width:5%;}
+.invoice-col-qty{width:9%;}
+.invoice-col-price{width:15%;}
+.invoice-col-amount{width:15%;}
+.invoice-col-actions{width:14%;}
 .invoice-table th,.invoice-table td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;font-size:.84rem;overflow-wrap:anywhere;}
 .invoice-table th{color:var(--ink-soft);font-weight:700;}
 .invoice-table th:first-child,.invoice-table td:first-child{text-align:center;color:var(--ink-soft);white-space:nowrap;padding-left:4px;padding-right:4px;}
