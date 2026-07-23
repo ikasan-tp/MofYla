@@ -760,7 +760,7 @@ function renderInvoice(){
   const periodLabel = draft.periodFrom || draft.periodTo ? `対象期間: ${draft.periodFrom || '-'} 〜 ${draft.periodTo || '-'}` : '';
   const blankRows = Math.max(0, INVOICE_TABLE_MIN_ROWS - items.length);
   const itemRows = items.map((item, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(item.name)}</td><td>${item.qty}</td><td>${yen(item.price)}</td><td>${yen(Number(item.qty || 0) * Number(item.price || 0))}</td><td class="no-print"><button class="btn btn-ghost btn-small" data-action="edit-invoice-item" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-invoice-item" data-id="${item.id}">削除</button></td></tr>`).join('');
-  const emptyRows = Array.from({ length: blankRows }, (_, i) => `<tr class="invoice-blank-row no-print"><td>${items.length + i + 1}</td><td></td><td></td><td></td><td></td><td class="no-print"></td></tr>`).join('');
+  const emptyRows = Array.from({ length: blankRows }, (_, i) => `<tr><td>${items.length + i + 1}</td><td></td><td></td><td></td><td></td><td class="no-print"></td></tr>`).join('');
   root.innerHTML = `${pageHead('帳票','請求書・納品書を、卸し実績から自動で作成できます。', actions)}
     <div class="invoice-toolbar no-print">
       <button class="btn btn-ghost btn-small" data-action="add-invoice-item">明細を追加</button>
@@ -771,58 +771,49 @@ function renderInvoice(){
     <details class="brand-archive invoice-archive" id="invoiceArchive" open>
       <summary class="no-print"><span>${escapeHtml(docType)}プレビュー</span><b>${escapeHtml(draft.number || '-')}</b></summary>
       <div class="invoice-sheet" id="invoiceSheet">
-        <div class="invoice-main">
-          <div class="invoice-head">
-            <div class="invoice-head-left">
-              <h1>${escapeHtml(docType)}</h1>
-              <div class="invoice-billto-block">
-                <div class="invoice-billto"><strong>${escapeHtml(draft.billTo || draft.store || 'お客様')} 御中</strong></div>
-                ${draft.billToContact ? `<p>お受取人：${escapeHtml(draft.billToContact)} 様</p>` : ''}
-                ${draft.billToPostalCode ? `<p>〒${escapeHtml(draft.billToPostalCode)}</p>` : ''}
-                ${draft.billToAddress ? `<p>${escapeHtml(draft.billToAddress)}</p>` : ''}
-                ${draft.billToPhone ? `<p>TEL: ${escapeHtml(draft.billToPhone)}</p>` : ''}
-                ${draft.billToEmail ? `<p>${escapeHtml(draft.billToEmail)}</p>` : ''}
-              </div>
-            </div>
-            <div class="invoice-head-right">
-              <div class="invoice-meta">
-                <div class="invoice-meta-row"><span>発行日</span><strong>${draft.date || '-'}</strong></div>
-                <div class="invoice-meta-row"><span>${escapeHtml(docType)}番号</span><strong>${escapeHtml(draft.number || '-')}</strong></div>
-                <div class="invoice-meta-row"><span>${isDeliveryNote ? '納品日' : '支払期限'}</span><strong>${draft.dueDate || '-'}</strong></div>
-                ${draft.orderNumber ? `<div class="invoice-meta-row"><span>注文番号</span><strong>${escapeHtml(draft.orderNumber)}</strong></div>` : ''}
-              </div>
-              <div class="invoice-seller">
-                <img class="invoice-logo" src="./assets/mofyla-logo.png" alt="MofYla logo">
-                <p class="invoice-seller-name">${escapeHtml(profile.name || '（発行者情報未設定）')}</p>
-                ${profile.contactPerson ? `<p>担当者：${escapeHtml(profile.contactPerson)}</p>` : ''}
-                ${profile.postalCode ? `<p>〒${escapeHtml(profile.postalCode)}</p>` : ''}
-                ${profile.address ? `<p>${escapeHtml(profile.address)}</p>` : ''}
-                ${profile.phone ? `<p>TEL: ${escapeHtml(profile.phone)}</p>` : ''}
-                ${profile.email ? `<p>${escapeHtml(profile.email)}</p>` : ''}
-              </div>
-            </div>
+        <div class="invoice-head">
+          <h1>${escapeHtml(docType)}</h1>
+          <div class="invoice-meta">
+            <div class="invoice-meta-row"><span>発行日</span><strong>${draft.date || '-'}</strong><span>${escapeHtml(docType)}番号</span><strong>${escapeHtml(draft.number || '-')}</strong></div>
+            <div class="invoice-meta-row"><span>${isDeliveryNote ? '納品日' : '支払期限'}</span><strong>${draft.dueDate || '-'}</strong><span>注文番号</span><strong>${escapeHtml(draft.orderNumber || '-')}</strong></div>
           </div>
-          <p class="invoice-greeting">${invoiceGreeting(isDeliveryNote)}</p>
-          ${periodLabel ? `<p class="invoice-period">${periodLabel}</p>` : ''}
-          <div class="invoice-total-highlight"><span>${isDeliveryNote ? '合計金額' : 'ご請求金額'}</span><strong>${yen(total)}（税込）</strong></div>
-          <table class="invoice-table">
-            <colgroup>
-              <col class="invoice-col-no"><col class="invoice-col-name"><col class="invoice-col-qty"><col class="invoice-col-price"><col class="invoice-col-amount"><col class="invoice-col-actions no-print">
-            </colgroup>
-            <thead><tr><th>No.</th><th>品目・商品名</th><th>数量</th><th>単価（税抜）</th><th>金額（税抜）</th><th class="no-print"></th></tr></thead>
-            <tbody>${itemRows || emptyRows ? itemRows + emptyRows : `<tr><td colspan="6">明細がありません。「明細を追加」から入力するか、卸し実績のある店舗で作り直してください。</td></tr>`}</tbody>
-          </table>
-          <div class="invoice-bottom">
-            <div class="invoice-notes"><p>備考</p><p>${draft.notes ? escapeHtml(draft.notes) : ''}</p></div>
-            <table class="invoice-summary-table">
-              <tr><td>小計（税抜）</td><td>${yen(subtotal)}</td></tr>
-              <tr><td>送料（税抜）</td><td>${yen(shipping)}</td></tr>
-              <tr><td>消費税（${draft.taxRate || 0}%）</td><td>${yen(tax)}</td></tr>
-              <tr class="invoice-grand-total"><td>合計（税込）</td><td>${yen(total)}</td></tr>
-            </table>
-          </div>
-          ${!isDeliveryNote ? bankInfoHtml(profile) : ''}
         </div>
+        <div class="invoice-parties">
+          <div class="invoice-billto-block">
+            <div class="invoice-billto"><strong>${escapeHtml(draft.billTo || draft.store || 'お客様')} 御中</strong></div>
+            ${draft.billToContact ? `<p>お受取人：${escapeHtml(draft.billToContact)} 様</p>` : ''}
+            ${draft.billToPostalCode ? `<p>〒${escapeHtml(draft.billToPostalCode)}</p>` : ''}
+            ${draft.billToAddress ? `<p>${escapeHtml(draft.billToAddress)}</p>` : ''}
+            ${draft.billToPhone ? `<p>TEL: ${escapeHtml(draft.billToPhone)}</p>` : ''}
+            ${draft.billToEmail ? `<p>${escapeHtml(draft.billToEmail)}</p>` : ''}
+          </div>
+          <div class="invoice-seller">
+            <img class="invoice-logo" src="./assets/mofyla-logo.png" alt="MofYla logo">
+            <p class="invoice-seller-name">${escapeHtml(profile.name || '（発行者情報未設定）')}</p>
+            ${profile.contactPerson ? `<p>担当者：${escapeHtml(profile.contactPerson)}</p>` : ''}
+            ${profile.postalCode ? `<p>〒${escapeHtml(profile.postalCode)}</p>` : ''}
+            ${profile.address ? `<p>${escapeHtml(profile.address)}</p>` : ''}
+            ${profile.phone ? `<p>TEL: ${escapeHtml(profile.phone)}</p>` : ''}
+            ${profile.email ? `<p>${escapeHtml(profile.email)}</p>` : ''}
+          </div>
+        </div>
+        <p class="invoice-greeting">${invoiceGreeting(isDeliveryNote)}</p>
+        ${periodLabel ? `<p class="brand-note">${periodLabel}</p>` : ''}
+        <div class="invoice-total-highlight">${isDeliveryNote ? '合計金額' : 'ご請求金額'}　${yen(total)}（税込）</div>
+        <table class="invoice-table">
+          <thead><tr><th>No.</th><th>品目・商品名</th><th>数量</th><th>単価（税抜）</th><th>金額（税抜）</th><th class="no-print"></th></tr></thead>
+          <tbody>${itemRows || emptyRows ? itemRows + emptyRows : `<tr><td colspan="6">明細がありません。「明細を追加」から入力するか、卸し実績のある店舗で作り直してください。</td></tr>`}</tbody>
+        </table>
+        <div class="invoice-bottom">
+          <div class="invoice-notes"><p>備考</p><p>${draft.notes ? escapeHtml(draft.notes) : ''}</p></div>
+          <table class="invoice-summary-table">
+            <tr><td>小計（税抜）</td><td>${yen(subtotal)}</td></tr>
+            <tr><td>送料（税抜）</td><td>${yen(shipping)}</td></tr>
+            <tr><td>消費税（${draft.taxRate || 0}%）</td><td>${yen(tax)}</td></tr>
+            <tr class="invoice-grand-total"><td>合計（税込）</td><td>${yen(total)}</td></tr>
+          </table>
+        </div>
+        ${!isDeliveryNote ? bankInfoHtml(profile) : ''}
         <div class="invoice-footer">
           <span>${escapeHtml(profile.name || '')}</span>
         </div>
