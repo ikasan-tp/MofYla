@@ -28,7 +28,7 @@ const DEMO_WORDS = ['神戸マルシェ','山田さま','うさぎネームプ�
 
 let state;
 let activeTaskFilter = '今日';
-let activeProductTab = 'online';
+let activeProductTab = 'manage';
 let activeNegotiationLead = 'all';
 let couponQuery = '';
 
@@ -324,6 +324,17 @@ function colorLabel(colorId){
   return color ? `${color.code} ${color.name}` : '';
 }
 function productColorIds(product){ return asArray(product.colorIds).length ? product.colorIds : (product.colorId ? [product.colorId] : []); }
+function formatDimensions(product){
+  const w = Number(product.dimensionsW || 0), d = Number(product.dimensionsD || 0), h = Number(product.dimensionsH || 0);
+  if(w || d || h){
+    const parts = [];
+    if(w) parts.push(`W${w}`);
+    if(d) parts.push(`D${d}`);
+    if(h) parts.push(`H${h}`);
+    return `${parts.join('×')}mm`;
+  }
+  return product.dimensions || '';
+}
 function productColorSwatches(product){
   const colors = productColorIds(product).map(id => state.colorPalette.find(c => c.id === id)).filter(Boolean);
   if(!colors.length) return '';
@@ -614,14 +625,29 @@ function renderProducts(){
     <h3>${escapeHtml(product.name || '商品名未設定')}</h3>
     ${product.sku ? `<p class="brand-product-sku">${escapeHtml(product.sku)}</p>` : ''}
     <p>${escapeHtml(product.category || 'カテゴリ未設定')}</p>
-    ${product.dimensions ? `<p class="brand-product-dimensions">${escapeHtml(product.dimensions)}</p>` : ''}
+    ${formatDimensions(product) ? `<p class="brand-product-dimensions">${escapeHtml(formatDimensions(product))}</p>` : ''}
     ${productColorSwatches(product)}
   </div>`;
-  const onlineCard = product => `<article class="brand-card brand-product-card">
+  const manageCard = product => `<article class="brand-card brand-product-card">
       <div class="brand-product-head">
         ${productTitleHtml(product)}
         <div class="brand-product-actions">
           <button class="btn btn-ghost btn-small" data-action="edit-product" data-id="${product.id}">編集</button>
+          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
+        </div>
+      </div>
+      <span class="brand-wholesale-store">${isWholesaleProduct(product) ? '卸し商品' : 'ネット販売'}</span>
+      <div class="brand-product-metrics">
+        <span><b>${yen(product.cost)}</b><small>原価</small></span>
+        <span><b>${product.minutes || 0}分</b><small>制作</small></span>
+      </div>
+      ${product.description ? `<p class="brand-note">${escapeHtml(product.description)}</p>` : '<p class="brand-note">説明はまだありません。</p>'}
+    </article>`;
+  const onlineCard = product => `<article class="brand-card brand-product-card">
+      <div class="brand-product-head">
+        ${productTitleHtml(product)}
+        <div class="brand-product-actions">
+          <button class="btn btn-ghost btn-small" data-action="edit-online-channel" data-id="${product.id}">編集</button>
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
         </div>
       </div>
@@ -671,7 +697,7 @@ function renderProducts(){
       ${product.description ? `<p class="brand-note">${escapeHtml(product.description)}</p>` : ''}
       <div class="brand-toolbar" style="margin-bottom:0;"><button class="btn btn-sage btn-small" data-action="new-listing" data-id="${product.id}">卸し先を追加</button></div>
     </article>`;
-  const currentCount = activeProductTab === 'wholesale' ? listings.length : onlineProducts.length;
+  const currentCount = activeProductTab === 'wholesale' ? listings.length : activeProductTab === 'online' ? onlineProducts.length : state.products.length;
   const totalStock = activeProductTab === 'wholesale'
     ? listings.reduce((sum, x) => sum + productDelivered(x.listing), 0)
     : onlineProducts.reduce((sum, p) => sum + Number(p.stock || 0), 0);
@@ -679,10 +705,16 @@ function renderProducts(){
     ? listings.reduce((sum, x) => sum + productDelivered(x.listing) * Number(x.listing.wholesalePrice || 0), 0)
     : onlineProducts.reduce((sum, p) => sum + Number(p.stock || 0) * Number(p.price || 0), 0);
   const tabs = `<div class="brand-product-tabs">
+    <button class="brand-filter ${activeProductTab === 'manage' ? 'active' : ''}" data-action="set-product-tab" data-value="manage">商品管理 <span>${state.products.length}</span></button>
     <button class="brand-filter ${activeProductTab === 'online' ? 'active' : ''}" data-action="set-product-tab" data-value="online">ネット販売在庫 <span>${onlineProducts.length}</span></button>
     <button class="brand-filter ${activeProductTab === 'wholesale' ? 'active' : ''}" data-action="set-product-tab" data-value="wholesale">卸し商品 <span>${wholesaleProducts.length}</span></button>
   </div>`;
-  const summary = `<div class="brand-status-summary">
+  const summary = activeProductTab === 'manage' ? `<div class="brand-status-summary">
+    <div class="brand-status-tile"><strong>${state.products.length}</strong><span>商品数</span></div>
+    <div class="brand-status-tile"><strong>${onlineProducts.length}</strong><span>ネット販売</span></div>
+    <div class="brand-status-tile"><strong>${wholesaleProducts.length}</strong><span>卸し商品</span></div>
+    <div class="brand-status-tile"><strong>${state.colorPalette.length}</strong><span>登録カラー数</span></div>
+  </div>` : `<div class="brand-status-summary">
     <div class="brand-status-tile"><strong>${currentCount}</strong><span>${activeProductTab === 'wholesale' ? '卸し先数' : '商品数'}</span></div>
     <div class="brand-status-tile"><strong>${totalStock}</strong><span>${activeProductTab === 'wholesale' ? '累計卸し数' : '在庫合計'}</span></div>
     <div class="brand-status-tile"><strong>${activeProductTab === 'wholesale' ? storeNames.length : onlineProducts.length}</strong><span>${activeProductTab === 'wholesale' ? '店舗数' : 'ネット販売商品'}</span></div>
@@ -702,10 +734,12 @@ function renderProducts(){
     return `<details class="brand-archive brand-wholesale-group" open><summary><span>${escapeHtml(store)}</span><b>${items.length}商品 / 累計卸し${stock}</b></summary><div class="brand-product-grid">${items.map(listingCard).join('')}</div></details>`;
   }).join('');
   const unassignedSection = unassignedProducts.length ? `<section class="brand-wholesale-group"><div class="brand-mini-head"><h3>卸し先未設定</h3></div><div class="brand-product-grid">${unassignedProducts.map(unassignedCard).join('')}</div></section>` : '';
-  const content = activeProductTab === 'wholesale'
-    ? (groupedByStore + unassignedSection || empty('卸し商品はまだありません。商品追加から管理区分を「卸し商品」にして登録できます。'))
+  const content = activeProductTab === 'manage'
+    ? `<div class="brand-product-grid">${state.products.map(manageCard).join('') || empty('まだ商品がありません。「追加」から登録してください。')}</div>`
+    : activeProductTab === 'wholesale'
+    ? (groupedByStore + unassignedSection || empty('卸し商品はまだありません。商品管理から管理区分を「卸し商品」にして登録できます。'))
     : `<div class="brand-product-grid">${onlineProducts.map(onlineCard).join('') || empty('ネット販売在庫はまだありません。')}</div>`;
-  root.innerHTML = `${pageHead('商品管理','卸し商品とネット販売在庫を分けて管理します。', '<button class="btn btn-primary" data-action="new-product">追加</button>')}${tabs}${summary}${wholesaleToolbar}${colorSection}${content}`;
+  root.innerHTML = `${pageHead('商品管理','商品情報・ネット販売・卸し商品を分けて管理します。', '<button class="btn btn-primary" data-action="new-product">追加</button>')}${tabs}${summary}${wholesaleToolbar}${activeProductTab === 'manage' ? colorSection : ''}${content}`;
 }
 
 function renderIdeas(){
@@ -1114,14 +1148,16 @@ function leadForm(lead = {}){ openForm(lead.id ? '営業先編集' : '営業先�
   {name:'nextAction',label:'次にやること',full:true},{name:'memo',label:'メモ',type:'textarea',full:true}
 ], {potential:'未設定', ...lead}, async data => { upsert('leads', {...lead, ...data, id:lead.id || uid('lead')}); await save(); }); }
 function productForm(product = {}){
-  const channel = product.salesChannel || (product.isWholesale ? 'wholesale' : activeProductTab);
+  const channel = product.salesChannel || (product.isWholesale ? 'wholesale' : (activeProductTab === 'wholesale' ? 'wholesale' : 'online'));
   const commonFields = [
     {name:'salesChannel',label:'管理区分',type:'select',options:[{value:'online',label:'ネット販売在庫'},{value:'wholesale',label:'卸し商品'}]},
     {name:'name',label:'商品名'},
     {name:'category',label:'商品カテゴリ',type:'select',options:CATEGORIES},
     {name:'breed',label:'兎種',type:'select',options:RABBIT_BREEDS.map(b => b.name)},
     {name:'sku',label:'商品番号（自動採番・編集可）'},
-    {name:'dimensions',label:'寸法（例: W80×D80×H10mm）'},
+    {name:'dimensionsW',label:'幅 W（mm）',type:'number'},
+    {name:'dimensionsD',label:'奥行 D（mm）',type:'number'},
+    {name:'dimensionsH',label:'高さ H（mm）',type:'number'},
     {name:'colorIds',label:'カラー（最大4色まで選択可）',type:'checkboxGroup',max:4,options:state.colorPalette.map(c => ({value:c.id, label:`${c.code} ${c.name}`}))},
     {name:'cost',label:'原価',type:'number'},
     {name:'minutes',label:'制作時間目安',type:'number'},
@@ -1134,7 +1170,7 @@ function productForm(product = {}){
     {name:'sold',label:'販売数',type:'number'},
     {name:'lastSoldDate',label:'最終販売日',type:'date'}
   ];
-  const fields = [...commonFields, ...(channel === 'wholesale' ? [] : onlineFields)];
+  const fields = product.id ? commonFields : [...commonFields, ...(channel === 'wholesale' ? [] : onlineFields)];
   const defaultCategory = product.category || CATEGORIES[0];
   const defaultBreed = product.breed || RABBIT_BREEDS[0].name;
   const initialValues = {
@@ -1148,6 +1184,7 @@ function productForm(product = {}){
     upsert('products', {
       ...product, ...data, id:product.id || uid('product'), salesChannel,
       colorIds:asArray(data.colorIds).slice(0, 4), colorId:undefined,
+      dimensionsW:Number(data.dimensionsW || 0), dimensionsD:Number(data.dimensionsD || 0), dimensionsH:Number(data.dimensionsH || 0), dimensions:undefined,
       price:Number(data.price ?? product.price ?? 0),
       cost:Number(data.cost || 0),
       minutes:Number(data.minutes || 0),
@@ -1155,7 +1192,7 @@ function productForm(product = {}){
       sold:Number(data.sold ?? product.sold ?? 0),
       wholesaleListings:asArray(product.wholesaleListings)
     });
-    activeProductTab = salesChannel === 'wholesale' ? 'wholesale' : 'online';
+    activeProductTab = 'manage';
     await save();
   });
   if(!product.id) wireProductSkuAutoFill();
@@ -1193,42 +1230,33 @@ function productDeliveryForm(productId, listingId){
 function listingForm(productId, listing = {}){
   const product = findBy('products', productId);
   if(!product) return;
-  const isEditingExisting = !!listing.id;
-  const productFields = isEditingExisting ? [
-    {type:'section', label:'商品情報'},
-    {name:'name',label:'商品名'},
-    {name:'category',label:'商品カテゴリ',type:'select',options:CATEGORIES},
-    {name:'breed',label:'兎種',type:'select',options:RABBIT_BREEDS.map(b => b.name)},
-    {name:'sku',label:'商品番号（自動採番・編集可）'},
-    {name:'dimensions',label:'寸法（例: W80×D80×H10mm）'},
-    {name:'colorIds',label:'カラー（最大4色まで選択可）',type:'checkboxGroup',max:4,options:state.colorPalette.map(c => ({value:c.id, label:`${c.code} ${c.name}`}))},
-    {name:'cost',label:'原価',type:'number'},
-    {name:'minutes',label:'制作時間目安',type:'number'},
-    {name:'description',label:'商品説明',type:'textarea',full:true},
-    {type:'section', label:'この店舗向けの条件'}
-  ] : [];
-  const listingFields = [
+  openForm(listing.id ? '卸し条件を編集' : '卸し先を追加', [
     {name:'leadId',label:'卸し先店舗',type:'select',options:optionsFrom(state.leads, 'shopName')},
     {name:'wholesalePrice',label:'卸し価格',type:'number'},
     {name:'status',label:'取引状態',type:'select',options:WHOLESALE_STATUSES},
     {name:'memo',label:'メモ',type:'textarea',full:true}
-  ];
-  const initialValues = {
-    colorIds:asArray(product.colorIds).length ? product.colorIds : (product.colorId ? [product.colorId] : []),
-    ...product, ...listing
-  };
-  openForm(isEditingExisting ? '商品編集' : '卸し先を追加', [...productFields, ...listingFields], initialValues, async data => {
-    if(isEditingExisting){
-      Object.assign(product, {
-        name:data.name, category:data.category, breed:data.breed, sku:data.sku,
-        dimensions:data.dimensions, colorIds:asArray(data.colorIds).slice(0, 4),
-        cost:Number(data.cost || 0), minutes:Number(data.minutes || 0), description:data.description
-      });
-    }
+  ], listing, async data => {
     product.wholesaleListings = asArray(product.wholesaleListings);
-    const newListing = {...listing, leadId:data.leadId, wholesalePrice:Number(data.wholesalePrice || 0), status:data.status, memo:data.memo, id:listing.id || uid('listing'), deliveries:asArray(listing.deliveries)};
+    const newListing = {...listing, ...data, id:listing.id || uid('listing'), wholesalePrice:Number(data.wholesalePrice || 0), deliveries:asArray(listing.deliveries)};
     const idx = product.wholesaleListings.findIndex(l => l.id === newListing.id);
     if(idx >= 0) product.wholesaleListings[idx] = newListing; else product.wholesaleListings.push(newListing);
+    await save();
+  });
+}
+function onlineChannelForm(productId){
+  const product = findBy('products', productId);
+  if(!product) return;
+  openForm('ネット販売情報を編集', [
+    {name:'price',label:'販売価格',type:'number'},
+    {name:'stock',label:'ネット販売在庫数',type:'number'},
+    {name:'status',label:'販売状態',type:'select',options:['販売中','非公開','準備中','在庫少']},
+    {name:'sold',label:'販売数',type:'number'},
+    {name:'lastSoldDate',label:'最終販売日',type:'date'}
+  ], product, async data => {
+    Object.assign(product, {
+      price:Number(data.price || 0), stock:Number(data.stock || 0), status:data.status,
+      sold:Number(data.sold || 0), lastSoldDate:data.lastSoldDate
+    });
     await save();
   });
 }
@@ -1432,7 +1460,8 @@ async function handleClick(event){
   if(action === 'toggle-market-check'){ const m = findBy('markets', market); const check = m?.checklist.find(item => item.id === id); if(check){ check.done = el.checked; await save(); renderAll(); } }
   if(action === 'set-customer-status'){ const c = findBy('customers', id); if(c){ c.status = value; if(value === '完了' && !c.completedAt) c.completedAt = todayKey(); await save(); renderAll(); } }
   if(action === 'set-lead-status'){ const lead = findBy('leads', id); if(lead){ lead.status = value; await save(); renderAll(); } }
-  if(action === 'set-product-tab'){ activeProductTab = value === 'wholesale' ? 'wholesale' : 'online'; renderProducts(); }
+  if(action === 'set-product-tab'){ activeProductTab = ['manage', 'online', 'wholesale'].includes(value) ? value : 'manage'; renderProducts(); }
+  if(action === 'edit-online-channel') onlineChannelForm(id);
   if(action === 'filter-negotiation'){ activeNegotiationLead = value; renderNegotiations(); }
   if(action === 'new-task') taskForm();
   if(action === 'edit-task') taskForm(findBy('tasks', id));
