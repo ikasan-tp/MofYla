@@ -637,8 +637,7 @@ function renderProducts(){
       <div class="brand-product-head">
         ${productTitleHtml(product)}
         <div class="brand-product-actions">
-          <button class="btn btn-ghost btn-small" data-action="edit-product" data-id="${product.id}">商品情報を編集</button>
-          <button class="btn btn-ghost btn-small" data-action="edit-listing" data-id="${product.id}" data-listing="${listing.id}">卸し条件を編集</button>
+          <button class="btn btn-ghost btn-small" data-action="edit-listing" data-id="${product.id}" data-listing="${listing.id}">編集</button>
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-listing" data-id="${product.id}" data-listing="${listing.id}">削除</button>
         </div>
       </div>
@@ -1194,14 +1193,40 @@ function productDeliveryForm(productId, listingId){
 function listingForm(productId, listing = {}){
   const product = findBy('products', productId);
   if(!product) return;
-  openForm(listing.id ? '卸し先編集' : '卸し先を追加', [
+  const isEditingExisting = !!listing.id;
+  const productFields = isEditingExisting ? [
+    {type:'section', label:'商品情報'},
+    {name:'name',label:'商品名'},
+    {name:'category',label:'商品カテゴリ',type:'select',options:CATEGORIES},
+    {name:'breed',label:'兎種',type:'select',options:RABBIT_BREEDS.map(b => b.name)},
+    {name:'sku',label:'商品番号（自動採番・編集可）'},
+    {name:'dimensions',label:'寸法（例: W80×D80×H10mm）'},
+    {name:'colorIds',label:'カラー（最大4色まで選択可）',type:'checkboxGroup',max:4,options:state.colorPalette.map(c => ({value:c.id, label:`${c.code} ${c.name}`}))},
+    {name:'cost',label:'原価',type:'number'},
+    {name:'minutes',label:'制作時間目安',type:'number'},
+    {name:'description',label:'商品説明',type:'textarea',full:true},
+    {type:'section', label:'この店舗向けの条件'}
+  ] : [];
+  const listingFields = [
     {name:'leadId',label:'卸し先店舗',type:'select',options:optionsFrom(state.leads, 'shopName')},
     {name:'wholesalePrice',label:'卸し価格',type:'number'},
     {name:'status',label:'取引状態',type:'select',options:WHOLESALE_STATUSES},
     {name:'memo',label:'メモ',type:'textarea',full:true}
-  ], listing, async data => {
+  ];
+  const initialValues = {
+    colorIds:asArray(product.colorIds).length ? product.colorIds : (product.colorId ? [product.colorId] : []),
+    ...product, ...listing
+  };
+  openForm(isEditingExisting ? '商品編集' : '卸し先を追加', [...productFields, ...listingFields], initialValues, async data => {
+    if(isEditingExisting){
+      Object.assign(product, {
+        name:data.name, category:data.category, breed:data.breed, sku:data.sku,
+        dimensions:data.dimensions, colorIds:asArray(data.colorIds).slice(0, 4),
+        cost:Number(data.cost || 0), minutes:Number(data.minutes || 0), description:data.description
+      });
+    }
     product.wholesaleListings = asArray(product.wholesaleListings);
-    const newListing = {...listing, ...data, id:listing.id || uid('listing'), wholesalePrice:Number(data.wholesalePrice || 0), deliveries:asArray(listing.deliveries)};
+    const newListing = {...listing, leadId:data.leadId, wholesalePrice:Number(data.wholesalePrice || 0), status:data.status, memo:data.memo, id:listing.id || uid('listing'), deliveries:asArray(listing.deliveries)};
     const idx = product.wholesaleListings.findIndex(l => l.id === newListing.id);
     if(idx >= 0) product.wholesaleListings[idx] = newListing; else product.wholesaleListings.push(newListing);
     await save();
