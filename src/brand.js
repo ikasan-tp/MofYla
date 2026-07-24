@@ -335,11 +335,13 @@ function formatDimensions(product){
   }
   return product.dimensions || '';
 }
-function productColorSwatches(product){
-  const colors = productColorIds(product).map(id => state.colorPalette.find(c => c.id === id)).filter(Boolean);
+function productColorSwatches(product, overrideIds){
+  const ids = asArray(overrideIds).length ? overrideIds : productColorIds(product);
+  const colors = ids.map(id => state.colorPalette.find(c => c.id === id)).filter(Boolean);
   if(!colors.length) return '';
   return `<div class="brand-product-colors">${colors.map(c => `<span class="brand-product-color-chip" title="${escapeHtml(c.code)} ${escapeHtml(c.name)}"><span class="brand-color-swatch" style="background:${escapeHtml(c.hex || '#ccc')}"></span>${escapeHtml(c.name)}</span>`).join('')}</div>`;
 }
+function listingDisplayName(listing, product){ return listing.name || product.name || '商品名未設定'; }
 function nextColorCode(){
   const nums = state.colorPalette.map(c => { const m = /^C(\d+)/.exec(c.code || ''); return m ? Number(m[1]) : 0; });
   const max = nums.length ? Math.max(...nums) : 0;
@@ -628,6 +630,13 @@ function renderProducts(){
     ${formatDimensions(product) ? `<p class="brand-product-dimensions">${escapeHtml(formatDimensions(product))}</p>` : ''}
     ${productColorSwatches(product)}
   </div>`;
+  const listingTitleHtml = (listing, product) => `<div class="brand-product-title">
+    <h3>${escapeHtml(listingDisplayName(listing, product))}</h3>
+    ${product.sku ? `<p class="brand-product-sku">${escapeHtml(product.sku)}</p>` : ''}
+    <p>${escapeHtml(product.category || 'カテゴリ未設定')}</p>
+    ${formatDimensions(product) ? `<p class="brand-product-dimensions">${escapeHtml(formatDimensions(product))}</p>` : ''}
+    ${productColorSwatches(product, listing.colorIds)}
+  </div>`;
   const manageCard = product => `<article class="brand-card brand-product-card">
       <div class="brand-product-head">
         ${productTitleHtml(product)}
@@ -661,7 +670,7 @@ function renderProducts(){
     </article>`;
   const listingCard = ({listing, product}) => `<article class="brand-card brand-product-card">
       <div class="brand-product-head">
-        ${productTitleHtml(product)}
+        ${listingTitleHtml(listing, product)}
         <div class="brand-product-actions">
           <button class="btn btn-ghost btn-small" data-action="edit-listing" data-id="${product.id}" data-listing="${listing.id}">編集</button>
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-listing" data-id="${product.id}" data-listing="${listing.id}">削除</button>
@@ -1232,12 +1241,16 @@ function listingForm(productId, listing = {}){
   if(!product) return;
   openForm(listing.id ? '卸し条件を編集' : '卸し先を追加', [
     {name:'leadId',label:'卸し先店舗',type:'select',options:optionsFrom(state.leads, 'shopName')},
+    {type:'section', label:'この店舗向けの表示（空欄なら商品の設定を使用）'},
+    {name:'name',label:'この店舗向けの名前'},
+    {name:'colorIds',label:'この店舗向けのカラー（最大4色）',type:'checkboxGroup',max:4,options:state.colorPalette.map(c => ({value:c.id, label:`${c.code} ${c.name}`}))},
+    {type:'section', label:'取引条件'},
     {name:'wholesalePrice',label:'卸し価格',type:'number'},
     {name:'status',label:'取引状態',type:'select',options:WHOLESALE_STATUSES},
     {name:'memo',label:'メモ',type:'textarea',full:true}
   ], listing, async data => {
     product.wholesaleListings = asArray(product.wholesaleListings);
-    const newListing = {...listing, ...data, id:listing.id || uid('listing'), wholesalePrice:Number(data.wholesalePrice || 0), deliveries:asArray(listing.deliveries)};
+    const newListing = {...listing, ...data, id:listing.id || uid('listing'), wholesalePrice:Number(data.wholesalePrice || 0), colorIds:asArray(data.colorIds).slice(0, 4), deliveries:asArray(listing.deliveries)};
     const idx = product.wholesaleListings.findIndex(l => l.id === newListing.id);
     if(idx >= 0) product.wholesaleListings[idx] = newListing; else product.wholesaleListings.push(newListing);
     await save();
@@ -1360,7 +1373,7 @@ function exportDeliveriesCsv(){
       asArray(listing.deliveries).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(d => {
         const price = Number(listing.wholesalePrice || 0);
         const qty = Number(d.qty || 0);
-        rows.push([listingLeadName(listing), product.sku || '', product.name || '', d.date || '', qty, price, qty * price, d.memo || '']);
+        rows.push([listingLeadName(listing), product.sku || '', listingDisplayName(listing, product), d.date || '', qty, price, qty * price, d.memo || '']);
       });
     });
   if(rows.length === 1){ showToast('卸し実績がまだありません'); return; }
@@ -1381,7 +1394,7 @@ function invoiceItemsFromDeliveries(store, from, to){
     .filter(x => listingLeadName(x.listing) === store)
     .map(({listing, product}) => ({
       id:uid('invoiceItem'),
-      name:product.name || '商品名未設定',
+      name:listingDisplayName(listing, product),
       qty:productDelivered(listing, from, to),
       price:Number(listing.wholesalePrice || 0)
     }))
