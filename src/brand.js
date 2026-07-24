@@ -637,7 +637,8 @@ function renderProducts(){
       <div class="brand-product-head">
         ${productTitleHtml(product)}
         <div class="brand-product-actions">
-          <button class="btn btn-ghost btn-small" data-action="edit-listing" data-id="${product.id}" data-listing="${listing.id}">編集</button>
+          <button class="btn btn-ghost btn-small" data-action="edit-product" data-id="${product.id}">商品情報を編集</button>
+          <button class="btn btn-ghost btn-small" data-action="edit-listing" data-id="${product.id}" data-listing="${listing.id}">卸し条件を編集</button>
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-listing" data-id="${product.id}" data-listing="${listing.id}">削除</button>
         </div>
       </div>
@@ -1261,6 +1262,12 @@ function nextDocumentNumber(type){
   const max = nums.length ? Math.max(...nums) : 0;
   return `${prefix}-${String(max + 1).padStart(4, '0')}`;
 }
+function nextOrderNumber(){
+  const nums = asArray(state.invoices)
+    .map(inv => { const m = /ORD-(\d+)\s*$/.exec(inv.orderNumber || ''); return m ? Number(m[1]) : 0; });
+  const max = nums.length ? Math.max(...nums) : 0;
+  return `ORD-${String(max + 1).padStart(4, '0')}`;
+}
 function invoiceTotals(items, taxRate, shippingFee){
   const subtotal = asArray(items).reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.price || 0), 0);
   const shipping = Number(shippingFee || 0);
@@ -1336,7 +1343,7 @@ function invoiceHeaderForm(){
     {name:'documentType',label:'書類の種類',type:'select',options:['請求書','納品書']},
     {name:'store',label:'宛先の店舗',type:'select',options:stores.map(s => ({value:s, label:s}))},
     {name:'number',label:'書類番号'},
-    {name:'orderNumber',label:'注文番号（任意）'},
+    {name:'orderNumber',label:'注文番号（自動採番・編集可）'},
     {name:'date',label:'発行日',type:'date'},
     {name:'dueDate',label:'納品日／支払期限',type:'date'},
     {name:'periodFrom',label:'対象期間（開始）',type:'date'},
@@ -1352,7 +1359,7 @@ function invoiceHeaderForm(){
     {name:'taxRate',label:'消費税率（%）',type:'number'},
     {name:'shippingFee',label:'送料（税抜・任意）',type:'number'},
     {name:'notes',label:'備考',type:'textarea',full:true}
-  ], draft || {documentType:defaultType, number:nextDocumentNumber(defaultType), date:todayKey(), taxRate:10, store:stores[0] || ''}, async data => {
+  ], draft || {documentType:defaultType, number:nextDocumentNumber(defaultType), orderNumber:nextOrderNumber(), date:todayKey(), taxRate:10, store:stores[0] || ''}, async data => {
     const isNew = !draft;
     const store = data.store || (draft && draft.store) || '';
     const items = isNew ? invoiceItemsFromDeliveries(store, data.periodFrom, data.periodTo) : draft.items;
