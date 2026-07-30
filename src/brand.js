@@ -516,6 +516,7 @@ function customerOpsCard(customer){
       </div>
       <div class="brand-meter"><span>制作進捗 ${customerProgress(customer)}%</span>${progressBar(customerProgress(customer))}</div>
       <div class="brand-detail-grid">
+        <div><small>シート回収日</small><strong>${customer.collectedDate || '-'}</strong></div>
         <div><small>ペット</small><strong>${escapeHtml(customer.petName || '-')}</strong><span>${escapeHtml(customer.petType || '-')}</span></div>
         <div><small>納期</small><strong>${customer.dueDate || '-'}</strong><span>あと${daysUntil(customer.dueDate) ?? '-'}日</span></div>
         <div><small>入金</small><strong>${escapeHtml(customer.paid || '-')}</strong><span>完了日 ${customer.completedAt || '-'}</span></div>
@@ -581,10 +582,10 @@ function renderCrm(){
       <summary><span>${escapeHtml(profile.name)}</span><b>${orders.length}件</b></summary>
       <div class="brand-archive-body">
         <div class="brand-card brand-customer-profile-card">
-          <div class="brand-card-head">
-            <div class="brand-card-title"><strong>${escapeHtml(profile.name)}</strong><p class="brand-note">${customerProfileSummaryLine(profile)}</p>${profile.memo ? `<p class="brand-note">${escapeHtml(profile.memo)}</p>` : ''}</div>
+          <div class="brand-card-title"><strong>${escapeHtml(profile.name)}</strong><p class="brand-note">${customerProfileSummaryLine(profile)}</p>${profile.memo ? `<p class="brand-note">${escapeHtml(profile.memo)}</p>` : ''}</div>
+          <div class="brand-card-foot">
+            <button class="btn btn-sage btn-small" data-action="new-order" data-id="${profile.id}">注文追加</button>
             <div class="brand-card-actions">
-              <button class="btn btn-sage btn-small" data-action="new-order" data-id="${profile.id}">注文追加</button>
               <button class="btn btn-ghost btn-small" data-action="edit-customer-profile" data-id="${profile.id}">編集</button>
               <button class="btn btn-ghost btn-small brand-danger" data-action="delete-customer-profile" data-id="${profile.id}">削除</button>
             </div>
@@ -1050,13 +1051,15 @@ function orderForm(customerId, order = {}){
   const profile = state.customerProfiles.find(p => p.id === customerId);
   if(!profile) return;
   openForm(order.id ? '注文編集' : '注文追加', [
+    {type:'section',label:'オーダーシート'},
+    {name:'collectedDate',label:'シート回収日',type:'date'},
     {type:'section',label:'ペット情報'},
     {name:'petName',label:'ペット名'},{name:'petType',label:'種類'},{name:'petNote',label:'ペット備考',type:'textarea',full:true},
     {type:'section',label:'注文と進捗'},
     {name:'orderNo',label:'受付番号'},{name:'productName',label:'商品名'},{name:'quantity',label:'数量',type:'number'},{name:'amount',label:'金額',type:'number'},
     {name:'paid',label:'入金状況',type:'select',options:['未入金','入金済','一部入金']},{name:'dueDate',label:'納期',type:'date'},{name:'status',label:'制作状況',type:'select',options:CUSTOMER_STATUSES},
     {name:'nextAction',label:'次に確認すること',full:true},{name:'memo',label:'メモ',type:'textarea',full:true}
-  ], order, async data => {
+  ], {collectedDate:todayKey(), ...order}, async data => {
     const completedAt = data.status === '完了' ? (order.completedAt || todayKey()) : order.completedAt;
     upsert('customers', {...order, ...data, completedAt, customerId:profile.id, id:order.id || uid('customer')});
     await save();

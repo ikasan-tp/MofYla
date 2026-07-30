@@ -29,6 +29,7 @@
 .brand-card-title h3{margin:0;font-size:1.02rem;line-height:1.45;overflow-wrap:anywhere;}
 .brand-card-title strong{font-size:1rem;color:var(--ink);overflow-wrap:anywhere;}
 .brand-card-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
+.brand-card-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:12px;margin-top:10px;}
 .brand-item .brand-card-head,.brand-market-card .brand-card-head{margin-bottom:0;}
 .brand-item .brand-card-head{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;}
 .brand-item .brand-card-title,.brand-item .brand-checkline{min-width:0;}
