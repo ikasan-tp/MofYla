@@ -69,7 +69,7 @@
 .brand-ops-card{display:flex;flex-direction:column;gap:14px;padding:18px;}
 .brand-ops-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:start;}
 .brand-ops-head h3{margin:8px 0 7px;font-size:1.12rem;line-height:1.45;overflow-wrap:anywhere;}
-.brand-ops-head p{margin:0;color:var(--ink-soft);font-size:.84rem;font-weight:700;}
+.brand-ops-head p{margin:0;color:var(--ink-soft);font-size:.84rem;font-weight:500;}
 .brand-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
 .brand-detail-grid div{display:grid;gap:3px;border-radius:12px;background:rgba(239,228,210,.72);padding:10px;min-width:0;}
 .brand-detail-grid small,.brand-next-action small{color:var(--ink-soft);font-size:.68rem;font-weight:800;}

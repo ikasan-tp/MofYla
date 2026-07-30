@@ -1056,7 +1056,7 @@ function orderForm(customerId, order = {}){
     {type:'section',label:'ペット情報'},
     {name:'petName',label:'ペット名'},{name:'petType',label:'種類'},{name:'petNote',label:'ペット備考',type:'textarea',full:true},
     {type:'section',label:'注文と進捗'},
-    {name:'orderNo',label:'受付番号'},{name:'productName',label:'商品名'},{name:'quantity',label:'数量',type:'number'},{name:'amount',label:'金額',type:'number'},
+    {name:'orderNo',label:'受付番号'},{name:'productName',label:'商品名',type:'select',options:[{value:'',label:'選択してください'}, ...state.products.map(p => ({value:p.name || '商品名未設定', label:`${p.name || '商品名未設定'}${p.sku ? `（${p.sku}）` : ''}`}))]},{name:'quantity',label:'数量',type:'number'},{name:'amount',label:'金額',type:'number'},
     {name:'paid',label:'入金状況',type:'select',options:['未入金','入金済','一部入金']},{name:'dueDate',label:'納期',type:'date'},{name:'status',label:'制作状況',type:'select',options:CUSTOMER_STATUSES},
     {name:'nextAction',label:'次に確認すること',full:true},{name:'memo',label:'メモ',type:'textarea',full:true}
   ], {collectedDate:todayKey(), ...order}, async data => {
