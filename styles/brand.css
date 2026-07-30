@@ -490,11 +490,11 @@
 .invoice-meta-row strong:last-child{margin-right:0;}
 .invoice-parties{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:nowrap;margin-bottom:14px;}
 .invoice-billto-block{max-width:50%;min-width:0;overflow-wrap:break-word;line-break:strict;font-size:.82rem;color:var(--ink-soft);}
-.invoice-billto-block p{margin:2px 0;overflow-wrap:break-word;line-break:strict;}
+.invoice-billto-block p{margin:2px 0;overflow-wrap:break-word;line-break:strict;white-space:pre-line;}
 .invoice-billto{margin-bottom:8px;}
 .invoice-billto strong{font-size:1.15rem;display:inline-block;border-bottom:2px solid var(--ink);padding-bottom:5px;max-width:100%;overflow-wrap:break-word;line-break:strict;color:var(--ink);}
 .invoice-seller{text-align:left;font-size:.82rem;color:var(--ink-soft);max-width:50%;min-width:0;overflow-wrap:break-word;line-break:strict;}
-.invoice-seller p{margin:2px 0;overflow-wrap:break-word;line-break:strict;}
+.invoice-seller p{margin:2px 0;overflow-wrap:break-word;line-break:strict;white-space:pre-line;}
 .invoice-seller-name{font-weight:800;font-size:.95rem;color:var(--ink);margin-bottom:4px !important;}
 .invoice-logo{width:38px;height:38px;object-fit:contain;display:block;margin-bottom:6px;}
 .invoice-greeting{margin:10px 0;font-size:.86rem;line-height:1.6;color:var(--ink);}
