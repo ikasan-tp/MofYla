@@ -804,7 +804,7 @@ function renderInvoice(){
   const periodLabel = draft.periodFrom || draft.periodTo ? `対象期間: ${draft.periodFrom || '-'} 〜 ${draft.periodTo || '-'}` : '';
   const blankRows = Math.max(0, INVOICE_TABLE_MIN_ROWS - items.length);
   const itemRows = items.map((item, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(item.name)}</td><td>${item.qty}</td><td>${yen(item.price)}</td><td>${yen(Number(item.qty || 0) * Number(item.price || 0))}</td><td class="no-print"><button class="btn btn-ghost btn-small" data-action="edit-invoice-item" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-invoice-item" data-id="${item.id}">削除</button></td></tr>`).join('');
-  const emptyRows = Array.from({ length: blankRows }, (_, i) => `<tr><td>${items.length + i + 1}</td><td></td><td></td><td></td><td></td><td class="no-print"></td></tr>`).join('');
+  const emptyRows = Array.from({ length: blankRows }, (_, i) => `<tr class="no-print"><td>${items.length + i + 1}</td><td></td><td></td><td></td><td></td><td class="no-print"></td></tr>`).join('');
   root.innerHTML = `${pageHead('帳票','請求書・納品書を、卸し実績から自動で作成できます。', actions)}
     <div class="invoice-toolbar no-print">
       <button class="btn btn-ghost btn-small" data-action="add-invoice-item">明細を追加</button>
