@@ -8,7 +8,7 @@ const todayKey = () => new Date().toISOString().slice(0, 10);
 const CUSTOMER_STATUSES = ['お問い合わせ','見積り','デザイン確認','制作中','印刷','塗装','梱包','発送','完了'];
 const LEAD_STATUSES = ['未調査','調査済','DM送信','返信待ち','商談中','サンプル送付','導入済','見送り'];
 const LEAD_POTENTIALS = ['未設定','高','中','低'];
-const WHOLESALE_STATUSES = ['商談中','納品準備中','納品済み','受注中','追加発注待ち','取り扱い終了'];
+const WHOLESALE_STATUSES = ['商談中','印刷待ち','納品準備中','納品済み','受注中','追加発注待ち','取り扱い終了'];
 const CATEGORIES = ['ネームプレート','コースター','キーホルダー','その他'];
 const CATEGORY_CODES = { 'ネームプレート':'NP', 'コースター':'CS', 'キーホルダー':'KH', 'その他':'OT' };
 const DEFAULT_COLOR_PALETTE = [
@@ -142,6 +142,25 @@ function customerProgress(customer){ return CUSTOMER_STATUSES.indexOf(customer.s
 function leadProgress(lead){ return LEAD_STATUSES.indexOf(lead.status) < 0 ? 0 : Math.round((LEAD_STATUSES.indexOf(lead.status) + 1) / LEAD_STATUSES.length * 100); }
 function dueCustomers(){ return state.customers.filter(item => item.status !== '完了' && daysUntil(item.dueDate) !== null && daysUntil(item.dueDate) <= 10).sort((a,b)=>(a.dueDate || '').localeCompare(b.dueDate || '')).slice(0, 4); }
 function todayLeads(){ return state.leads.filter(lead => lead.nextContactDate && lead.nextContactDate <= todayKey() && !['導入済','見送り'].includes(lead.status)).sort((a,b)=>a.nextContactDate.localeCompare(b.nextContactDate)).slice(0, 4); }
+function printQueueItems(){
+  const customerItems = state.customers
+    .filter(c => c.status === '印刷')
+    .sort((a,b) => (a.dueDate || '').localeCompare(b.dueDate || ''))
+    .map(c => ({ kind:'customer', id:c.id, title:customerDisplayName(c), sub:c.productName || '商品未設定', dueDate:c.dueDate }));
+  const listingItems = allWholesaleListings()
+    .filter(x => x.listing.status === '印刷待ち')
+    .map(x => ({ kind:'listing', id:x.product.id, listingId:x.listing.id, title:listingLeadName(x.listing), sub:listingDisplayName(x.listing, x.product), dueDate:null }));
+  return [...customerItems, ...listingItems];
+}
+function printQueueItem(item){
+  return `<div class="brand-item">
+    <div class="brand-card-head">
+      <div class="brand-card-title"><span class="brand-chip ${item.kind === 'customer' ? 'ok' : 'warm'}">${item.kind === 'customer' ? 'お客様' : '卸し'}</span><strong>${escapeHtml(item.title)}</strong></div>
+      <div class="brand-card-actions"><button class="btn btn-sage btn-small" data-action="${item.kind === 'customer' ? 'advance-customer-print' : 'advance-listing-print'}" data-id="${item.id}"${item.listingId ? ` data-listing="${item.listingId}"` : ''}>印刷完了</button></div>
+    </div>
+    <p class="brand-note">${escapeHtml(item.sub)}${item.dueDate ? ` / 納期 ${item.dueDate}` : ''}</p>
+  </div>`;
+}
 function customerCounts(){ return CUSTOMER_STATUSES.reduce((acc, status) => ({ ...acc, [status]:state.customers.filter(item => item.status === status).length }), {}); }
 function leadCounts(){ return LEAD_STATUSES.reduce((acc, status) => ({ ...acc, [status]:state.leads.filter(item => item.status === status).length }), {}); }
 function instagramUrl(value){
@@ -375,6 +394,7 @@ function renderHome(){
       <div class="brand-row" style="margin-top:14px;"><button class="btn btn-primary" data-action="focus-next">次にやる</button></div>
     </div>
     <div class="brand-home-grid">
+      <div class="brand-card"><div class="brand-mini-head"><h3>印刷待ち</h3></div><div class="brand-list">${printQueueItems().map(printQueueItem).join('') || empty('印刷待ちはありません。')}</div></div>
       <div class="brand-card"><div class="brand-mini-head"><h3>今日連絡する営業先</h3></div><div class="brand-list">${todayLeads().map(leadCard).join('') || empty('今日連絡予定の営業先はありません。')}</div></div>
       <div class="brand-card">
         <h3>次のマルシェ</h3>
@@ -1478,6 +1498,12 @@ async function handleClick(event){
   if(action === 'toggle-market-check'){ const m = findBy('markets', market); const check = m?.checklist.find(item => item.id === id); if(check){ check.done = el.checked; await save(); renderAll(); } }
   if(action === 'set-customer-status'){ const c = findBy('customers', id); if(c){ c.status = value; if(value === '完了' && !c.completedAt) c.completedAt = todayKey(); await save(); renderAll(); } }
   if(action === 'set-lead-status'){ const lead = findBy('leads', id); if(lead){ lead.status = value; await save(); renderAll(); } }
+  if(action === 'advance-customer-print'){ const c = findBy('customers', id); if(c){ c.status = '塗装'; await save(); showToast('印刷完了にしました'); renderAll(); } }
+  if(action === 'advance-listing-print'){
+    const product = findBy('products', id);
+    const targetListing = product && asArray(product.wholesaleListings).find(l => l.id === listing);
+    if(targetListing){ targetListing.status = '納品準備中'; await save(); showToast('印刷完了にしました'); renderAll(); }
+  }
   if(action === 'set-product-tab'){ activeProductTab = ['manage', 'online', 'wholesale'].includes(value) ? value : 'manage'; renderProducts(); }
   if(action === 'edit-online-channel') onlineChannelForm(id);
   if(action === 'filter-negotiation'){ activeNegotiationLead = value; renderNegotiations(); }
