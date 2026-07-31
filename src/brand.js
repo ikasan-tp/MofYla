@@ -839,6 +839,7 @@ function renderInvoice(){
             ${profile.address ? `<p>${escapeHtml(profile.address)}</p>` : ''}
             ${profile.phone ? `<p>TEL: ${escapeHtml(profile.phone)}</p>` : ''}
             ${profile.email ? `<p>${escapeHtml(profile.email)}</p>` : ''}
+            ${!isDeliveryNote && profile.invoiceRegistrationNumber ? `<p>登録番号：${escapeHtml(profile.invoiceRegistrationNumber)}</p>` : ''}
           </div>
         </div>
         <p class="invoice-greeting">${invoiceGreeting(isDeliveryNote)}</p>
@@ -1312,6 +1313,7 @@ function sellerProfileForm(){
     {name:'address',label:'住所（改行で行を分けられます）',type:'textarea',full:true},
     {name:'phone',label:'電話番号'},
     {name:'email',label:'メールアドレス'},
+    {name:'invoiceRegistrationNumber',label:'インボイス登録番号（T+13桁）'},
     {type:'section',label:'振込先'},
     {name:'bankName',label:'銀行名'},
     {name:'branchName',label:'支店名'},
