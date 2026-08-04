@@ -329,6 +329,7 @@ function leadCard(lead){
 function potentialClass(value){ return value === '高' ? 'hot' : value === '中' ? 'warm' : value === '低' ? 'cool' : ''; }
 
 function isWholesaleProduct(product){ return product.salesChannel === 'wholesale' || product.isWholesale === true; }
+function isCustomProduct(product){ return product.salesChannel === 'custom'; }
 function productDelivered(deliverable, from, to){
   return asArray(deliverable.deliveries)
     .filter(d => (!from || (d.date || '') >= from) && (!to || (d.date || '') <= to))
@@ -649,8 +650,9 @@ function renderLeads(){
 function renderProducts(){
   const root = document.getElementById('brandProducts');
   if(!root) return;
-  const onlineProducts = state.products.filter(product => !isWholesaleProduct(product));
+  const onlineProducts = state.products.filter(product => !isWholesaleProduct(product) && !isCustomProduct(product));
   const wholesaleProducts = state.products.filter(isWholesaleProduct);
+  const customProducts = state.products.filter(isCustomProduct);
   const listings = allWholesaleListings();
   const unassignedProducts = wholesaleProducts.filter(product => !asArray(product.wholesaleListings).length);
   const storeNames = wholesaleStoreNames();
@@ -676,7 +678,7 @@ function renderProducts(){
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
         </div>
       </div>
-      <span class="brand-wholesale-store">${isWholesaleProduct(product) ? '卸し商品' : 'ネット販売'}</span>
+      <span class="brand-wholesale-store">${isWholesaleProduct(product) ? '卸し商品' : isCustomProduct(product) ? 'オーダーメイド' : 'ネット販売'}</span>
       <div class="brand-product-metrics">
         <span><b>${yen(product.cost)}</b><small>原価</small></span>
         <span><b>${product.minutes || 0}分</b><small>制作</small></span>
@@ -695,6 +697,21 @@ function renderProducts(){
         <span><b>${yen(product.price)}</b><small>価格</small></span>
         <span><b>${yen(product.cost)}</b><small>原価</small></span>
         <span><b>${Number(product.stock || 0)}</b><small>在庫</small></span>
+        <span><b>${product.minutes || 0}分</b><small>制作</small></span>
+      </div>
+      ${product.description ? `<p class="brand-note">${escapeHtml(product.description)}</p>` : '<p class="brand-note">説明はまだありません。</p>'}
+    </article>`;
+  const customCard = product => `<article class="brand-card brand-product-card">
+      <div class="brand-product-head">
+        ${productTitleHtml(product)}
+        <div class="brand-product-actions">
+          <button class="btn btn-ghost btn-small" data-action="edit-custom-channel" data-id="${product.id}">編集</button>
+          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
+        </div>
+      </div>
+      <div class="brand-product-metrics">
+        <span><b>${yen(product.basePrice)}</b><small>基本価格（目安）</small></span>
+        <span><b>${yen(product.cost)}</b><small>原価</small></span>
         <span><b>${product.minutes || 0}分</b><small>制作</small></span>
       </div>
       ${product.description ? `<p class="brand-note">${escapeHtml(product.description)}</p>` : '<p class="brand-note">説明はまだありません。</p>'}
@@ -748,12 +765,16 @@ function renderProducts(){
     <button class="brand-filter ${activeProductTab === 'manage' ? 'active' : ''}" data-action="set-product-tab" data-value="manage">商品管理 <span>${state.products.length}</span></button>
     <button class="brand-filter ${activeProductTab === 'online' ? 'active' : ''}" data-action="set-product-tab" data-value="online">ネット販売在庫 <span>${onlineProducts.length}</span></button>
     <button class="brand-filter ${activeProductTab === 'wholesale' ? 'active' : ''}" data-action="set-product-tab" data-value="wholesale">卸し商品 <span>${wholesaleProducts.length}</span></button>
+    <button class="brand-filter ${activeProductTab === 'custom' ? 'active' : ''}" data-action="set-product-tab" data-value="custom">オーダーメイド <span>${customProducts.length}</span></button>
   </div>`;
   const summary = activeProductTab === 'manage' ? `<div class="brand-status-summary">
     <div class="brand-status-tile"><strong>${state.products.length}</strong><span>商品数</span></div>
     <div class="brand-status-tile"><strong>${onlineProducts.length}</strong><span>ネット販売</span></div>
     <div class="brand-status-tile"><strong>${wholesaleProducts.length}</strong><span>卸し商品</span></div>
-    <div class="brand-status-tile"><strong>${state.colorPalette.length}</strong><span>登録カラー数</span></div>
+    <div class="brand-status-tile"><strong>${customProducts.length}</strong><span>オーダーメイド</span></div>
+  </div>` : activeProductTab === 'custom' ? `<div class="brand-status-summary">
+    <div class="brand-status-tile"><strong>${customProducts.length}</strong><span>商品数</span></div>
+    <div class="brand-status-tile"><strong>${yen(customProducts.reduce((sum,p) => sum + Number(p.basePrice || 0), 0))}</strong><span>基本価格合計（目安）</span></div>
   </div>` : `<div class="brand-status-summary">
     <div class="brand-status-tile"><strong>${currentCount}</strong><span>${activeProductTab === 'wholesale' ? '卸し先数' : '商品数'}</span></div>
     <div class="brand-status-tile"><strong>${totalStock}</strong><span>${activeProductTab === 'wholesale' ? '累計卸し数' : '在庫合計'}</span></div>
@@ -778,8 +799,10 @@ function renderProducts(){
     ? `<div class="brand-product-grid">${state.products.map(manageCard).join('') || empty('まだ商品がありません。「追加」から登録してください。')}</div>`
     : activeProductTab === 'wholesale'
     ? (groupedByStore + unassignedSection || empty('卸し商品はまだありません。商品管理から管理区分を「卸し商品」にして登録できます。'))
+    : activeProductTab === 'custom'
+    ? `<div class="brand-product-grid">${customProducts.map(customCard).join('') || empty('オーダーメイド商品はまだありません。商品管理から管理区分を「オーダーメイド」にして登録できます。')}</div>`
     : `<div class="brand-product-grid">${onlineProducts.map(onlineCard).join('') || empty('ネット販売在庫はまだありません。')}</div>`;
-  root.innerHTML = `${pageHead('商品管理','商品情報・ネット販売・卸し商品を分けて管理します。', '<button class="btn btn-primary" data-action="new-product">追加</button>')}${tabs}${summary}${wholesaleToolbar}${activeProductTab === 'manage' ? colorSection : ''}${content}`;
+  root.innerHTML = `${pageHead('商品管理','商品情報・ネット販売・卸し商品・オーダーメイドを分けて管理します。', '<button class="btn btn-primary" data-action="new-product">追加</button>')}${tabs}${summary}${wholesaleToolbar}${activeProductTab === 'manage' ? colorSection : ''}${content}`;
 }
 
 function renderIdeas(){
@@ -1191,9 +1214,10 @@ function leadForm(lead = {}){ openForm(lead.id ? '営業先編集' : '営業先�
   {name:'nextAction',label:'次にやること',full:true},{name:'memo',label:'メモ',type:'textarea',full:true}
 ], {potential:'未設定', ...lead}, async data => { upsert('leads', {...lead, ...data, id:lead.id || uid('lead')}); await save(); }); }
 function productForm(product = {}){
-  const channel = product.salesChannel || (product.isWholesale ? 'wholesale' : (activeProductTab === 'wholesale' ? 'wholesale' : 'online'));
+  const channelFallback = ['wholesale', 'custom'].includes(activeProductTab) ? activeProductTab : 'online';
+  const channel = product.salesChannel || (product.isWholesale ? 'wholesale' : channelFallback);
   const commonFields = [
-    {name:'salesChannel',label:'管理区分',type:'select',options:[{value:'online',label:'ネット販売在庫'},{value:'wholesale',label:'卸し商品'}]},
+    {name:'salesChannel',label:'管理区分',type:'select',options:[{value:'online',label:'ネット販売在庫'},{value:'wholesale',label:'卸し商品'},{value:'custom',label:'オーダーメイド'}]},
     {name:'name',label:'商品名'},
     {name:'category',label:'商品カテゴリ',type:'select',options:CATEGORIES},
     {name:'breed',label:'兎種',type:'select',options:RABBIT_BREEDS.map(b => b.name)},
@@ -1213,7 +1237,11 @@ function productForm(product = {}){
     {name:'sold',label:'販売数',type:'number'},
     {name:'lastSoldDate',label:'最終販売日',type:'date'}
   ];
-  const fields = product.id ? commonFields : [...commonFields, ...(channel === 'wholesale' ? [] : onlineFields)];
+  const customCreateFields = [
+    {name:'basePrice',label:'基本価格（目安）',type:'number'}
+  ];
+  const channelFieldsByType = { wholesale:[], custom:customCreateFields, online:onlineFields };
+  const fields = product.id ? commonFields : [...commonFields, ...(channelFieldsByType[channel] || onlineFields)];
   const defaultCategory = product.category || CATEGORIES[0];
   const defaultBreed = product.breed || RABBIT_BREEDS[0].name;
   const initialValues = {
@@ -1229,6 +1257,7 @@ function productForm(product = {}){
       colorIds:asArray(data.colorIds).slice(0, 4), colorId:undefined,
       dimensionsW:Number(data.dimensionsW || 0), dimensionsD:Number(data.dimensionsD || 0), dimensionsH:Number(data.dimensionsH || 0), dimensions:undefined,
       price:Number(data.price ?? product.price ?? 0),
+      basePrice:Number(data.basePrice ?? product.basePrice ?? 0),
       cost:Number(data.cost || 0),
       minutes:Number(data.minutes || 0),
       stock:Number(data.stock ?? product.stock ?? 0),
@@ -1305,6 +1334,16 @@ function onlineChannelForm(productId){
       price:Number(data.price || 0), stock:Number(data.stock || 0), status:data.status,
       sold:Number(data.sold || 0), lastSoldDate:data.lastSoldDate
     });
+    await save();
+  });
+}
+function customChannelForm(productId){
+  const product = findBy('products', productId);
+  if(!product) return;
+  openForm('オーダーメイド情報を編集', [
+    {name:'basePrice',label:'基本価格（目安）',type:'number'}
+  ], product, async data => {
+    Object.assign(product, { basePrice:Number(data.basePrice || 0) });
     await save();
   });
 }
@@ -1515,8 +1554,9 @@ async function handleClick(event){
     const targetListing = product && asArray(product.wholesaleListings).find(l => l.id === listing);
     if(targetListing){ targetListing.status = '納品準備中'; await save(); showToast('印刷完了にしました'); renderAll(); }
   }
-  if(action === 'set-product-tab'){ activeProductTab = ['manage', 'online', 'wholesale'].includes(value) ? value : 'manage'; renderProducts(); }
+  if(action === 'set-product-tab'){ activeProductTab = ['manage', 'online', 'wholesale', 'custom'].includes(value) ? value : 'manage'; renderProducts(); }
   if(action === 'edit-online-channel') onlineChannelForm(id);
+  if(action === 'edit-custom-channel') customChannelForm(id);
   if(action === 'filter-negotiation'){ activeNegotiationLead = value; renderNegotiations(); }
   if(action === 'new-task') taskForm();
   if(action === 'edit-task') taskForm(findBy('tasks', id));
