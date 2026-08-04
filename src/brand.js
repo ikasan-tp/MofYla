@@ -146,19 +146,29 @@ function printQueueItems(){
   const customerItems = state.customers
     .filter(c => c.status === '印刷')
     .sort((a,b) => (a.dueDate || '').localeCompare(b.dueDate || ''))
-    .map(c => ({ kind:'customer', id:c.id, title:customerDisplayName(c), sub:c.productName || '商品未設定', dueDate:c.dueDate }));
+    .map(c => ({ kind:'customer', id:c.id, group:customerDisplayName(c), title:c.productName || '商品未設定', qty:Number(c.quantity || 0) || 1, dueDate:c.dueDate }));
   const listingItems = allWholesaleListings()
     .filter(x => x.listing.status === '印刷待ち')
-    .map(x => ({ kind:'listing', id:x.product.id, listingId:x.listing.id, title:listingLeadName(x.listing), sub:listingDisplayName(x.listing, x.product), dueDate:null }));
+    .map(x => ({ kind:'listing', id:x.product.id, listingId:x.listing.id, group:listingLeadName(x.listing), title:listingDisplayName(x.listing, x.product), qty:Number(x.listing.printQty || 0) || 1, dueDate:null }));
   return [...customerItems, ...listingItems];
 }
-function printQueueItem(item){
-  return `<div class="brand-item">
-    <div class="brand-card-head">
-      <div class="brand-card-title"><span class="brand-chip ${item.kind === 'customer' ? 'ok' : 'warm'}">${item.kind === 'customer' ? 'お客様' : '卸し'}</span><strong>${escapeHtml(item.title)}</strong></div>
-      <div class="brand-card-actions"><button class="btn btn-sage btn-small" data-action="${item.kind === 'customer' ? 'advance-customer-print' : 'advance-listing-print'}" data-id="${item.id}"${item.listingId ? ` data-listing="${item.listingId}"` : ''}>印刷完了</button></div>
-    </div>
-    <p class="brand-note">${escapeHtml(item.sub)}${item.dueDate ? ` / 納期 ${item.dueDate}` : ''}</p>
+function printQueueGroups(){
+  const groups = new Map();
+  printQueueItems().forEach(item => {
+    const key = `${item.kind}:${item.group}`;
+    if(!groups.has(key)) groups.set(key, { kind:item.kind, label:item.group, items:[] });
+    groups.get(key).items.push(item);
+  });
+  return [...groups.values()];
+}
+function printQueueGroupHtml(group){
+  const totalQty = group.items.reduce((sum, item) => sum + item.qty, 0);
+  return `<div class="brand-print-group">
+    <div class="brand-mini-head"><h3><span class="brand-chip ${group.kind === 'customer' ? 'ok' : 'warm'}">${group.kind === 'customer' ? 'お客様' : '卸し'}</span> ${escapeHtml(group.label)}</h3><b>計${totalQty}個</b></div>
+    <div class="brand-market-product-list">${group.items.map(item => `<div class="brand-market-product-row">
+      <div><strong>${escapeHtml(item.title)}</strong><span>×${item.qty}${item.dueDate ? ` ・ 納期 ${item.dueDate}` : ''}</span></div>
+      <button class="btn btn-sage btn-small" data-action="${item.kind === 'customer' ? 'advance-customer-print' : 'advance-listing-print'}" data-id="${item.id}"${item.listingId ? ` data-listing="${item.listingId}"` : ''}>完了</button>
+    </div>`).join('')}</div>
   </div>`;
 }
 function customerCounts(){ return CUSTOMER_STATUSES.reduce((acc, status) => ({ ...acc, [status]:state.customers.filter(item => item.status === status).length }), {}); }
@@ -394,7 +404,7 @@ function renderHome(){
       <div class="brand-row" style="margin-top:14px;"><button class="btn btn-primary" data-action="focus-next">次にやる</button></div>
     </div>
     <div class="brand-home-grid">
-      <div class="brand-card"><div class="brand-mini-head"><h3>印刷待ち</h3></div><div class="brand-list">${printQueueItems().map(printQueueItem).join('') || empty('印刷待ちはありません。')}</div></div>
+      <div class="brand-card"><div class="brand-mini-head"><h3>印刷待ち</h3></div><div class="brand-list">${printQueueGroups().map(printQueueGroupHtml).join('') || empty('印刷待ちはありません。')}</div></div>
       <div class="brand-card"><div class="brand-mini-head"><h3>今日連絡する営業先</h3></div><div class="brand-list">${todayLeads().map(leadCard).join('') || empty('今日連絡予定の営業先はありません。')}</div></div>
       <div class="brand-card">
         <h3>次のマルシェ</h3>
@@ -1271,10 +1281,11 @@ function listingForm(productId, listing = {}){
     {type:'section', label:'取引条件'},
     {name:'wholesalePrice',label:'卸し価格',type:'number'},
     {name:'status',label:'取引状態',type:'select',options:WHOLESALE_STATUSES},
+    {name:'printQty',label:'印刷が必要な数量',type:'number'},
     {name:'memo',label:'メモ',type:'textarea',full:true}
   ], listing, async data => {
     product.wholesaleListings = asArray(product.wholesaleListings);
-    const newListing = {...listing, ...data, id:listing.id || uid('listing'), wholesalePrice:Number(data.wholesalePrice || 0), colorIds:asArray(data.colorIds).slice(0, 4), deliveries:asArray(listing.deliveries)};
+    const newListing = {...listing, ...data, id:listing.id || uid('listing'), wholesalePrice:Number(data.wholesalePrice || 0), printQty:Number(data.printQty || 0), colorIds:asArray(data.colorIds).slice(0, 4), deliveries:asArray(listing.deliveries)};
     const idx = product.wholesaleListings.findIndex(l => l.id === newListing.id);
     if(idx >= 0) product.wholesaleListings[idx] = newListing; else product.wholesaleListings.push(newListing);
     await save();
