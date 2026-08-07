@@ -832,10 +832,20 @@ function bankInfoHtml(profile){
   if(!rows.length) return '';
   return `<div class="invoice-bank"><p>お振込先</p><table class="invoice-bank-table">${rows.map(([label, value]) => `<tr><th>${label}</th><td>${value}</td></tr>`).join('')}</table></div>`;
 }
-function invoiceGreeting(isDeliveryNote){
-  return isDeliveryNote
-    ? 'この度はご注文ありがとうございます。<br>下記のとおり納品申し上げます。'
-    : 'いつもお世話になっております。<br>下記のとおりご請求申し上げます。';
+function invoiceGreeting(docType){
+  if(docType === '納品書') return 'この度はご注文ありがとうございます。<br>下記のとおり納品申し上げます。';
+  if(docType === '見積書') return 'いつもお世話になっております。<br>下記のとおりお見積り申し上げます。';
+  return 'いつもお世話になっております。<br>下記のとおりご請求申し上げます。';
+}
+function invoiceDueDateLabel(docType){
+  if(docType === '納品書') return '納品日';
+  if(docType === '見積書') return '有効期限';
+  return '支払期限';
+}
+function invoiceTotalLabel(docType){
+  if(docType === '納品書') return '合計金額';
+  if(docType === '見積書') return 'お見積り金額';
+  return 'ご請求金額';
 }
 const INVOICE_TABLE_MIN_ROWS = 4;
 function renderInvoice(){
@@ -847,18 +857,18 @@ function renderInvoice(){
   const historySection = history.length ? `<div class="no-print section-gap"><h3>書類履歴</h3>${invoiceHistoryByStore(history)}</div>` : '';
   const actions = `<button class="btn btn-ghost btn-small" data-action="edit-seller-profile">発行者情報</button><button class="btn btn-primary" data-action="${draft ? 'edit-invoice-header' : 'generate-invoice'}">${draft ? '書類情報を編集' : '書類を作成'}</button>`;
   if(!draft){
-    root.innerHTML = `${pageHead('帳票','請求書・納品書を、卸し実績から自動で作成できます。', actions)}${empty('まだ書類がありません。「書類を作成」から種類・店舗・期間を選んでください。')}${historySection}`;
+    root.innerHTML = `${pageHead('帳票','請求書・見積書・納品書を、卸し実績から自動で作成できます。', actions)}${empty('まだ書類がありません。「書類を作成」から種類・店舗・期間を選んでください。')}${historySection}`;
     return;
   }
   const docType = draft.documentType || '請求書';
-  const isDeliveryNote = docType === '納品書';
+  const isInvoice = docType === '請求書';
   const items = asArray(draft.items);
   const { subtotal, shipping, tax, total } = invoiceTotals(items, draft.taxRate, draft.shippingFee);
   const periodLabel = draft.periodFrom || draft.periodTo ? `対象期間: ${draft.periodFrom || '-'} 〜 ${draft.periodTo || '-'}` : '';
   const blankRows = Math.max(0, INVOICE_TABLE_MIN_ROWS - items.length);
   const itemRows = items.map((item, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(item.name)}</td><td>${item.qty}</td><td>${yen(item.price)}</td><td>${yen(Number(item.qty || 0) * Number(item.price || 0))}</td><td class="no-print"><button class="btn btn-ghost btn-small" data-action="edit-invoice-item" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-invoice-item" data-id="${item.id}">削除</button></td></tr>`).join('');
   const emptyRows = Array.from({ length: blankRows }, (_, i) => `<tr class="no-print"><td>${items.length + i + 1}</td><td></td><td></td><td></td><td></td><td class="no-print"></td></tr>`).join('');
-  root.innerHTML = `${pageHead('帳票','請求書・納品書を、卸し実績から自動で作成できます。', actions)}
+  root.innerHTML = `${pageHead('帳票','請求書・見積書・納品書を、卸し実績から自動で作成できます。', actions)}
     <div class="invoice-toolbar no-print">
       <button class="btn btn-ghost btn-small" data-action="add-invoice-item">明細を追加</button>
       <button class="btn btn-ghost btn-small brand-danger" data-action="clear-invoice">${escapeHtml(docType)}をクリア</button>
@@ -872,7 +882,7 @@ function renderInvoice(){
           <h1>${escapeHtml(docType)}</h1>
           <div class="invoice-meta">
             <div class="invoice-meta-row"><span>発行日</span><strong>${draft.date || '-'}</strong><span>${escapeHtml(docType)}番号</span><strong>${escapeHtml(draft.number || '-')}</strong></div>
-            <div class="invoice-meta-row"><span>${isDeliveryNote ? '納品日' : '支払期限'}</span><strong>${draft.dueDate || '-'}</strong><span>注文番号</span><strong>${escapeHtml(draft.orderNumber || '-')}</strong></div>
+            <div class="invoice-meta-row"><span>${invoiceDueDateLabel(docType)}</span><strong>${draft.dueDate || '-'}</strong><span>注文番号</span><strong>${escapeHtml(draft.orderNumber || '-')}</strong></div>
           </div>
         </div>
         <div class="invoice-parties">
@@ -892,12 +902,12 @@ function renderInvoice(){
             ${profile.address ? `<p>${escapeHtml(profile.address)}</p>` : ''}
             ${profile.phone ? `<p>TEL: ${escapeHtml(profile.phone)}</p>` : ''}
             ${profile.email ? `<p>${escapeHtml(profile.email)}</p>` : ''}
-            ${!isDeliveryNote && profile.invoiceRegistrationNumber ? `<p>登録番号：${escapeHtml(profile.invoiceRegistrationNumber)}</p>` : ''}
+            ${isInvoice && profile.invoiceRegistrationNumber ? `<p>登録番号：${escapeHtml(profile.invoiceRegistrationNumber)}</p>` : ''}
           </div>
         </div>
-        <p class="invoice-greeting">${invoiceGreeting(isDeliveryNote)}</p>
+        <p class="invoice-greeting">${invoiceGreeting(docType)}</p>
         ${periodLabel ? `<p class="brand-note">${periodLabel}</p>` : ''}
-        <div class="invoice-total-highlight">${isDeliveryNote ? '合計金額' : 'ご請求金額'}　${yen(total)}（税込）</div>
+        <div class="invoice-total-highlight">${invoiceTotalLabel(docType)}　${yen(total)}（税込）</div>
         <table class="invoice-table">
           <thead><tr><th>No.</th><th>品目・商品名</th><th>数量</th><th>単価（税抜）</th><th>金額（税抜）</th><th class="no-print"></th></tr></thead>
           <tbody>${itemRows || emptyRows ? itemRows + emptyRows : `<tr><td colspan="6">明細がありません。「明細を追加」から入力するか、卸し実績のある店舗で作り直してください。</td></tr>`}</tbody>
@@ -911,7 +921,7 @@ function renderInvoice(){
             <tr class="invoice-grand-total"><td>合計（税込）</td><td>${yen(total)}</td></tr>
           </table>
         </div>
-        ${!isDeliveryNote ? bankInfoHtml(profile) : ''}
+        ${isInvoice ? bankInfoHtml(profile) : ''}
         <div class="invoice-footer">
           <span>${escapeHtml(profile.name || '')}</span>
         </div>
@@ -1396,7 +1406,7 @@ function sellerProfileForm(){
   });
 }
 function nextDocumentNumber(type){
-  const prefix = type === '納品書' ? 'DN' : 'INV';
+  const prefix = type === '納品書' ? 'DN' : type === '見積書' ? 'EST' : 'INV';
   const nums = asArray(state.invoices)
     .filter(inv => (inv.documentType || '請求書') === type)
     .map(inv => { const m = /(\d+)\s*$/.exec(inv.number || ''); return m ? Number(m[1]) : 0; });
@@ -1481,7 +1491,7 @@ function invoiceHeaderForm(){
   const defaultType = (draft && draft.documentType) || '請求書';
   openForm(draft ? '書類情報を編集' : '書類を作成', [
     {type:'section',label:'書類情報'},
-    {name:'documentType',label:'書類の種類',type:'select',options:['請求書','納品書']},
+    {name:'documentType',label:'書類の種類',type:'select',options:['請求書','見積書','納品書']},
     {name:'store',label:'宛先の店舗',type:'select',options:stores.map(s => ({value:s, label:s}))},
     {name:'number',label:'書類番号'},
     {name:'orderNumber',label:'注文番号（自動採番・編集可）'},
