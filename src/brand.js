@@ -336,6 +336,10 @@ function productDelivered(deliverable, from, to){
     .reduce((sum, d) => sum + Number(d.qty || 0), 0);
 }
 function listingLeadName(listing){ return findBy('leads', listing.leadId)?.shopName || '店舗未設定'; }
+function latestDeliveryLabel(deliverable){
+  const dates = asArray(deliverable.deliveries).map(d => d.date).filter(Boolean).sort();
+  return dates.length ? `最終 ${dates[dates.length - 1]}` : '実績なし';
+}
 function allWholesaleListings(){
   return state.products.flatMap(product => asArray(product.wholesaleListings).map(listing => ({ listing, product })));
 }
@@ -733,10 +737,11 @@ function renderProducts(){
       </div>
       ${product.description ? `<p class="brand-note">${escapeHtml(product.description)}</p>` : ''}
       ${listing.memo ? `<p class="brand-note">${escapeHtml(listing.memo)}</p>` : ''}
-      <section class="brand-market-products">
-        <div class="brand-mini-head"><h3>卸し実績</h3><button class="btn btn-ghost btn-small" data-action="new-delivery" data-id="${product.id}" data-listing="${listing.id}">記録追加</button></div>
+      <details class="brand-delivery-panel">
+        <summary><span>卸し実績（${asArray(listing.deliveries).length}件）</span><b>${latestDeliveryLabel(listing)}</b></summary>
+        <div class="brand-mini-head"><button class="btn btn-ghost btn-small" data-action="new-delivery" data-id="${product.id}" data-listing="${listing.id}">記録追加</button></div>
         <div class="brand-market-product-list">${asArray(listing.deliveries).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(d => `<div class="brand-market-product-row"><div><strong>${d.date || '日付未設定'}</strong><span>${d.qty || 0}個</span>${d.memo ? `<p>${escapeHtml(d.memo)}</p>` : ''}</div><button class="btn btn-ghost btn-small brand-danger" data-action="delete-delivery" data-id="${product.id}" data-listing="${listing.id}" data-delivery="${d.id}">削除</button></div>`).join('') || empty('まだ卸し実績がありません。記録追加から入力できます。')}</div>
-      </section>
+      </details>
       <div class="brand-toolbar" style="margin-bottom:0;"><button class="btn btn-ghost btn-small" data-action="new-listing" data-id="${product.id}">他の店舗にも卸し先を追加</button></div>
     </article>`;
   const unassignedCard = product => `<article class="brand-card brand-product-card">
@@ -913,7 +918,7 @@ function renderInvoice(){
           <tbody>${itemRows || emptyRows ? itemRows + emptyRows : `<tr><td colspan="6">明細がありません。「明細を追加」から入力するか、卸し実績のある店舗で作り直してください。</td></tr>`}</tbody>
         </table>
         <div class="invoice-bottom">
-          <div class="invoice-notes"><p>備考</p><p>${draft.notes ? escapeHtml(draft.notes) : ''}</p></div>
+          <div class="invoice-notes"><p>備考</p><p class="invoice-notes-text">${draft.notes ? escapeHtml(draft.notes) : ''}</p></div>
           <table class="invoice-summary-table">
             <tr><td>小計（税抜）</td><td>${yen(subtotal)}</td></tr>
             <tr><td>送料（税抜）</td><td>${yen(shipping)}</td></tr>
