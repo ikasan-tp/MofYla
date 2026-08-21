@@ -855,6 +855,31 @@ function invoiceTotalLabel(docType){
   if(docType === '領収書') return '領収金額';
   return 'ご請求金額';
 }
+function receiptCopyHtml(draft, profile, totals, copyLabel){
+  const { subtotal, tax, total } = totals;
+  return `<div class="receipt-copy">
+    <div class="receipt-copy-head">
+      <h1>領収書</h1>
+      <span class="receipt-copy-badge">${escapeHtml(copyLabel)}</span>
+    </div>
+    <div class="receipt-meta-row"><span>発行日</span><strong>${draft.date || '-'}</strong><span>領収書番号</span><strong>${escapeHtml(draft.number || '-')}</strong></div>
+    <div class="receipt-billto">${escapeHtml(draft.billTo || draft.store || 'お客様')} 様</div>
+    <div class="receipt-amount">${yen(total)}<small>（税込）</small></div>
+    <p class="receipt-note-line">上記金額を正に領収いたしました。</p>
+    <div class="receipt-description">但し　${draft.notes ? escapeHtml(draft.notes) : '　　　　　　　　　　　　　　　　'}として</div>
+    <table class="receipt-breakdown">
+      <tr><td>小計（税抜）</td><td>${yen(subtotal)}</td></tr>
+      <tr><td>消費税（${draft.taxRate || 0}%）</td><td>${yen(tax)}</td></tr>
+    </table>
+    <div class="receipt-seller">
+      <p class="receipt-seller-name">${escapeHtml(profile.name || '（発行者情報未設定）')}</p>
+      ${profile.postalCode ? `<p>〒${escapeHtml(profile.postalCode)}</p>` : ''}
+      ${profile.address ? `<p>${escapeHtml(profile.address)}</p>` : ''}
+      ${profile.phone ? `<p>TEL: ${escapeHtml(profile.phone)}</p>` : ''}
+      ${profile.invoiceRegistrationNumber ? `<p>登録番号：${escapeHtml(profile.invoiceRegistrationNumber)}</p>` : ''}
+    </div>
+  </div>`;
+}
 const INVOICE_TABLE_MIN_ROWS = 4;
 function renderInvoice(){
   const root = document.getElementById('brandInvoice');
@@ -870,24 +895,18 @@ function renderInvoice(){
   }
   const docType = draft.documentType || '請求書';
   const isInvoice = docType === '請求書';
+  const isReceipt = docType === '領収書';
   const showRegistrationNumber = docType === '請求書' || docType === '領収書';
   const items = asArray(draft.items);
-  const { subtotal, shipping, tax, total } = invoiceTotals(items, draft.taxRate, draft.shippingFee);
+  const totals = invoiceTotals(items, draft.taxRate, draft.shippingFee);
+  const { subtotal, shipping, tax, total } = totals;
   const periodLabel = draft.periodFrom || draft.periodTo ? `対象期間: ${draft.periodFrom || '-'} 〜 ${draft.periodTo || '-'}` : '';
   const blankRows = Math.max(0, INVOICE_TABLE_MIN_ROWS - items.length);
   const itemRows = items.map((item, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(item.name)}</td><td>${item.qty}</td><td>${yen(item.price)}</td><td>${yen(Number(item.qty || 0) * Number(item.price || 0))}</td><td class="no-print"><button class="btn btn-ghost btn-small" data-action="edit-invoice-item" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-invoice-item" data-id="${item.id}">削除</button></td></tr>`).join('');
   const emptyRows = Array.from({ length: blankRows }, (_, i) => `<tr class="no-print"><td>${items.length + i + 1}</td><td></td><td></td><td></td><td></td><td class="no-print"></td></tr>`).join('');
-  root.innerHTML = `${pageHead('帳票','請求書・見積書・納品書・領収書を、卸し実績から自動で作成できます。', actions)}
-    <div class="invoice-toolbar no-print">
-      <button class="btn btn-ghost btn-small" data-action="add-invoice-item">明細を追加</button>
-      <button class="btn btn-ghost btn-small brand-danger" data-action="clear-invoice">${escapeHtml(docType)}をクリア</button>
-      <button class="btn btn-sage btn-small" data-action="save-invoice-history">履歴に保存</button>
-      <button class="btn btn-primary btn-small" data-action="print-invoice">A4で印刷する</button>
-    </div>
-    <details class="brand-archive invoice-archive" id="invoiceArchive" open>
-      <summary class="no-print"><span>${escapeHtml(docType)}プレビュー</span><b>${escapeHtml(draft.number || '-')}</b></summary>
-      <div class="invoice-sheet" id="invoiceSheet">
-        <div class="invoice-head">
+  const sheetBody = isReceipt
+    ? `${receiptCopyHtml(draft, profile, totals, '領収書')}<div class="receipt-cut-line"><span>✂ きりとり線</span></div>${receiptCopyHtml(draft, profile, totals, '控え')}`
+    : `<div class="invoice-head">
           <h1>${escapeHtml(docType)}</h1>
           <div class="invoice-meta">
             <div class="invoice-meta-row"><span>発行日</span><strong>${draft.date || '-'}</strong><span>${escapeHtml(docType)}番号</span><strong>${escapeHtml(draft.number || '-')}</strong></div>
@@ -933,7 +952,18 @@ function renderInvoice(){
         ${isInvoice ? bankInfoHtml(profile) : ''}
         <div class="invoice-footer">
           <span>${escapeHtml(profile.name || '')}</span>
-        </div>
+        </div>`;
+  root.innerHTML = `${pageHead('帳票','請求書・見積書・納品書・領収書を、卸し実績から自動で作成できます。', actions)}
+    <div class="invoice-toolbar no-print">
+      ${isReceipt ? '' : '<button class="btn btn-ghost btn-small" data-action="add-invoice-item">明細を追加</button>'}
+      <button class="btn btn-ghost btn-small brand-danger" data-action="clear-invoice">${escapeHtml(docType)}をクリア</button>
+      <button class="btn btn-sage btn-small" data-action="save-invoice-history">履歴に保存</button>
+      <button class="btn btn-primary btn-small" data-action="print-invoice">A4で印刷する</button>
+    </div>
+    <details class="brand-archive invoice-archive" id="invoiceArchive" open>
+      <summary class="no-print"><span>${escapeHtml(docType)}プレビュー</span><b>${escapeHtml(draft.number || '-')}</b></summary>
+      <div class="invoice-sheet${isReceipt ? ' receipt-sheet' : ''}" id="invoiceSheet">
+        ${sheetBody}
       </div>
     </details>
     ${historySection}`;
