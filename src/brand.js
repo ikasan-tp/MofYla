@@ -956,7 +956,7 @@ function renderInvoice(){
         </div>`;
   root.innerHTML = `${pageHead('帳票','請求書・見積書・納品書・領収書を、卸し実績から自動で作成できます。', actions)}
     <div class="invoice-toolbar no-print">
-      ${isReceipt ? '' : '<button class="btn btn-ghost btn-small" data-action="add-invoice-item">明細を追加</button>'}
+      ${isReceipt ? '<button class="btn btn-ghost btn-small" data-action="edit-receipt-amount">金額を編集</button>' : '<button class="btn btn-ghost btn-small" data-action="add-invoice-item">明細を追加</button>'}
       <button class="btn btn-ghost btn-small brand-danger" data-action="clear-invoice">${escapeHtml(docType)}をクリア</button>
       <button class="btn btn-sage btn-small" data-action="save-invoice-history">履歴に保存</button>
       <button class="btn btn-primary btn-small" data-action="print-invoice">A4で印刷する</button>
@@ -1083,6 +1083,7 @@ function openForm(title, fields, values, onSubmit){
     overlay.remove();
     renderAll();
   });
+  return overlay;
 }
 function fieldHtml(field){
   if(field.type === 'section') return `<div class="brand-form-section">${field.label}</div>`;
@@ -1555,7 +1556,7 @@ function invoiceHeaderForm(){
   const draft = state.invoiceDraft;
   const stores = wholesaleStoreNames();
   const defaultType = (draft && draft.documentType) || '請求書';
-  openForm(draft ? '書類情報を編集' : '書類を作成', [
+  const overlay = openForm(draft ? '書類情報を編集' : '書類を作成', [
     {type:'section',label:'書類情報'},
     {name:'documentType',label:'書類の種類',type:'select',options:['請求書','見積書','納品書','領収書']},
     {name:'store',label:'宛先の店舗',type:'select',options:stores.map(s => ({value:s, label:s}))},
@@ -1579,7 +1580,7 @@ function invoiceHeaderForm(){
   ], draft || {documentType:defaultType, number:nextDocumentNumber(defaultType), orderNumber:nextOrderNumber(), date:todayKey(), taxRate:10, store:stores[0] || ''}, async data => {
     const isNew = !draft;
     const store = data.store || (draft && draft.store) || '';
-    const items = isNew ? invoiceItemsFromDeliveries(store, data.periodFrom, data.periodTo) : draft.items;
+    const items = isNew ? (data.documentType === '領収書' ? [] : invoiceItemsFromDeliveries(store, data.periodFrom, data.periodTo)) : draft.items;
     state.invoiceDraft = {
       ...(draft || {}),
       ...data,
@@ -1592,6 +1593,13 @@ function invoiceHeaderForm(){
     };
     await save();
   });
+  if(!draft){
+    const typeSelect = overlay.querySelector('[name="documentType"]');
+    const numberInput = overlay.querySelector('[name="number"]');
+    if(typeSelect && numberInput){
+      typeSelect.addEventListener('change', () => { numberInput.value = nextDocumentNumber(typeSelect.value); });
+    }
+  }
 }
 function invoiceItemForm(item = {}){
   openForm(item.id ? '明細を編集' : '明細を追加', [
@@ -1715,6 +1723,7 @@ async function handleClick(event){
   if(action === 'generate-invoice') invoiceHeaderForm();
   if(action === 'edit-invoice-header') invoiceHeaderForm();
   if(action === 'add-invoice-item') invoiceItemForm();
+  if(action === 'edit-receipt-amount'){ const items = asArray(state.invoiceDraft?.items); invoiceItemForm(items[0] || {}); }
   if(action === 'edit-invoice-item'){ const item = asArray(state.invoiceDraft?.items).find(i => i.id === id); if(item) invoiceItemForm(item); }
   if(action === 'delete-invoice-item'){
     if(state.invoiceDraft && confirm('この明細を削除します。よろしいですか？')){
