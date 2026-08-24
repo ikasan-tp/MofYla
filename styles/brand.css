@@ -561,7 +561,7 @@
   .invoice-archive .invoice-sheet,
   .invoice-sheet{box-shadow:none;border:none;max-width:none;margin:0;padding:12mm;box-sizing:border-box;}
   .invoice-sheet.receipt-sheet{padding:8mm 12mm;height:277mm;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;}
-  .invoice-sheet.receipt-sheet .receipt-copy{flex:1 1 0;min-height:0;overflow:hidden;box-sizing:border-box;}
+  .invoice-sheet.receipt-sheet .receipt-copy{flex:1 1 0;min-height:0;overflow:hidden;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;}
   .invoice-sheet.receipt-sheet .receipt-cut-line{flex:0 0 auto;}
   .invoice-table th:nth-child(2),.invoice-table td:nth-child(2){width:44%;}
   .invoice-table th:nth-child(3),.invoice-table td:nth-child(3){width:12%;}

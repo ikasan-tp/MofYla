@@ -882,6 +882,19 @@ function receiptCopyHtml(draft, profile, totals, copyLabel){
   </div>`;
 }
 const INVOICE_TABLE_MIN_ROWS = 4;
+function receiptItemsManageHtml(items){
+  const rows = items.map((item, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(item.name)}</td><td>${item.qty}</td><td>${yen(item.price)}</td><td>${yen(Number(item.qty || 0) * Number(item.price || 0))}</td><td><button class="btn btn-ghost btn-small" data-action="edit-invoice-item" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-invoice-item" data-id="${item.id}">削除</button></td></tr>`).join('');
+  return `<div class="brand-card no-print section-gap">
+    <div class="brand-card-head">
+      <div class="brand-card-title"><strong>内訳（画面確認用・印刷には出ません）</strong><p class="brand-note">複数の商品をまとめて1件の領収書にできます。</p></div>
+      <div class="brand-card-actions"><button class="btn btn-ghost btn-small" data-action="add-invoice-item">明細を追加</button></div>
+    </div>
+    <table class="invoice-table">
+      <thead><tr><th>No.</th><th>品目</th><th>数量</th><th>単価</th><th>金額</th><th></th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="6">明細がありません。「明細を追加」から入力してください。</td></tr>'}</tbody>
+    </table>
+  </div>`;
+}
 function renderInvoice(){
   const root = document.getElementById('brandInvoice');
   if(!root) return;
@@ -956,11 +969,12 @@ function renderInvoice(){
         </div>`;
   root.innerHTML = `${pageHead('帳票','請求書・見積書・納品書・領収書を、卸し実績から自動で作成できます。', actions)}
     <div class="invoice-toolbar no-print">
-      ${isReceipt ? '<button class="btn btn-ghost btn-small" data-action="edit-receipt-amount">金額を編集</button>' : '<button class="btn btn-ghost btn-small" data-action="add-invoice-item">明細を追加</button>'}
+      ${isReceipt ? '' : '<button class="btn btn-ghost btn-small" data-action="add-invoice-item">明細を追加</button>'}
       <button class="btn btn-ghost btn-small brand-danger" data-action="clear-invoice">${escapeHtml(docType)}をクリア</button>
       <button class="btn btn-sage btn-small" data-action="save-invoice-history">履歴に保存</button>
       <button class="btn btn-primary btn-small" data-action="print-invoice">A4で印刷する</button>
     </div>
+    ${isReceipt ? receiptItemsManageHtml(items) : ''}
     <details class="brand-archive invoice-archive" id="invoiceArchive" open>
       <summary class="no-print"><span>${escapeHtml(docType)}プレビュー</span><b>${escapeHtml(draft.number || '-')}</b></summary>
       <div class="invoice-sheet${isReceipt ? ' receipt-sheet' : ''}" id="invoiceSheet">
@@ -1723,7 +1737,6 @@ async function handleClick(event){
   if(action === 'generate-invoice') invoiceHeaderForm();
   if(action === 'edit-invoice-header') invoiceHeaderForm();
   if(action === 'add-invoice-item') invoiceItemForm();
-  if(action === 'edit-receipt-amount'){ const items = asArray(state.invoiceDraft?.items); invoiceItemForm(items[0] || {}); }
   if(action === 'edit-invoice-item'){ const item = asArray(state.invoiceDraft?.items).find(i => i.id === id); if(item) invoiceItemForm(item); }
   if(action === 'delete-invoice-item'){
     if(state.invoiceDraft && confirm('この明細を削除します。よろしいですか？')){
