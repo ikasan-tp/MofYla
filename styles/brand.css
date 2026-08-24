@@ -532,7 +532,7 @@
 .invoice-footer{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-top:18px;padding-top:12px;border-top:1px solid var(--line);font-size:.78rem;color:var(--ink-soft);}
 
 /* ---------- Receipt (領収書) ---------- */
-.receipt-copy{padding:8px 0;}
+.receipt-copy{padding:4px 0;}
 .receipt-copy-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;}
 .receipt-copy-head h1{margin:0;font-size:1.5rem;letter-spacing:.14em;}
 .receipt-copy-badge{font-size:.78rem;font-weight:700;color:var(--ink-soft);border:1px solid var(--line);border-radius:999px;padding:3px 12px;}
@@ -540,8 +540,8 @@
 .receipt-meta-row strong{color:var(--ink);margin-right:14px;}
 .receipt-meta-row strong:last-child{margin-right:0;}
 .receipt-billto{font-size:1.15rem;font-weight:800;color:var(--ink);border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:16px;max-width:340px;overflow-wrap:break-word;line-break:strict;}
-.receipt-amount{font-size:1.6rem;font-weight:800;color:var(--sage-deep);background:var(--sage-soft);border:1px solid rgba(137,161,124,.4);border-radius:8px;padding:12px 18px;margin-bottom:12px;display:inline-block;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-.receipt-amount small{font-size:.85rem;font-weight:700;margin-left:6px;}
+.receipt-amount{font-size:2rem;font-weight:800;color:var(--ink);border-bottom:3px double var(--ink);padding:4px 6px 10px;margin-bottom:16px;display:inline-block;letter-spacing:.02em;}
+.receipt-amount small{font-size:.82rem;font-weight:700;color:var(--ink-soft);margin-left:10px;}
 .receipt-note-line{margin:0 0 12px;font-size:.86rem;color:var(--ink);}
 .receipt-description{font-size:.86rem;color:var(--ink);margin-bottom:16px;border-bottom:1px dotted var(--line);padding-bottom:10px;overflow-wrap:break-word;line-break:strict;}
 .receipt-breakdown{border-collapse:collapse;margin-bottom:16px;}
@@ -550,7 +550,7 @@
 .receipt-seller{font-size:.8rem;color:var(--ink-soft);}
 .receipt-seller-name{font-weight:800;color:var(--ink);font-size:.9rem;margin:0 0 4px;}
 .receipt-seller p{margin:2px 0;}
-.receipt-cut-line{position:relative;text-align:center;margin:26px 0;border-top:1px dashed var(--ink-soft);}
+.receipt-cut-line{position:relative;text-align:center;margin:14px 0;border-top:1px dashed var(--ink-soft);}
 .receipt-cut-line span{position:relative;top:-9px;background:#fffefb;padding:0 12px;color:var(--ink-soft);font-size:.7rem;}
 
 @media print{
@@ -560,6 +560,10 @@
   .invoice-archive{border:none;background:none;box-shadow:none;margin:0;}
   .invoice-archive .invoice-sheet,
   .invoice-sheet{box-shadow:none;border:none;max-width:none;margin:0;padding:12mm;box-sizing:border-box;}
+  .invoice-table th:nth-child(2),.invoice-table td:nth-child(2){width:44%;}
+  .invoice-table th:nth-child(3),.invoice-table td:nth-child(3){width:12%;}
+  .invoice-table th:nth-child(4),.invoice-table td:nth-child(4){width:20%;}
+  .invoice-table th:nth-child(5),.invoice-table td:nth-child(5){width:20%;}
   .receipt-copy{break-inside:avoid;}
   .receipt-cut-line{break-inside:avoid;break-after:avoid;}
   @page{size:A4;margin:10mm;}

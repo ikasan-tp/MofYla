@@ -820,7 +820,8 @@ function renderIdeas(){
 function invoiceHistoryCard(invoice){
   const totals = invoiceTotals(invoice.items, invoice.taxRate, invoice.shippingFee);
   const type = invoice.documentType || '請求書';
-  return `<div class="brand-card"><div class="brand-card-head"><div class="brand-card-title"><span class="brand-chip">${escapeHtml(type)}</span><strong>${escapeHtml(invoice.number)}</strong><p class="brand-note">${invoice.date || '-'}</p></div><div class="brand-card-actions"><button class="btn btn-ghost btn-small" data-action="load-invoice-history" data-id="${invoice.id}">呼び出す</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-invoice-history" data-id="${invoice.id}">削除</button></div></div><p class="brand-note">合計 ${yen(totals.total)}（税込）</p></div>`;
+  const canMakeReceipt = type === '請求書' || type === '納品書';
+  return `<div class="brand-card"><div class="brand-card-head"><div class="brand-card-title"><span class="brand-chip">${escapeHtml(type)}</span><strong>${escapeHtml(invoice.number)}</strong><p class="brand-note">${invoice.date || '-'}</p></div><div class="brand-card-actions">${canMakeReceipt ? `<button class="btn btn-sage btn-small" data-action="create-receipt-from-invoice" data-id="${invoice.id}">領収書を作成</button>` : ''}<button class="btn btn-ghost btn-small" data-action="load-invoice-history" data-id="${invoice.id}">呼び出す</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-invoice-history" data-id="${invoice.id}">削除</button></div></div><p class="brand-note">合計 ${yen(totals.total)}（税込）</p></div>`;
 }
 function invoiceHistoryByStore(history){
   const storeNames = [...new Set(history.map(inv => inv.store || inv.billTo || '店舗未設定'))].sort((a,b) => a.localeCompare(b, 'ja'));
@@ -1488,6 +1489,32 @@ function loadInvoiceFromHistory(id){
   save();
   renderAll();
 }
+function createReceiptFromInvoice(id){
+  const source = asArray(state.invoices).find(inv => inv.id === id);
+  if(!source) return;
+  const sourceType = source.documentType || '請求書';
+  state.invoiceDraft = {
+    documentType: '領収書',
+    number: nextDocumentNumber('領収書'),
+    orderNumber: source.orderNumber || '',
+    date: todayKey(),
+    dueDate: todayKey(),
+    store: source.store || '',
+    billTo: source.billTo || source.store || '',
+    billToContact: source.billToContact || '',
+    billToPostalCode: source.billToPostalCode || '',
+    billToAddress: source.billToAddress || '',
+    billToPhone: source.billToPhone || '',
+    billToEmail: source.billToEmail || '',
+    taxRate: source.taxRate ?? 10,
+    shippingFee: source.shippingFee || 0,
+    items: asArray(source.items).map(item => ({ ...item, id: uid('invoiceItem') })),
+    notes: `${sourceType} ${source.number || ''} のお支払いとして`
+  };
+  save();
+  showToast(`${sourceType} ${source.number || ''} をもとに領収書を作成しました`);
+  renderAll();
+}
 function exportDeliveriesCsv(){
   const rows = [['店舗名','商品番号','商品名','日付','数量','単価','金額','メモ']];
   allWholesaleListings()
@@ -1706,6 +1733,7 @@ async function handleClick(event){
   if(action === 'print-invoice'){ const archive = document.getElementById('invoiceArchive'); if(archive) archive.open = true; window.print(); }
   if(action === 'save-invoice-history') await saveInvoiceToHistory();
   if(action === 'load-invoice-history') loadInvoiceFromHistory(id);
+  if(action === 'create-receipt-from-invoice') createReceiptFromInvoice(id);
   if(action === 'delete-invoice-history'){
     if(confirm('この書類の履歴を削除します。よろしいですか？')){
       state.invoices = asArray(state.invoices).filter(inv => inv.id !== id);
