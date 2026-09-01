@@ -610,7 +610,12 @@ function renderCrm(){
   const counts = customerCounts();
   const activeCustomers = state.customers.filter(customer => customer.status !== '完了');
   const archivedCustomers = state.customers.filter(customer => customer.status === '完了');
-  const profiles = asArray(state.customerProfiles).slice().sort((a,b) => a.name.localeCompare(b.name, 'ja'));
+  const profiles = asArray(state.customerProfiles).slice().sort((a,b) => {
+    const aActive = activeCustomers.some(o => o.customerId === a.id);
+    const bActive = activeCustomers.some(o => o.customerId === b.id);
+    if(aActive !== bActive) return aActive ? -1 : 1;
+    return a.name.localeCompare(b.name, 'ja');
+  });
   const profileGroups = profiles.map(profile => {
     const orders = activeCustomers.filter(o => o.customerId === profile.id);
     return `<details class="brand-archive brand-customer-group" open>
