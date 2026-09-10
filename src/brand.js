@@ -180,7 +180,7 @@ function printQueueGroupHtml(group){
   return `<div class="brand-print-group">
     <div class="brand-mini-head"><h3><span class="brand-chip ${group.kind === 'customer' ? 'ok' : 'warm'}">${group.kind === 'customer' ? 'お客様' : '卸し'}</span> ${escapeHtml(group.label)}</h3><b>計${totalQty}個</b></div>
     <div class="brand-market-product-list">${group.items.map(item => `<div class="brand-market-product-row">
-      <div><strong>${escapeHtml(item.title)}</strong><span>×${item.qty}${item.dueDate ? ` ・ 納期 ${item.dueDate}` : ''}${item.colorsHtml || ''}</span></div>
+      <div><strong>${escapeHtml(item.title)} ×${item.qty}</strong>${item.colorsHtml || ''}${item.dueDate ? `<span>納期 ${item.dueDate}</span>` : ''}</div>
       <button class="btn btn-sage btn-small" data-action="${item.kind === 'customer' ? 'advance-customer-print' : 'advance-listing-print'}" data-id="${item.id}"${item.listingId ? ` data-listing="${item.listingId}"` : ''}>完了</button>
     </div>`).join('')}</div>
   </div>`;
@@ -203,7 +203,7 @@ function deliveryPrepGroupHtml(group){
   return `<div class="brand-print-group">
     <div class="brand-mini-head"><h3><span class="brand-chip warm">卸し</span> ${escapeHtml(group.label)}</h3><b>計${totalQty}個</b></div>
     <div class="brand-market-product-list">${group.items.map(item => `<div class="brand-market-product-row">
-      <div><strong>${escapeHtml(item.title)}</strong><span>×${item.qty}${item.colorsHtml || ''}</span></div>
+      <div><strong>${escapeHtml(item.title)} ×${item.qty}</strong>${item.colorsHtml || ''}</div>
       <button class="btn btn-sage btn-small" data-action="advance-listing-delivery" data-id="${item.id}" data-listing="${item.listingId}">完了</button>
     </div>`).join('')}</div>
   </div>`;
