@@ -198,7 +198,7 @@ function deliveryPrepGroupHtml(group){
     <div class="brand-mini-head"><h3><span class="brand-chip warm">卸し</span> ${escapeHtml(group.label)}</h3><b>計${totalQty}個</b></div>
     <div class="brand-market-product-list">${group.items.map(item => `<div class="brand-market-product-row">
       <div><strong>${escapeHtml(item.title)}</strong><span>×${item.qty}</span>${item.colorsHtml || ''}</div>
-      <button class="btn btn-sage btn-small" data-action="advance-listing-delivery" data-id="${item.id}" data-listing="${item.listingId}">納品済みにする</button>
+      <button class="btn btn-sage btn-small" data-action="advance-listing-delivery" data-id="${item.id}" data-listing="${item.listingId}">完了</button>
     </div>`).join('')}</div>
   </div>`;
 }
