@@ -171,6 +171,29 @@ function printQueueGroupHtml(group){
     </div>`).join('')}</div>
   </div>`;
 }
+function deliveryPrepItems(){
+  return allWholesaleListings()
+    .filter(x => x.listing.status === '納品準備中')
+    .map(x => ({ id:x.product.id, listingId:x.listing.id, group:listingLeadName(x.listing), title:listingDisplayName(x.listing, x.product), qty:Number(x.listing.printQty || 0) || 1 }));
+}
+function deliveryPrepGroups(){
+  const groups = new Map();
+  deliveryPrepItems().forEach(item => {
+    if(!groups.has(item.group)) groups.set(item.group, { label:item.group, items:[] });
+    groups.get(item.group).items.push(item);
+  });
+  return [...groups.values()];
+}
+function deliveryPrepGroupHtml(group){
+  const totalQty = group.items.reduce((sum, item) => sum + item.qty, 0);
+  return `<div class="brand-print-group">
+    <div class="brand-mini-head"><h3><span class="brand-chip warm">卸し</span> ${escapeHtml(group.label)}</h3><b>計${totalQty}個</b></div>
+    <div class="brand-market-product-list">${group.items.map(item => `<div class="brand-market-product-row">
+      <div><strong>${escapeHtml(item.title)}</strong><span>×${item.qty}</span></div>
+      <button class="btn btn-sage btn-small" data-action="advance-listing-delivery" data-id="${item.id}" data-listing="${item.listingId}">納品済みにする</button>
+    </div>`).join('')}</div>
+  </div>`;
+}
 function customerCounts(){ return CUSTOMER_STATUSES.reduce((acc, status) => ({ ...acc, [status]:state.customers.filter(item => item.status === status).length }), {}); }
 function leadCounts(){ return LEAD_STATUSES.reduce((acc, status) => ({ ...acc, [status]:state.leads.filter(item => item.status === status).length }), {}); }
 function instagramUrl(value){
@@ -410,6 +433,7 @@ function renderHome(){
     </div>
     <div class="brand-home-grid">
       <div class="brand-card"><div class="brand-mini-head"><h3>印刷待ち</h3></div><div class="brand-list">${printQueueGroups().map(printQueueGroupHtml).join('') || empty('印刷待ちはありません。')}</div></div>
+      <div class="brand-card"><div class="brand-mini-head"><h3>卸し・納品準備中</h3></div><div class="brand-list">${deliveryPrepGroups().map(deliveryPrepGroupHtml).join('') || empty('納品準備中の商品はありません。')}</div></div>
       <div class="brand-card"><div class="brand-mini-head"><h3>今日連絡する営業先</h3></div><div class="brand-list">${todayLeads().map(leadCard).join('') || empty('今日連絡予定の営業先はありません。')}</div></div>
       <div class="brand-card">
         <h3>次のマルシェ</h3>
@@ -1656,6 +1680,11 @@ async function handleClick(event){
     const product = findBy('products', id);
     const targetListing = product && asArray(product.wholesaleListings).find(l => l.id === listing);
     if(targetListing){ targetListing.status = '納品準備中'; await save(); showToast('印刷完了にしました'); renderAll(); }
+  }
+  if(action === 'advance-listing-delivery'){
+    const product = findBy('products', id);
+    const targetListing = product && asArray(product.wholesaleListings).find(l => l.id === listing);
+    if(targetListing){ targetListing.status = '納品済み'; await save(); showToast('納品済みにしました'); renderAll(); }
   }
   if(action === 'set-product-tab'){ activeProductTab = ['manage', 'online', 'wholesale', 'custom'].includes(value) ? value : 'manage'; renderProducts(); }
   if(action === 'edit-online-channel') onlineChannelForm(id);
