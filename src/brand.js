@@ -150,6 +150,12 @@ function shipReadyCard(customer){
   </div>`;
 }
 function todayLeads(){ return state.leads.filter(lead => lead.nextContactDate && lead.nextContactDate <= todayKey() && !['導入済','見送り'].includes(lead.status)).sort((a,b)=>a.nextContactDate.localeCompare(b.nextContactDate)).slice(0, 4); }
+function compactColorDots(product, overrideIds){
+  const ids = asArray(overrideIds).length ? overrideIds : productColorIds(product);
+  const colors = ids.map(id => state.colorPalette.find(c => c.id === id)).filter(Boolean);
+  if(!colors.length) return '';
+  return `<span class="brand-color-dots">${colors.map(c => `<span class="brand-color-dot" style="background:${escapeHtml(c.hex || '#ccc')}" title="${escapeHtml(c.name)}"></span>`).join('')}</span>`;
+}
 function printQueueItems(){
   const customerItems = state.customers
     .filter(c => c.status === '印刷')
@@ -157,7 +163,7 @@ function printQueueItems(){
     .map(c => ({ kind:'customer', id:c.id, group:customerDisplayName(c), title:c.productName || '商品未設定', qty:Number(c.quantity || 0) || 1, dueDate:c.dueDate }));
   const listingItems = allWholesaleListings()
     .filter(x => x.listing.status === '印刷待ち')
-    .map(x => ({ kind:'listing', id:x.product.id, listingId:x.listing.id, group:listingLeadName(x.listing), title:listingDisplayName(x.listing, x.product), qty:Number(x.listing.printQty || 0) || 1, dueDate:null, colorsHtml:productColorSwatches(x.product, x.listing.colorIds) }));
+    .map(x => ({ kind:'listing', id:x.product.id, listingId:x.listing.id, group:listingLeadName(x.listing), title:listingDisplayName(x.listing, x.product), qty:Number(x.listing.printQty || 0) || 1, dueDate:null, colorsHtml:compactColorDots(x.product, x.listing.colorIds) }));
   return [...customerItems, ...listingItems];
 }
 function printQueueGroups(){
@@ -174,7 +180,7 @@ function printQueueGroupHtml(group){
   return `<div class="brand-print-group">
     <div class="brand-mini-head"><h3><span class="brand-chip ${group.kind === 'customer' ? 'ok' : 'warm'}">${group.kind === 'customer' ? 'お客様' : '卸し'}</span> ${escapeHtml(group.label)}</h3><b>計${totalQty}個</b></div>
     <div class="brand-market-product-list">${group.items.map(item => `<div class="brand-market-product-row">
-      <div><strong>${escapeHtml(item.title)}</strong><span>×${item.qty}${item.dueDate ? ` ・ 納期 ${item.dueDate}` : ''}</span>${item.colorsHtml || ''}</div>
+      <div><strong>${escapeHtml(item.title)}</strong><span>×${item.qty}${item.dueDate ? ` ・ 納期 ${item.dueDate}` : ''}${item.colorsHtml || ''}</span></div>
       <button class="btn btn-sage btn-small" data-action="${item.kind === 'customer' ? 'advance-customer-print' : 'advance-listing-print'}" data-id="${item.id}"${item.listingId ? ` data-listing="${item.listingId}"` : ''}>完了</button>
     </div>`).join('')}</div>
   </div>`;
@@ -182,7 +188,7 @@ function printQueueGroupHtml(group){
 function deliveryPrepItems(){
   return allWholesaleListings()
     .filter(x => x.listing.status === '納品準備中')
-    .map(x => ({ id:x.product.id, listingId:x.listing.id, group:listingLeadName(x.listing), title:listingDisplayName(x.listing, x.product), qty:Number(x.listing.printQty || 0) || 1, colorsHtml:productColorSwatches(x.product, x.listing.colorIds) }));
+    .map(x => ({ id:x.product.id, listingId:x.listing.id, group:listingLeadName(x.listing), title:listingDisplayName(x.listing, x.product), qty:Number(x.listing.printQty || 0) || 1, colorsHtml:compactColorDots(x.product, x.listing.colorIds) }));
 }
 function deliveryPrepGroups(){
   const groups = new Map();
@@ -197,7 +203,7 @@ function deliveryPrepGroupHtml(group){
   return `<div class="brand-print-group">
     <div class="brand-mini-head"><h3><span class="brand-chip warm">卸し</span> ${escapeHtml(group.label)}</h3><b>計${totalQty}個</b></div>
     <div class="brand-market-product-list">${group.items.map(item => `<div class="brand-market-product-row">
-      <div><strong>${escapeHtml(item.title)}</strong><span>×${item.qty}</span>${item.colorsHtml || ''}</div>
+      <div><strong>${escapeHtml(item.title)}</strong><span>×${item.qty}${item.colorsHtml || ''}</span></div>
       <button class="btn btn-sage btn-small" data-action="advance-listing-delivery" data-id="${item.id}" data-listing="${item.listingId}">完了</button>
     </div>`).join('')}</div>
   </div>`;
