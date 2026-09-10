@@ -154,7 +154,7 @@ function compactColorDots(product, overrideIds){
   const ids = asArray(overrideIds).length ? overrideIds : productColorIds(product);
   const colors = ids.map(id => state.colorPalette.find(c => c.id === id)).filter(Boolean);
   if(!colors.length) return '';
-  return `<span class="brand-color-dots">${colors.map(c => `<span class="brand-color-dot" style="background:${escapeHtml(c.hex || '#ccc')}" title="${escapeHtml(c.name)}"></span>`).join('')}</span>`;
+  return `<span class="brand-color-dots">${colors.map(c => `<span class="brand-color-dot-label" title="${escapeHtml(c.name)}"><span class="brand-color-dot" style="background:${escapeHtml(c.hex || '#ccc')}"></span>${c.abbr ? escapeHtml(c.abbr) : ''}</span>`).join('')}</span>`;
 }
 function printQueueItems(){
   const customerItems = state.customers
@@ -422,6 +422,7 @@ function colorPaletteForm(color = {}){
   openForm(color.id ? 'カラー編集' : 'カラー追加', [
     {name:'code',label:'カラー番号（空欄なら自動採番）'},
     {name:'name',label:'カラー名'},
+    {name:'abbr',label:'略称（例：ND, HL）'},
     {name:'hex',label:'カラーコード',type:'color'}
   ], { hex:'#CCCCCC', ...color }, async data => {
     upsert('colorPalette', {...color, ...data, code:data.code || color.code || nextColorCode(), id:color.id || uid('color')});
@@ -843,7 +844,7 @@ function renderProducts(){
   const colorSection = `<details class="brand-archive brand-color-palette section-gap">
     <summary><span>カラー管理</span><b>${state.colorPalette.length}色</b></summary>
     <div class="brand-archive-body">
-      <div class="brand-color-list">${state.colorPalette.map(c => `<div class="brand-color-chip"><span class="brand-color-swatch" style="background:${escapeHtml(c.hex || '#ccc')}"></span><strong>${escapeHtml(c.code)}</strong><span>${escapeHtml(c.name)}</span><button class="btn btn-ghost btn-small" data-action="edit-color" data-id="${c.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-color" data-id="${c.id}">削除</button></div>`).join('') || empty('カラーがまだありません。')}</div>
+      <div class="brand-color-list">${state.colorPalette.map(c => `<div class="brand-color-chip"><span class="brand-color-swatch" style="background:${escapeHtml(c.hex || '#ccc')}"></span><strong>${escapeHtml(c.code)}</strong><span>${escapeHtml(c.name)}${c.abbr ? `（${escapeHtml(c.abbr)}）` : ''}</span><button class="btn btn-ghost btn-small" data-action="edit-color" data-id="${c.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-color" data-id="${c.id}">削除</button></div>`).join('') || empty('カラーがまだありません。')}</div>
       <button class="btn btn-sage btn-small" data-action="new-color" style="margin-top:10px;">カラー追加</button>
     </div>
   </details>`;
