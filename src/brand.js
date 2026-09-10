@@ -141,6 +141,14 @@ function marketProgress(market){ const checks = asArray(market.checklist); retur
 function customerProgress(customer){ return CUSTOMER_STATUSES.indexOf(customer.status) < 0 ? 0 : Math.round((CUSTOMER_STATUSES.indexOf(customer.status) + 1) / CUSTOMER_STATUSES.length * 100); }
 function leadProgress(lead){ return LEAD_STATUSES.indexOf(lead.status) < 0 ? 0 : Math.round((LEAD_STATUSES.indexOf(lead.status) + 1) / LEAD_STATUSES.length * 100); }
 function dueCustomers(){ return state.customers.filter(item => item.status !== '完了' && daysUntil(item.dueDate) !== null && daysUntil(item.dueDate) <= 10).sort((a,b)=>(a.dueDate || '').localeCompare(b.dueDate || '')).slice(0, 4); }
+function shipReadyCustomers(){ return state.customers.filter(item => item.status === '発送').sort((a,b)=>(a.dueDate || '').localeCompare(b.dueDate || '')); }
+function shipReadyCard(customer){
+  return `<div class="brand-item">
+    <div class="brand-row"><strong>${escapeHtml(customerDisplayName(customer))} / ${escapeHtml(customer.productName || '商品未設定')}</strong><span class="brand-chip">×${Number(customer.quantity || 0) || 1}</span></div>
+    <p class="brand-note">${escapeHtml(customer.nextAction || customer.memo || '')}</p>
+    <div class="brand-row" style="margin-top:8px;"><button class="btn btn-sage btn-small" data-action="advance-customer-ship" data-id="${customer.id}">発送完了</button></div>
+  </div>`;
+}
 function todayLeads(){ return state.leads.filter(lead => lead.nextContactDate && lead.nextContactDate <= todayKey() && !['導入済','見送り'].includes(lead.status)).sort((a,b)=>a.nextContactDate.localeCompare(b.nextContactDate)).slice(0, 4); }
 function printQueueItems(){
   const customerItems = state.customers
@@ -149,7 +157,7 @@ function printQueueItems(){
     .map(c => ({ kind:'customer', id:c.id, group:customerDisplayName(c), title:c.productName || '商品未設定', qty:Number(c.quantity || 0) || 1, dueDate:c.dueDate }));
   const listingItems = allWholesaleListings()
     .filter(x => x.listing.status === '印刷待ち')
-    .map(x => ({ kind:'listing', id:x.product.id, listingId:x.listing.id, group:listingLeadName(x.listing), title:listingDisplayName(x.listing, x.product), qty:Number(x.listing.printQty || 0) || 1, dueDate:null }));
+    .map(x => ({ kind:'listing', id:x.product.id, listingId:x.listing.id, group:listingLeadName(x.listing), title:listingDisplayName(x.listing, x.product), qty:Number(x.listing.printQty || 0) || 1, dueDate:null, colorsHtml:productColorSwatches(x.product, x.listing.colorIds) }));
   return [...customerItems, ...listingItems];
 }
 function printQueueGroups(){
@@ -166,7 +174,7 @@ function printQueueGroupHtml(group){
   return `<div class="brand-print-group">
     <div class="brand-mini-head"><h3><span class="brand-chip ${group.kind === 'customer' ? 'ok' : 'warm'}">${group.kind === 'customer' ? 'お客様' : '卸し'}</span> ${escapeHtml(group.label)}</h3><b>計${totalQty}個</b></div>
     <div class="brand-market-product-list">${group.items.map(item => `<div class="brand-market-product-row">
-      <div><strong>${escapeHtml(item.title)}</strong><span>×${item.qty}${item.dueDate ? ` ・ 納期 ${item.dueDate}` : ''}</span></div>
+      <div><strong>${escapeHtml(item.title)}</strong><span>×${item.qty}${item.dueDate ? ` ・ 納期 ${item.dueDate}` : ''}</span>${item.colorsHtml || ''}</div>
       <button class="btn btn-sage btn-small" data-action="${item.kind === 'customer' ? 'advance-customer-print' : 'advance-listing-print'}" data-id="${item.id}"${item.listingId ? ` data-listing="${item.listingId}"` : ''}>完了</button>
     </div>`).join('')}</div>
   </div>`;
@@ -174,7 +182,7 @@ function printQueueGroupHtml(group){
 function deliveryPrepItems(){
   return allWholesaleListings()
     .filter(x => x.listing.status === '納品準備中')
-    .map(x => ({ id:x.product.id, listingId:x.listing.id, group:listingLeadName(x.listing), title:listingDisplayName(x.listing, x.product), qty:Number(x.listing.printQty || 0) || 1 }));
+    .map(x => ({ id:x.product.id, listingId:x.listing.id, group:listingLeadName(x.listing), title:listingDisplayName(x.listing, x.product), qty:Number(x.listing.printQty || 0) || 1, colorsHtml:productColorSwatches(x.product, x.listing.colorIds) }));
 }
 function deliveryPrepGroups(){
   const groups = new Map();
@@ -189,7 +197,7 @@ function deliveryPrepGroupHtml(group){
   return `<div class="brand-print-group">
     <div class="brand-mini-head"><h3><span class="brand-chip warm">卸し</span> ${escapeHtml(group.label)}</h3><b>計${totalQty}個</b></div>
     <div class="brand-market-product-list">${group.items.map(item => `<div class="brand-market-product-row">
-      <div><strong>${escapeHtml(item.title)}</strong><span>×${item.qty}</span></div>
+      <div><strong>${escapeHtml(item.title)}</strong><span>×${item.qty}</span>${item.colorsHtml || ''}</div>
       <button class="btn btn-sage btn-small" data-action="advance-listing-delivery" data-id="${item.id}" data-listing="${item.listingId}">納品済みにする</button>
     </div>`).join('')}</div>
   </div>`;
@@ -422,6 +430,11 @@ function renderHome(){
   const market = nextMarket();
   const sales = monthlySales();
   const goal = Number(state.monthlySalesGoal || 0);
+  const printQueue = printQueueGroups();
+  const deliveryPrep = deliveryPrepGroups();
+  const shipReady = shipReadyCustomers();
+  const leadsToday = todayLeads();
+  const actionCount = printQueue.reduce((sum, g) => sum + g.items.length, 0) + deliveryPrep.reduce((sum, g) => sum + g.items.length, 0) + shipReady.length + leadsToday.length;
   root.innerHTML = `<div class="brand-home">
     <div class="brand-hero">
       <div class="brand-hero-top">
@@ -431,10 +444,15 @@ function renderHome(){
       ${task ? taskItem(task, true) : ''}
       <div class="brand-row" style="margin-top:14px;"><button class="btn btn-primary" data-action="focus-next">次にやる</button></div>
     </div>
+    <div class="brand-home-section-title"><h3>今日の対応</h3>${actionCount ? `<span class="brand-chip warn">計${actionCount}件</span>` : ''}</div>
     <div class="brand-home-grid">
-      <div class="brand-card"><div class="brand-mini-head"><h3>印刷待ち</h3></div><div class="brand-list">${printQueueGroups().map(printQueueGroupHtml).join('') || empty('印刷待ちはありません。')}</div></div>
-      <div class="brand-card"><div class="brand-mini-head"><h3>卸し・納品準備中</h3></div><div class="brand-list">${deliveryPrepGroups().map(deliveryPrepGroupHtml).join('') || empty('納品準備中の商品はありません。')}</div></div>
-      <div class="brand-card"><div class="brand-mini-head"><h3>今日連絡する営業先</h3></div><div class="brand-list">${todayLeads().map(leadCard).join('') || empty('今日連絡予定の営業先はありません。')}</div></div>
+      <div class="brand-card"><div class="brand-mini-head"><h3>印刷待ち</h3></div><div class="brand-list">${printQueue.map(printQueueGroupHtml).join('') || empty('印刷待ちはありません。')}</div></div>
+      <div class="brand-card"><div class="brand-mini-head"><h3>卸し・納品準備中</h3></div><div class="brand-list">${deliveryPrep.map(deliveryPrepGroupHtml).join('') || empty('納品準備中の商品はありません。')}</div></div>
+      <div class="brand-card"><div class="brand-mini-head"><h3>発送待ち</h3></div><div class="brand-list">${shipReady.map(shipReadyCard).join('') || empty('発送待ちの注文はありません。')}</div></div>
+      <div class="brand-card"><div class="brand-mini-head"><h3>今日連絡する営業先</h3></div><div class="brand-list">${leadsToday.map(leadCard).join('') || empty('今日連絡予定の営業先はありません。')}</div></div>
+    </div>
+    <div class="brand-home-section-title"><h3>経営状況</h3></div>
+    <div class="brand-home-grid">
       <div class="brand-card">
         <h3>次のマルシェ</h3>
         ${market ? `<p class="brand-title">${escapeHtml(market.name)}</p><p class="brand-note">${market.date || '-'} / ${escapeHtml(market.place || '')} / あと${daysUntil(market.date) ?? '-'}日</p><div class="brand-meter"><span>準備 ${marketProgress(market)}%</span>${progressBar(marketProgress(market))}</div>` : empty('予定マルシェはありません。')}
@@ -1676,6 +1694,7 @@ async function handleClick(event){
   if(action === 'set-customer-status'){ const c = findBy('customers', id); if(c){ c.status = value; if(value === '完了' && !c.completedAt) c.completedAt = todayKey(); await save(); renderAll(); } }
   if(action === 'set-lead-status'){ const lead = findBy('leads', id); if(lead){ lead.status = value; await save(); renderAll(); } }
   if(action === 'advance-customer-print'){ const c = findBy('customers', id); if(c){ c.status = '塗装'; await save(); showToast('印刷完了にしました'); renderAll(); } }
+  if(action === 'advance-customer-ship'){ const c = findBy('customers', id); if(c){ c.status = '完了'; if(!c.completedAt) c.completedAt = todayKey(); await save(); showToast('発送完了にしました'); renderAll(); } }
   if(action === 'advance-listing-print'){
     const product = findBy('products', id);
     const targetListing = product && asArray(product.wholesaleListings).find(l => l.id === listing);

@@ -330,6 +330,18 @@
   max-width:1180px;
   margin:0 auto;
 }
+.brand-home-section-title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:22px 0 12px;
+}
+.brand-home-section-title h3{
+  margin:0;
+  font-size:1rem;
+  color:var(--ink-soft);
+  letter-spacing:.04em;
+}
 .brand-home-grid{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
