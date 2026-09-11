@@ -135,18 +135,18 @@ function dueSoonTasks(){
 function autoSalesEntries(month){
   const targetMonth = month || state.salesMonth || new Date().toISOString().slice(0, 7);
   const orderEntries = state.customers
-    .filter(c => c.completedAt && c.completedAt.startsWith(targetMonth) && Number(c.amount || 0) > 0)
+    .filter(c => String(c.completedAt || '').startsWith(targetMonth) && Number(c.amount || 0) > 0)
     .map(c => {
       const product = state.products.find(p => p.name === c.productName);
-      return { id:`order:${c.id}`, date:c.completedAt, category:product?.category || 'その他', amount:Number(c.amount || 0), memo:`${customerDisplayName(c)} / ${c.productName || '商品未設定'}`, source:'order' };
+      return { id:`order:${c.id}`, date:c.completedAt, category:(product && product.category) || 'その他', amount:Number(c.amount || 0), memo:`${customerDisplayName(c)} / ${c.productName || '商品未設定'}`, source:'order' };
     });
   const deliveryEntries = [];
   allWholesaleListings().forEach(({listing, product}) => {
     asArray(listing.deliveries).forEach(d => {
-      if(!d.date || !d.date.startsWith(targetMonth)) return;
+      if(!String(d.date || '').startsWith(targetMonth)) return;
       const amount = Number(d.qty || 0) * Number(listing.wholesalePrice || 0);
       if(!amount) return;
-      deliveryEntries.push({ id:`delivery:${d.id}`, date:d.date, category:product.category || 'その他', amount, memo:`${listingLeadName(listing)} / ${listingDisplayName(listing, product)}`, source:'wholesale' });
+      deliveryEntries.push({ id:`delivery:${d.id}`, date:d.date, category:(product && product.category) || 'その他', amount, memo:`${listingLeadName(listing)} / ${listingDisplayName(listing, product)}`, source:'wholesale' });
     });
   });
   return [...orderEntries, ...deliveryEntries];
@@ -1353,7 +1353,7 @@ function renderCoupons(){
 }
 function leadForm(lead = {}){ openForm(lead.id ? '営業先編集' : '営業先追加', [
   {type:'section',label:'店舗情報'},
-  {name:'shopName',label:'店舗名'},{name:'area',label:'地域'},{name:'hp',label:'HP'},{name:'instagram',label:'Instagram'},
+  {name:'shopName',label:'店舗名'},{name:'companyName',label:'正式な会社名（帳票の宛名に使用・空欄なら店舗名）'},{name:'area',label:'地域'},{name:'hp',label:'HP'},{name:'instagram',label:'Instagram'},
   {type:'section',label:'連絡先'},
   {name:'person',label:'担当者'},{name:'phone',label:'電話'},{name:'email',label:'メール'},
   {name:'postalCode',label:'郵便番号（帳票に自動入力）'},{name:'address',label:'住所（帳票に自動入力）',type:'textarea',full:true},
@@ -1704,7 +1704,7 @@ function invoiceHeaderForm(){
       const lead = state.leads.find(l => l.shopName === name);
       if(!lead) return;
       const setVal = (field, value) => { const el = overlay.querySelector(`[name="${field}"]`); if(el && value) el.value = value; };
-      setVal('billTo', lead.shopName);
+      setVal('billTo', lead.companyName || lead.shopName);
       setVal('billToContact', lead.person);
       setVal('billToPostalCode', lead.postalCode);
       setVal('billToAddress', lead.address);
