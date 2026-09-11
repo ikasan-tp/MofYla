@@ -1,5 +1,6 @@
 import { Storage } from './storage.js';
 import { showToast } from './components/toast.js';
+import { RABBIT_BREEDS, breedCode } from './services/rabbitBreeds.js';
 
 const STORE_KEY = 'brand:data';
 const SCHEMA_VERSION = 6;
@@ -7,7 +8,17 @@ const todayKey = () => new Date().toISOString().slice(0, 10);
 const CUSTOMER_STATUSES = ['お問い合わせ','見積り','デザイン確認','制作中','印刷','塗装','梱包','発送','完了'];
 const LEAD_STATUSES = ['未調査','調査済','DM送信','返信待ち','商談中','サンプル送付','導入済','見送り'];
 const LEAD_POTENTIALS = ['未設定','高','中','低'];
+const WHOLESALE_STATUSES = ['商談中','印刷待ち','納品準備中','納品済み','受注中','追加発注待ち','取り扱い終了'];
 const CATEGORIES = ['ネームプレート','コースター','キーホルダー','その他'];
+const CATEGORY_CODES = { 'ネームプレート':'NP', 'コースター':'CS', 'キーホルダー':'KH', 'その他':'OT' };
+const DEFAULT_COLOR_PALETTE = [
+  { id:'color-c001', code:'C001', name:'White', hex:'#FFFFFF' },
+  { id:'color-c002', code:'C002', name:'Ivory', hex:'#F5EAD6' },
+  { id:'color-c003', code:'C003', name:'Milk Tea', hex:'#C9A27E' },
+  { id:'color-c004', code:'C004', name:'Ash Gray', hex:'#A9A9A9' },
+  { id:'color-c005', code:'C005', name:'Chocolate', hex:'#5C3A21' },
+  { id:'color-c006', code:'C006', name:'Black', hex:'#1A1A1A' }
+];
 const TASK_FILTERS = ['今日','期限近い','マルシェ関連','制作','SNS','事務作業','完了済み'];
 const DAILY_TASKS = [
   { id:'daily-sns-post', title:'SNS投稿を1件確認する', memo:'投稿作成、予約、投稿済みチェックのどれか1つでOK。', priority:'中', energy:'軽い', category:'SNS', minutes:15 },
@@ -17,6 +28,9 @@ const DEMO_WORDS = ['神戸マルシェ','山田さま','うさぎネームプ�
 
 let state;
 let activeTaskFilter = '今日';
+let activeProductTab = 'manage';
+let activeNegotiationLead = 'all';
+let couponQuery = '';
 
 function uid(prefix){ return `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`; }
 function yen(value){ return `${Number(value || 0).toLocaleString('ja-JP')}円`; }
@@ -47,9 +61,16 @@ function emptyState(){
     markets:[],
     sales:[],
     customers:[],
+    customerProfiles:[],
     leads:[],
     products:[],
-    ideas:[]
+    ideas:[],
+    sellerProfile:{name:'', contactPerson:'', postalCode:'', address:'', phone:'', email:'', bankName:'', branchName:'', accountType:'普通', accountNumber:'', accountHolder:''},
+    invoiceDraft:null,
+    invoices:[],
+    coupons:[],
+    colorPalette:DEFAULT_COLOR_PALETTE.map(c => ({...c})),
+    negotiations:[]
   };
 }
 
@@ -66,8 +87,10 @@ function stripDemoData(){
 function ensureShape(){
   const base = emptyState();
   state = { ...base, ...(state || {}) };
-  for(const key of ['goals','tasks','markets','sales','customers','leads','products','ideas']) state[key] = asArray(state[key]);
+  for(const key of ['goals','tasks','markets','sales','customers','customerProfiles','leads','products','ideas','invoices','coupons','colorPalette','negotiations']) state[key] = asArray(state[key]);
+  if(!state.colorPalette.length) state.colorPalette = DEFAULT_COLOR_PALETTE.map(c => ({...c}));
   state.dailyDone = state.dailyDone && typeof state.dailyDone === 'object' ? state.dailyDone : {};
+  state.sellerProfile = state.sellerProfile && typeof state.sellerProfile === 'object' ? state.sellerProfile : {name:'', contactPerson:'', postalCode:'', address:'', phone:'', email:'', bankName:'', branchName:'', accountType:'普通', accountNumber:'', accountHolder:''};
   state.schemaVersion = SCHEMA_VERSION;
 }
 async function load(){
@@ -82,6 +105,8 @@ async function load(){
     changed = true;
     return { ...lead, potential:'未設定' };
   });
+  if(migrateCustomerProfiles()) changed = true;
+  if(migrateWholesaleListings()) changed = true;
   if(changed || savedVersion !== SCHEMA_VERSION) await save(false);
 }
 async function save(notify = true){
@@ -107,16 +132,103 @@ function todayTasks(){
 function dueSoonTasks(){
   return state.tasks.filter(task => !task.done && daysUntil(task.dueDate) !== null && daysUntil(task.dueDate) <= 7).sort(byDue).slice(0, 5);
 }
+function autoSalesEntries(month){
+  const targetMonth = month || state.salesMonth || new Date().toISOString().slice(0, 7);
+  const orderEntries = state.customers
+    .filter(c => c.completedAt && c.completedAt.startsWith(targetMonth) && Number(c.amount || 0) > 0)
+    .map(c => {
+      const product = state.products.find(p => p.name === c.productName);
+      return { id:`order:${c.id}`, date:c.completedAt, category:product?.category || 'その他', amount:Number(c.amount || 0), memo:`${customerDisplayName(c)} / ${c.productName || '商品未設定'}`, source:'order' };
+    });
+  const deliveryEntries = [];
+  allWholesaleListings().forEach(({listing, product}) => {
+    asArray(listing.deliveries).forEach(d => {
+      if(!d.date || !d.date.startsWith(targetMonth)) return;
+      const amount = Number(d.qty || 0) * Number(listing.wholesalePrice || 0);
+      if(!amount) return;
+      deliveryEntries.push({ id:`delivery:${d.id}`, date:d.date, category:product.category || 'その他', amount, memo:`${listingLeadName(listing)} / ${listingDisplayName(listing, product)}`, source:'wholesale' });
+    });
+  });
+  return [...orderEntries, ...deliveryEntries];
+}
 function monthlySales(){
   const month = state.salesMonth || new Date().toISOString().slice(0, 7);
-  return state.sales.filter(sale => (sale.date || '').startsWith(month)).reduce((sum, sale) => sum + Number(sale.amount || 0), 0);
+  const manual = state.sales.filter(sale => (sale.date || '').startsWith(month)).reduce((sum, sale) => sum + Number(sale.amount || 0), 0);
+  const auto = autoSalesEntries(month).reduce((sum, entry) => sum + entry.amount, 0);
+  return manual + auto;
 }
 function nextMarket(){ return [...state.markets].filter(market => daysUntil(market.date) === null || daysUntil(market.date) >= -1).sort((a, b) => (a.date || '').localeCompare(b.date || ''))[0]; }
 function marketProgress(market){ const checks = asArray(market.checklist); return checks.length ? Math.round(checks.filter(item => item.done).length / checks.length * 100) : 0; }
 function customerProgress(customer){ return CUSTOMER_STATUSES.indexOf(customer.status) < 0 ? 0 : Math.round((CUSTOMER_STATUSES.indexOf(customer.status) + 1) / CUSTOMER_STATUSES.length * 100); }
 function leadProgress(lead){ return LEAD_STATUSES.indexOf(lead.status) < 0 ? 0 : Math.round((LEAD_STATUSES.indexOf(lead.status) + 1) / LEAD_STATUSES.length * 100); }
 function dueCustomers(){ return state.customers.filter(item => item.status !== '完了' && daysUntil(item.dueDate) !== null && daysUntil(item.dueDate) <= 10).sort((a,b)=>(a.dueDate || '').localeCompare(b.dueDate || '')).slice(0, 4); }
+function shipReadyCustomers(){ return state.customers.filter(item => item.status === '発送').sort((a,b)=>(a.dueDate || '').localeCompare(b.dueDate || '')); }
+function shipReadyCard(customer){
+  return `<div class="brand-item">
+    <div class="brand-row"><strong>${escapeHtml(customerDisplayName(customer))} / ${escapeHtml(customer.productName || '商品未設定')}</strong><span class="brand-chip">×${Number(customer.quantity || 0) || 1}</span></div>
+    <p class="brand-note">${escapeHtml(customer.nextAction || customer.memo || '')}</p>
+    <div class="brand-row" style="margin-top:8px;"><button class="btn btn-sage btn-small" data-action="advance-customer-ship" data-id="${customer.id}">発送完了</button></div>
+  </div>`;
+}
 function todayLeads(){ return state.leads.filter(lead => lead.nextContactDate && lead.nextContactDate <= todayKey() && !['導入済','見送り'].includes(lead.status)).sort((a,b)=>a.nextContactDate.localeCompare(b.nextContactDate)).slice(0, 4); }
+function compactColorDots(product, overrideIds){
+  const ids = asArray(overrideIds).length ? overrideIds : productColorIds(product);
+  const colors = ids.map(id => state.colorPalette.find(c => c.id === id)).filter(Boolean);
+  if(!colors.length) return '';
+  return `<span class="brand-color-dots">${colors.map(c => `<span class="brand-color-dot-label" title="${escapeHtml(c.name)}"><span class="brand-color-dot" style="background:${escapeHtml(c.hex || '#ccc')}"></span>${c.abbr ? escapeHtml(c.abbr) : ''}</span>`).join('')}</span>`;
+}
+function printQueueItems(){
+  const customerItems = state.customers
+    .filter(c => c.status === '印刷')
+    .sort((a,b) => (a.dueDate || '').localeCompare(b.dueDate || ''))
+    .map(c => ({ kind:'customer', id:c.id, group:customerDisplayName(c), title:c.productName || '商品未設定', qty:Number(c.quantity || 0) || 1, dueDate:c.dueDate }));
+  const listingItems = allWholesaleListings()
+    .filter(x => x.listing.status === '印刷待ち')
+    .map(x => ({ kind:'listing', id:x.product.id, listingId:x.listing.id, group:listingLeadName(x.listing), title:listingDisplayName(x.listing, x.product), qty:Number(x.listing.printQty || 0) || 1, dueDate:null, colorsHtml:compactColorDots(x.product, x.listing.colorIds) }));
+  return [...customerItems, ...listingItems];
+}
+function printQueueGroups(){
+  const groups = new Map();
+  printQueueItems().forEach(item => {
+    const key = `${item.kind}:${item.group}`;
+    if(!groups.has(key)) groups.set(key, { kind:item.kind, label:item.group, items:[] });
+    groups.get(key).items.push(item);
+  });
+  return [...groups.values()];
+}
+function printQueueGroupHtml(group){
+  const totalQty = group.items.reduce((sum, item) => sum + item.qty, 0);
+  return `<div class="brand-print-group">
+    <div class="brand-mini-head"><h3><span class="brand-chip ${group.kind === 'customer' ? 'ok' : 'warm'}">${group.kind === 'customer' ? 'お客様' : '卸し'}</span> ${escapeHtml(group.label)}</h3><b>計${totalQty}個</b></div>
+    <div class="brand-market-product-list">${group.items.map(item => `<div class="brand-market-product-row">
+      <div><strong>${escapeHtml(item.title)} ×${item.qty}</strong>${item.colorsHtml || ''}${item.dueDate ? `<span>納期 ${item.dueDate}</span>` : ''}</div>
+      <button class="btn btn-sage btn-small" data-action="${item.kind === 'customer' ? 'advance-customer-print' : 'advance-listing-print'}" data-id="${item.id}"${item.listingId ? ` data-listing="${item.listingId}"` : ''}>完了</button>
+    </div>`).join('')}</div>
+  </div>`;
+}
+function deliveryPrepItems(){
+  return allWholesaleListings()
+    .filter(x => x.listing.status === '納品準備中')
+    .map(x => ({ id:x.product.id, listingId:x.listing.id, group:listingLeadName(x.listing), title:listingDisplayName(x.listing, x.product), qty:Number(x.listing.printQty || 0) || 1, colorsHtml:compactColorDots(x.product, x.listing.colorIds) }));
+}
+function deliveryPrepGroups(){
+  const groups = new Map();
+  deliveryPrepItems().forEach(item => {
+    if(!groups.has(item.group)) groups.set(item.group, { label:item.group, items:[] });
+    groups.get(item.group).items.push(item);
+  });
+  return [...groups.values()];
+}
+function deliveryPrepGroupHtml(group){
+  const totalQty = group.items.reduce((sum, item) => sum + item.qty, 0);
+  return `<div class="brand-print-group">
+    <div class="brand-mini-head"><h3><span class="brand-chip warm">卸し</span> ${escapeHtml(group.label)}</h3><b>計${totalQty}個</b></div>
+    <div class="brand-market-product-list">${group.items.map(item => `<div class="brand-market-product-row">
+      <div><strong>${escapeHtml(item.title)} ×${item.qty}</strong>${item.colorsHtml || ''}</div>
+      <button class="btn btn-sage btn-small" data-action="advance-listing-delivery" data-id="${item.id}" data-listing="${item.listingId}">完了</button>
+    </div>`).join('')}</div>
+  </div>`;
+}
 function customerCounts(){ return CUSTOMER_STATUSES.reduce((acc, status) => ({ ...acc, [status]:state.customers.filter(item => item.status === status).length }), {}); }
 function leadCounts(){ return LEAD_STATUSES.reduce((acc, status) => ({ ...acc, [status]:state.leads.filter(item => item.status === status).length }), {}); }
 function instagramUrl(value){
@@ -170,13 +282,65 @@ function normalizeMarket(market){
   }));
   return market;
 }
+function migrateCustomerProfiles(){
+  state.customerProfiles = asArray(state.customerProfiles);
+  let changed = false;
+  const byName = new Map(state.customerProfiles.map(p => [p.name, p]));
+  state.customers.forEach(order => {
+    if(order.customerId && state.customerProfiles.some(p => p.id === order.customerId)) return;
+    const name = order.customerName || '名前未設定';
+    let profile = byName.get(name);
+    if(!profile){
+      profile = { id:uid('customerProfile'), name, sns:order.sns || '', line:order.line || '', email:order.email || '', memo:'' };
+      state.customerProfiles.push(profile);
+      byName.set(name, profile);
+    }
+    order.customerId = profile.id;
+    changed = true;
+  });
+  return changed;
+}
+function migrateWholesaleListings(){
+  let changed = false;
+  state.products.forEach(product => {
+    if(!isWholesaleProduct(product) || Array.isArray(product.wholesaleListings)) return;
+    changed = true;
+    const storeName = product.storeName || product.shopName || product.wholesaleStore || '';
+    let lead = storeName ? state.leads.find(l => l.shopName === storeName) : null;
+    if(storeName && !lead){
+      lead = { id:uid('lead'), shopName:storeName, status:'導入済', potential:'未設定' };
+      state.leads.push(lead);
+    }
+    product.wholesaleListings = lead ? [{
+      id:uid('listing'),
+      leadId:lead.id,
+      wholesalePrice:Number(product.wholesalePrice || 0),
+      status:product.status || '',
+      memo:product.wholesaleMemo || '',
+      deliveries:asArray(product.deliveries)
+    }] : [];
+    delete product.storeName;
+    delete product.wholesalePrice;
+    delete product.wholesaleMemo;
+    delete product.deliveries;
+    delete product.status;
+  });
+  return changed;
+}
+function customerDisplayName(order){
+  const profile = state.customerProfiles.find(p => p.id === order.customerId);
+  return profile?.name || order.customerName || '名前未設定';
+}
+function customerProfile(order){
+  return state.customerProfiles.find(p => p.id === order.customerId) || null;
+}
 
 function marketProductTotals(market){
   const items = asArray(market.productItems);
   return {
     planned: items.reduce((sum, item) => sum + Number(item.plannedQty || 0), 0),
     packed: items.reduce((sum, item) => sum + Number(item.packedQty || 0), 0),
-    value: items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.packedQty || item.plannedQty || 0), 0)
+    value: items.reduce((sum, item) => sum + Number(item.price || 0) * (Number(item.packedQty) || Number(item.plannedQty) || 1), 0)
   };
 }
 
@@ -192,9 +356,9 @@ function taskChips(task){
 }
 function taskItem(task, compact = false){
   return `<div class="brand-item ${task.done ? 'done' : ''}">
-    <div class="brand-row">
+    <div class="brand-card-head">
       <label class="brand-checkline"><input type="checkbox" data-action="toggle-task" data-id="${task.id}" ${task.isDaily ? 'data-daily="true"' : ''} ${task.done ? 'checked' : ''}><span class="brand-title">${escapeHtml(task.title)}</span></label>
-      <div class="brand-row">
+      <div class="brand-card-actions">
         ${task.isDaily ? '' : `<button class="btn btn-ghost btn-small" data-action="postpone-task" data-id="${task.id}">明日に送る</button>`}
         ${compact || task.isDaily ? '' : `<button class="btn btn-ghost btn-small" data-action="edit-task" data-id="${task.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-task" data-id="${task.id}">削除</button>`}
       </div>
@@ -208,7 +372,7 @@ function taskItem(task, compact = false){
 function customerCard(customer){
   const d = daysUntil(customer.dueDate);
   return `<div class="brand-item">
-    <div class="brand-row"><strong>${escapeHtml(customer.customerName || '名前未設定')} / ${escapeHtml(customer.productName || '商品未設定')}</strong><span class="brand-chip ${d !== null && d <= 3 ? 'warn' : ''}">納期まで${d ?? '-'}日</span></div>
+    <div class="brand-row"><strong>${escapeHtml(customerDisplayName(customer))} / ${escapeHtml(customer.productName || '商品未設定')}</strong><span class="brand-chip ${d !== null && d <= 3 ? 'warn' : ''}">納期まで${d ?? '-'}日</span></div>
     <div class="brand-meter"><span>${escapeHtml(customer.status || '未設定')} / ${customerProgress(customer)}%</span>${progressBar(customerProgress(customer))}</div>
     <p class="brand-note">${escapeHtml(customer.nextAction || customer.memo || '')}</p>
   </div>`;
@@ -222,6 +386,71 @@ function leadCard(lead){
 }
 function potentialClass(value){ return value === '高' ? 'hot' : value === '中' ? 'warm' : value === '低' ? 'cool' : ''; }
 
+function isWholesaleProduct(product){ return product.salesChannel === 'wholesale' || product.isWholesale === true; }
+function isCustomProduct(product){ return product.salesChannel === 'custom'; }
+function productDelivered(deliverable, from, to){
+  return asArray(deliverable.deliveries)
+    .filter(d => (!from || (d.date || '') >= from) && (!to || (d.date || '') <= to))
+    .reduce((sum, d) => sum + Number(d.qty || 0), 0);
+}
+function listingLeadName(listing){ return findBy('leads', listing.leadId)?.shopName || '店舗未設定'; }
+function latestDeliveryLabel(deliverable){
+  const dates = asArray(deliverable.deliveries).map(d => d.date).filter(Boolean).sort();
+  return dates.length ? `最終 ${dates[dates.length - 1]}` : '実績なし';
+}
+function allWholesaleListings(){
+  return state.products.flatMap(product => asArray(product.wholesaleListings).map(listing => ({ listing, product })));
+}
+function wholesaleStoreNames(){ return [...new Set(allWholesaleListings().map(x => listingLeadName(x.listing)))].sort((a,b)=>a.localeCompare(b,'ja')); }
+function nextProductSku(category, breedName){
+  const catCode = CATEGORY_CODES[category] || 'OT';
+  const brCode = breedCode(breedName);
+  const prefix = `MY-${catCode}-${brCode}-`;
+  const pattern = new RegExp(`^${prefix}(\\d+)`);
+  const nums = state.products.map(p => { const m = pattern.exec(p.sku || ''); return m ? Number(m[1]) : 0; });
+  const max = nums.length ? Math.max(...nums) : 0;
+  return `${prefix}${String(max + 1).padStart(3, '0')}`;
+}
+function colorLabel(colorId){
+  const color = state.colorPalette.find(c => c.id === colorId);
+  return color ? `${color.code} ${color.name}` : '';
+}
+function productColorIds(product){ return asArray(product.colorIds).length ? product.colorIds : (product.colorId ? [product.colorId] : []); }
+function formatDimensions(product){
+  const w = Number(product.dimensionsW || 0), d = Number(product.dimensionsD || 0), h = Number(product.dimensionsH || 0);
+  if(w || d || h){
+    const parts = [];
+    if(w) parts.push(`W${w}`);
+    if(d) parts.push(`D${d}`);
+    if(h) parts.push(`H${h}`);
+    return `${parts.join('×')}mm`;
+  }
+  return product.dimensions || '';
+}
+function productColorSwatches(product, overrideIds){
+  const ids = asArray(overrideIds).length ? overrideIds : productColorIds(product);
+  const colors = ids.map(id => state.colorPalette.find(c => c.id === id)).filter(Boolean);
+  if(!colors.length) return '';
+  return `<div class="brand-product-colors">${colors.map(c => `<span class="brand-product-color-chip" title="${escapeHtml(c.code)} ${escapeHtml(c.name)}"><span class="brand-color-swatch" style="background:${escapeHtml(c.hex || '#ccc')}"></span>${escapeHtml(c.name)}</span>`).join('')}</div>`;
+}
+function listingDisplayName(listing, product){ return listing.name || product.name || '商品名未設定'; }
+function nextColorCode(){
+  const nums = state.colorPalette.map(c => { const m = /^C(\d+)/.exec(c.code || ''); return m ? Number(m[1]) : 0; });
+  const max = nums.length ? Math.max(...nums) : 0;
+  return `C${String(max + 1).padStart(3, '0')}`;
+}
+function colorPaletteForm(color = {}){
+  openForm(color.id ? 'カラー編集' : 'カラー追加', [
+    {name:'code',label:'カラー番号（空欄なら自動採番）'},
+    {name:'name',label:'カラー名'},
+    {name:'abbr',label:'略称（例：ND, HL）'},
+    {name:'hex',label:'カラーコード',type:'color'}
+  ], { hex:'#CCCCCC', ...color }, async data => {
+    upsert('colorPalette', {...color, ...data, code:data.code || color.code || nextColorCode(), id:color.id || uid('color')});
+    await save();
+  });
+}
+
 function renderHome(){
   const root = document.getElementById('brandHome');
   if(!root) return;
@@ -229,6 +458,11 @@ function renderHome(){
   const market = nextMarket();
   const sales = monthlySales();
   const goal = Number(state.monthlySalesGoal || 0);
+  const printQueue = printQueueGroups();
+  const deliveryPrep = deliveryPrepGroups();
+  const shipReady = shipReadyCustomers();
+  const leadsToday = todayLeads();
+  const actionCount = printQueue.reduce((sum, g) => sum + g.items.length, 0) + deliveryPrep.reduce((sum, g) => sum + g.items.length, 0) + shipReady.length + leadsToday.length;
   root.innerHTML = `<div class="brand-home">
     <div class="brand-hero">
       <div class="brand-hero-top">
@@ -238,8 +472,15 @@ function renderHome(){
       ${task ? taskItem(task, true) : ''}
       <div class="brand-row" style="margin-top:14px;"><button class="btn btn-primary" data-action="focus-next">次にやる</button></div>
     </div>
+    <div class="brand-home-section-title"><h3>今日の対応</h3>${actionCount ? `<span class="brand-chip warn">計${actionCount}件</span>` : ''}</div>
     <div class="brand-home-grid">
-      <div class="brand-card"><div class="brand-mini-head"><h3>今日連絡する営業先</h3></div><div class="brand-list">${todayLeads().map(leadCard).join('') || empty('今日連絡予定の営業先はありません。')}</div></div>
+      <div class="brand-card"><div class="brand-mini-head"><h3>印刷待ち</h3></div><div class="brand-list">${printQueue.map(printQueueGroupHtml).join('') || empty('印刷待ちはありません。')}</div></div>
+      <div class="brand-card"><div class="brand-mini-head"><h3>卸し・納品準備中</h3></div><div class="brand-list">${deliveryPrep.map(deliveryPrepGroupHtml).join('') || empty('納品準備中の商品はありません。')}</div></div>
+      <div class="brand-card"><div class="brand-mini-head"><h3>発送待ち</h3></div><div class="brand-list">${shipReady.map(shipReadyCard).join('') || empty('発送待ちの注文はありません。')}</div></div>
+      <div class="brand-card"><div class="brand-mini-head"><h3>今日連絡する営業先</h3></div><div class="brand-list">${leadsToday.map(leadCard).join('') || empty('今日連絡予定の営業先はありません。')}</div></div>
+    </div>
+    <div class="brand-home-section-title"><h3>経営状況</h3></div>
+    <div class="brand-home-grid">
       <div class="brand-card">
         <h3>次のマルシェ</h3>
         ${market ? `<p class="brand-title">${escapeHtml(market.name)}</p><p class="brand-note">${market.date || '-'} / ${escapeHtml(market.place || '')} / あと${daysUntil(market.date) ?? '-'}日</p><div class="brand-meter"><span>準備 ${marketProgress(market)}%</span>${progressBar(marketProgress(market))}</div>` : empty('予定マルシェはありません。')}
@@ -265,14 +506,17 @@ function renderTasks(){
     return task.category === activeTaskFilter;
   }).sort((a,b)=>Number(a.done)-Number(b.done) || priorityValue(b)-priorityValue(a) || byDue(a,b));
   const completed = allTasks().filter(task => task.done);
-  root.innerHTML = `${pageHead('タスク管理','毎日の確認と個別タスクをここで整理します。', '<button class="btn btn-primary" data-action="new-task">タスク追加</button>')}
+  root.innerHTML = `${pageHead('タスク管理','毎日の確認と個別タスクをここで整理します。', '<button class="btn btn-primary" data-action="new-task">追加</button>')}
     <div class="brand-toolbar"><div class="brand-filters">${TASK_FILTERS.map(f => `<button class="brand-filter ${activeTaskFilter === f ? 'active' : ''}" data-action="filter-task" data-value="${f}">${f}</button>`).join('')}</div></div>
     <div class="brand-list">${filtered.map(task => taskItem(task)).join('') || empty()}</div>
     ${activeTaskFilter === '完了済み' ? '' : archiveDetails('完了アーカイブ', completed, task => taskItem(task))}`;
 }
 
+function goalChildren(goal){ return state.goals.filter(g => g.parentId === goal.id); }
 function goalProgress(goal){
   if(goal.progress !== null && goal.progress !== undefined && goal.progress !== '') return clamp(goal.progress);
+  const children = goalChildren(goal);
+  if(children.length) return Math.round(children.reduce((sum, child) => sum + goalProgress(child), 0) / children.length);
   const related = state.tasks.filter(task => task.goalId === goal.id);
   if(!related.length) return 0;
   return Math.round(related.filter(task => task.done).length / related.length * 100);
@@ -280,17 +524,44 @@ function goalProgress(goal){
 function renderGoals(){
   const root = document.getElementById('brandGoals');
   if(!root) return;
-  root.innerHTML = `${pageHead('目標管理','大目標・中目標・小タスクを階層で見ます。', '<button class="btn btn-primary" data-action="new-goal">目標追加</button>')}
-    <div class="brand-grid">${state.goals.map(goal => `<div class="brand-card"><div class="brand-row"><div><span class="brand-chip">${escapeHtml(goal.type || '目標')}</span><h3>${escapeHtml(goal.title)}</h3></div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="edit-goal" data-id="${goal.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-goal" data-id="${goal.id}">削除</button></div></div><p class="brand-note">${goal.dueDate ? `期限: ${goal.dueDate}` : '期限なし'}</p>${progressBar(goalProgress(goal))}<p class="brand-note">完了率 ${goalProgress(goal)}%</p><p class="brand-note">${escapeHtml(goal.memo || '')}</p></div>`).join('') || empty()}</div>`;
+  const majorGoals = state.goals.filter(goal => goal.type === '大目標');
+  const orphans = state.goals.filter(goal => goal.type !== '大目標' && !majorGoals.some(major => major.id === goal.parentId));
+  const childRow = child => `<div class="brand-goal-child-row">
+    <div class="brand-goal-child-row-head"><div class="brand-card-title"><span class="brand-chip">${escapeHtml(child.type || '目標')}</span><h4 title="${escapeHtml(child.title)}">${escapeHtml(child.title)}</h4></div>
+    <div class="brand-card-actions"><button class="btn btn-ghost btn-small" data-action="edit-goal" data-id="${child.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-goal" data-id="${child.id}">削除</button></div></div>
+    <div class="brand-goal-meta-row"><span>${child.dueDate ? `期限: ${child.dueDate}` : '期限なし'}</span><b>${goalProgress(child)}%</b></div>
+    ${progressBar(goalProgress(child))}
+    ${child.memo ? `<p class="brand-note">${escapeHtml(child.memo)}</p>` : ''}
+  </div>`;
+  const cluster = (major, children) => `<article class="brand-card brand-goal-cluster">
+    <div class="brand-goal-cluster-head">
+      <div class="brand-card-title"><span class="brand-chip">${escapeHtml(major.type || '目標')}</span><h3 title="${escapeHtml(major.title)}">${escapeHtml(major.title)}</h3></div>
+      <div class="brand-card-actions"><button class="btn btn-ghost btn-small" data-action="edit-goal" data-id="${major.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-goal" data-id="${major.id}">削除</button></div>
+      <div class="brand-goal-meta-row"><span>${major.dueDate ? `期限: ${major.dueDate}` : '期限なし'}</span><b>完了率 ${goalProgress(major)}%</b></div>
+      ${progressBar(goalProgress(major))}
+      ${major.memo ? `<p class="brand-note">${escapeHtml(major.memo)}</p>` : ''}
+    </div>
+    ${children.length
+      ? `<div class="brand-goal-cluster-children"><p class="brand-goal-cluster-children-label">中目標・小タスク（${children.length}）</p>${children.map(childRow).join('')}</div>`
+      : `<p class="brand-goal-empty-children">まだ中目標・小タスクがありません。追加から「親目標」にこの大目標を選ぶと、ここに表示されます。</p>`}
+  </article>`;
+  const groups = majorGoals.map(major => cluster(major, goalChildren(major))).join('');
+  const orphanSection = orphans.length ? `<article class="brand-card brand-goal-cluster brand-goal-cluster-unassigned">
+    <div class="brand-goal-cluster-head"><div class="brand-card-title"><span class="brand-chip">未分類</span><h3>親目標が未設定</h3></div></div>
+    <div class="brand-goal-cluster-children">${orphans.map(childRow).join('')}</div>
+  </article>` : '';
+  const content = groups || orphanSection ? `<div class="brand-goal-tree">${groups}${orphanSection}</div>` : empty();
+  root.innerHTML = `${pageHead('目標管理','大目標ごとに、関連する中目標・小タスクをまとめて見ます。', '<button class="btn btn-primary" data-action="new-goal">追加</button>')}${content}`;
 }
 
 function renderMarkets(){
   const root = document.getElementById('brandMarkets');
   if(!root) return;
-  root.innerHTML = `${pageHead('マルシェ準備','準備チェックと売上目標をまとめます。', '<button class="btn btn-primary" data-action="new-market">マルシェ追加</button>')}
+  root.innerHTML = `${pageHead('マルシェ準備','準備チェックと売上目標をまとめます。', '<button class="btn btn-primary" data-action="new-market">追加</button>')}
     <div class="brand-grid">${state.markets.map(market => {
       const productTotals = marketProductTotals(market);
-      return `<div class="brand-card brand-market-card"><div class="brand-row"><div><h3>${escapeHtml(market.name)}</h3><p class="brand-note">${market.date || '-'} / ${escapeHtml(market.place || '')} / あと${daysUntil(market.date) ?? '-'}日</p></div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="edit-market" data-id="${market.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-market" data-id="${market.id}">削除</button></div></div><div class="brand-meter"><span>準備 ${marketProgress(market)}%</span>${progressBar(marketProgress(market))}</div><p class="brand-note">売上目標 ${yen(market.salesGoal)} / 実績 ${yen(market.actualSales)}</p>
+      return `<div class="brand-card brand-market-card"><div class="brand-card-head"><div class="brand-card-title"><h3>${escapeHtml(market.name)}</h3><p class="brand-note">${market.date || '-'} / ${escapeHtml(market.place || '')} / あと${daysUntil(market.date) ?? '-'}日</p></div><div class="brand-card-actions"><button class="btn btn-ghost btn-small" data-action="edit-market" data-id="${market.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-market" data-id="${market.id}">削除</button></div></div><div class="brand-meter"><span>準備 ${marketProgress(market)}%</span>${progressBar(marketProgress(market))}</div><p class="brand-note">売上目標 ${yen(market.salesGoal)} / 実績 ${yen(market.actualSales)} / 参加費 ${yen(market.participationFee)}</p>
+      ${market.participationFee ? `<p class="brand-note">差引 ${yen(Number(market.actualSales || 0) - Number(market.participationFee || 0))}（実績 - 参加費）</p>` : ''}
       <div class="brand-detail-grid">
         <div><small>机</small><strong>${escapeHtml(market.deskStatus || '未確認')}</strong></div>
         <div><small>椅子</small><strong>${escapeHtml(market.chairStatus || '未確認')}</strong></div>
@@ -311,14 +582,18 @@ function renderMarkets(){
 function renderSales(){
   const root = document.getElementById('brandSales');
   if(!root) return;
+  const month = state.salesMonth || new Date().toISOString().slice(0, 7);
+  const manualSales = state.sales.filter(sale => (sale.date || '').startsWith(month));
+  const autoSales = autoSalesEntries(month);
   const total = monthlySales();
   const goal = Number(state.monthlySalesGoal || 0);
   const byCat = Object.fromEntries(CATEGORIES.map(cat => [cat, 0]));
-  state.sales.filter(sale => (sale.date || '').startsWith(state.salesMonth)).forEach(sale => { byCat[sale.category] = (byCat[sale.category] || 0) + Number(sale.amount || 0); });
-  root.innerHTML = `${pageHead('売上管理','月間目標とカテゴリ別の売上を見ます。', '<button class="btn btn-primary" data-action="new-sale">売上追加</button>')}
+  [...manualSales, ...autoSales].forEach(sale => { byCat[sale.category] = (byCat[sale.category] || 0) + Number(sale.amount || 0); });
+  const combinedList = [...manualSales.map(s => ({...s, source:'manual'})), ...autoSales].sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+  root.innerHTML = `${pageHead('売上管理','お客様注文（完了時）と卸しの納品実績は自動で合算されます。', '<button class="btn btn-primary" data-action="new-sale">その他の売上を追加</button>')}
     <section class="brand-card brand-sales-hero">
       <div>
-        <span class="brand-chip ok">${state.salesMonth || new Date().toISOString().slice(0, 7)}</span>
+        <span class="brand-chip ok">${month}</span>
         <h3>${yen(total)}</h3>
         <p>目標 ${yen(goal)} / あと ${yen(Math.max(0, goal - total))}</p>
       </div>
@@ -331,7 +606,11 @@ function renderSales(){
     </section>
     <section class="brand-sales-section">
       <h3>売上履歴</h3>
-      <div class="brand-sales-list">${state.sales.slice().sort((a,b)=>(b.date || '').localeCompare(a.date || '')).map(sale => `<div class="brand-sales-row"><div><strong>${yen(sale.amount)}</strong><span>${sale.date || '-'} / ${escapeHtml(sale.category)}</span>${sale.memo ? `<p>${escapeHtml(sale.memo)}</p>` : ''}</div><button class="btn btn-ghost btn-small brand-danger" data-action="delete-sale" data-id="${sale.id}">削除</button></div>`).join('') || empty()}</div>
+      <p class="brand-note">お客様注文が完了・卸しの納品実績を記録すると自動でここに表示されます。マルシェの現金販売など、他に記録がない売上だけ「その他の売上を追加」から入力してください。</p>
+      <div class="brand-sales-list">${combinedList.map(sale => sale.source === 'manual'
+        ? `<div class="brand-sales-row"><div><strong>${yen(sale.amount)}</strong><span>${sale.date || '-'} / ${escapeHtml(sale.category)}</span>${sale.memo ? `<p>${escapeHtml(sale.memo)}</p>` : ''}</div><button class="btn btn-ghost btn-small brand-danger" data-action="delete-sale" data-id="${sale.id}">削除</button></div>`
+        : `<div class="brand-sales-row"><div><strong>${yen(sale.amount)}</strong> <span class="brand-chip ok">自動</span><span>${sale.date || '-'} / ${escapeHtml(sale.category)}</span><p>${escapeHtml(sale.memo)}</p></div></div>`
+      ).join('') || empty()}</div>
     </section>`;
 }
 
@@ -340,16 +619,17 @@ function customerOpsCard(customer){
       <div class="brand-ops-head">
         <div>
           <span class="brand-chip ok">${escapeHtml(customer.status || '未設定')}</span>
-          <h3>${escapeHtml(customer.customerName || '名前未設定')}</h3>
+          <h3>${escapeHtml(customerDisplayName(customer))}</h3>
           <p>${escapeHtml(customer.orderNo || '-')} / ${escapeHtml(customer.productName || '-')} / ${yen(customer.amount)}</p>
         </div>
         <div class="brand-product-actions">
-          <button class="btn btn-ghost btn-small" data-action="edit-customer" data-id="${customer.id}">編集</button>
-          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-customer" data-id="${customer.id}">削除</button>
+          <button class="btn btn-ghost btn-small" data-action="edit-order" data-id="${customer.id}">編集</button>
+          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-order" data-id="${customer.id}">削除</button>
         </div>
       </div>
       <div class="brand-meter"><span>制作進捗 ${customerProgress(customer)}%</span>${progressBar(customerProgress(customer))}</div>
       <div class="brand-detail-grid">
+        <div><small>シート回収日</small><strong>${customer.collectedDate || '-'}</strong></div>
         <div><small>ペット</small><strong>${escapeHtml(customer.petName || '-')}</strong><span>${escapeHtml(customer.petType || '-')}</span></div>
         <div><small>納期</small><strong>${customer.dueDate || '-'}</strong><span>あと${daysUntil(customer.dueDate) ?? '-'}日</span></div>
         <div><small>入金</small><strong>${escapeHtml(customer.paid || '-')}</strong><span>完了日 ${customer.completedAt || '-'}</span></div>
@@ -362,6 +642,12 @@ function customerOpsCard(customer){
     </article>`;
 }
 
+function leadNegotiationSummary(leadId){
+  const records = asArray(state.negotiations).filter(n => n.leadId === leadId).slice().sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  if(!records.length) return '';
+  const latest = records[0];
+  return `<p class="brand-note">商談記録 ${records.length}件・最新 ${latest.date || '-'}${latest.result ? ` ${escapeHtml(latest.result)}` : ''}</p>`;
+}
 function leadOpsCard(lead){
   return `<article class="brand-card brand-ops-card">
       <div class="brand-ops-head">
@@ -385,6 +671,7 @@ function leadOpsCard(lead){
         <div><small>連絡先</small><strong>${escapeHtml(lead.email || lead.phone || '-')}</strong><span>${escapeHtml(lead.hp || '')}</span></div>
       </div>
       <div class="brand-next-action"><small>次にやること</small><p>${escapeHtml(lead.nextAction || '未設定')}</p></div>
+      ${leadNegotiationSummary(lead.id)}
       <details class="brand-step-panel">
         <summary>営業状況を変更</summary>
         <div class="brand-status">${LEAD_STATUSES.map(status => `<button class="brand-step ${lead.status === status ? 'active' : ''}" data-action="set-lead-status" data-id="${lead.id}" data-value="${status}">${status}</button>`).join('')}</div>
@@ -392,15 +679,46 @@ function leadOpsCard(lead){
     </article>`;
 }
 
+function customerProfileSummaryLine(profile){
+  return [profile.sns ? `SNS: ${escapeHtml(profile.sns)}` : '', profile.line ? `LINE: ${escapeHtml(profile.line)}` : '', profile.email ? escapeHtml(profile.email) : ''].filter(Boolean).join(' / ') || '連絡先未登録';
+}
 function renderCrm(){
   const root = document.getElementById('brandCrm');
   if(!root) return;
   const counts = customerCounts();
   const activeCustomers = state.customers.filter(customer => customer.status !== '完了');
   const archivedCustomers = state.customers.filter(customer => customer.status === '完了');
-  root.innerHTML = `${pageHead('お客様管理','注文ごとの現在地が見えるよう、進捗バーとステータスで追います。', '<button class="btn btn-primary" data-action="new-customer">注文追加</button>')}
+  const profiles = asArray(state.customerProfiles).slice().sort((a,b) => {
+    const aActive = activeCustomers.some(o => o.customerId === a.id);
+    const bActive = activeCustomers.some(o => o.customerId === b.id);
+    if(aActive !== bActive) return aActive ? -1 : 1;
+    return a.name.localeCompare(b.name, 'ja');
+  });
+  const profileGroups = profiles.map(profile => {
+    const orders = activeCustomers.filter(o => o.customerId === profile.id);
+    return `<details class="brand-archive brand-customer-group" open>
+      <summary><span>${escapeHtml(profile.name)}</span><b>${orders.length}件</b></summary>
+      <div class="brand-archive-body">
+        <div class="brand-card brand-customer-profile-card">
+          <div class="brand-card-title"><strong>${escapeHtml(profile.name)}</strong><p class="brand-note">${customerProfileSummaryLine(profile)}</p>${profile.memo ? `<p class="brand-note">${escapeHtml(profile.memo)}</p>` : ''}</div>
+          <div class="brand-card-foot">
+            <button class="btn btn-sage btn-small" data-action="new-order" data-id="${profile.id}">注文追加</button>
+            <div class="brand-card-actions">
+              <button class="btn btn-ghost btn-small" data-action="edit-customer-profile" data-id="${profile.id}">編集</button>
+              <button class="btn btn-ghost btn-small brand-danger" data-action="delete-customer-profile" data-id="${profile.id}">削除</button>
+            </div>
+          </div>
+        </div>
+        ${orders.length ? `<div class="brand-ops-grid">${orders.map(customerOpsCard).join('')}</div>` : empty('この方の進行中の注文はまだありません。')}
+      </div>
+    </details>`;
+  }).join('');
+  const orphanOrders = activeCustomers.filter(o => !profiles.some(p => p.id === o.customerId));
+  const orphanSection = orphanOrders.length ? `<section class="brand-wholesale-group"><div class="brand-mini-head"><h3>未分類の注文</h3></div><div class="brand-ops-grid">${orphanOrders.map(customerOpsCard).join('')}</div></section>` : '';
+  const bodyContent = profileGroups + orphanSection;
+  root.innerHTML = `${pageHead('お客様管理','お客様ごとに、注文の現在地をまとめて見ます。', '<button class="btn btn-primary" data-action="new-customer-profile">顧客追加</button>')}
     <div class="brand-status-summary">${CUSTOMER_STATUSES.map(status => `<div class="brand-status-tile"><strong>${counts[status]}</strong><span>${status}</span></div>`).join('')}</div>
-    <div class="brand-ops-grid">${activeCustomers.map(customerOpsCard).join('') || empty()}</div>
+    ${bodyContent || empty('まだお客様がいません。「顧客追加」から登録してください。')}
     ${archiveDetails('完了アーカイブ', archivedCustomers, customerOpsCard)}`;
 }
 
@@ -410,7 +728,7 @@ function renderLeads(){
   const counts = leadCounts();
   const activeLeads = state.leads.filter(lead => !['導入済','見送り'].includes(lead.status));
   const archivedLeads = state.leads.filter(lead => ['導入済','見送り'].includes(lead.status));
-  root.innerHTML = `${pageHead('営業先管理','営業状況ごとの件数と、次の連絡予定を見やすくします。', '<button class="btn btn-primary" data-action="new-lead">営業先追加</button>')}
+  root.innerHTML = `${pageHead('営業先管理','営業状況ごとの件数と、次の連絡予定を見やすくします。', '<button class="btn btn-primary" data-action="new-lead">追加</button>')}
     <div class="brand-status-summary">${LEAD_STATUSES.map(status => `<div class="brand-status-tile"><strong>${counts[status]}</strong><span>${status}</span></div>`).join('')}</div>
     <div class="brand-ops-grid">${activeLeads.map(leadOpsCard).join('') || empty()}</div>
     ${archiveDetails('完了・見送りアーカイブ', archivedLeads, leadOpsCard)}`;
@@ -419,68 +737,457 @@ function renderLeads(){
 function renderProducts(){
   const root = document.getElementById('brandProducts');
   if(!root) return;
-  const popular = [...state.products].filter(product => Number(product.sold || 0) > 0).sort((a,b)=>Number(b.sold || 0)-Number(a.sold || 0)).slice(0, 3);
-  const stale = state.products.filter(product => product.status === '販売中' && (!product.lastSoldDate || daysUntil(product.lastSoldDate) < -30));
-  root.innerHTML = `${pageHead('商品管理','価格・原価・在庫・販売状態をまとめます。', '<button class="btn btn-primary" data-action="new-product">商品追加</button>')}
-    <div class="brand-insight-grid">
-      <section class="brand-insight-card">
-        <div class="brand-mini-head"><h3>人気商品</h3><span class="brand-chip ok">${popular.length}件</span></div>
-        ${popular.length ? `<div class="brand-compact-list">${popular.map(p => `<div><strong>${escapeHtml(p.name || '商品名未設定')}</strong><span>販売 ${p.sold || 0}</span></div>`).join('')}</div>` : empty('まだ販売数の記録がありません。')}
-      </section>
-      <section class="brand-insight-card">
-        <div class="brand-mini-head"><h3>最近売れていない商品</h3><span class="brand-chip">${stale.length}件</span></div>
-        ${stale.length ? `<div class="brand-compact-list">${stale.map(p => `<div><strong>${escapeHtml(p.name || '商品名未設定')}</strong><span>最終 ${p.lastSoldDate || '-'}</span></div>`).join('')}</div>` : empty('該当商品はありません。')}
-      </section>
-    </div>
-    <div class="brand-product-grid">${state.products.map(product => `<article class="brand-card brand-product-card">
+  const onlineProducts = state.products.filter(product => !isWholesaleProduct(product) && !isCustomProduct(product));
+  const wholesaleProducts = state.products.filter(isWholesaleProduct);
+  const customProducts = state.products.filter(isCustomProduct);
+  const listings = allWholesaleListings();
+  const unassignedProducts = wholesaleProducts.filter(product => !asArray(product.wholesaleListings).length);
+  const storeNames = wholesaleStoreNames();
+  const productTitleHtml = product => `<div class="brand-product-title">
+    <h3>${escapeHtml(product.name || '商品名未設定')}</h3>
+    ${product.sku ? `<p class="brand-product-sku">${escapeHtml(product.sku)}</p>` : ''}
+    <p>${escapeHtml(product.category || 'カテゴリ未設定')}</p>
+    ${formatDimensions(product) ? `<p class="brand-product-dimensions">${escapeHtml(formatDimensions(product))}</p>` : ''}
+    ${productColorSwatches(product)}
+  </div>`;
+  const listingTitleHtml = (listing, product) => `<div class="brand-product-title">
+    <h3>${escapeHtml(listingDisplayName(listing, product))}</h3>
+    ${product.sku ? `<p class="brand-product-sku">${escapeHtml(product.sku)}</p>` : ''}
+    <p>${escapeHtml(product.category || 'カテゴリ未設定')}</p>
+    ${formatDimensions(product) ? `<p class="brand-product-dimensions">${escapeHtml(formatDimensions(product))}</p>` : ''}
+    ${productColorSwatches(product, listing.colorIds)}
+  </div>`;
+  const manageCard = product => `<article class="brand-card brand-product-card">
       <div class="brand-product-head">
-        <div class="brand-product-title">
-          <h3>${escapeHtml(product.name || '商品名未設定')}</h3>
-          <p>${escapeHtml(product.category || 'カテゴリ未設定')} / ${escapeHtml(product.status || '未設定')}</p>
-        </div>
+        ${productTitleHtml(product)}
         <div class="brand-product-actions">
           <button class="btn btn-ghost btn-small" data-action="edit-product" data-id="${product.id}">編集</button>
+          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
+        </div>
+      </div>
+      <span class="brand-wholesale-store">${isWholesaleProduct(product) ? '卸し商品' : isCustomProduct(product) ? 'オーダーメイド' : 'ネット販売'}</span>
+      <div class="brand-product-metrics">
+        <span><b>${yen(product.cost)}</b><small>原価</small></span>
+        <span><b>${product.minutes || 0}分</b><small>制作</small></span>
+      </div>
+      ${product.description ? `<p class="brand-note">${escapeHtml(product.description)}</p>` : '<p class="brand-note">説明はまだありません。</p>'}
+    </article>`;
+  const onlineCard = product => `<article class="brand-card brand-product-card">
+      <div class="brand-product-head">
+        ${productTitleHtml(product)}
+        <div class="brand-product-actions">
+          <button class="btn btn-ghost btn-small" data-action="edit-online-channel" data-id="${product.id}">編集</button>
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
         </div>
       </div>
       <div class="brand-product-metrics">
         <span><b>${yen(product.price)}</b><small>価格</small></span>
         <span><b>${yen(product.cost)}</b><small>原価</small></span>
-        <span><b>${product.stock || 0}</b><small>在庫</small></span>
+        <span><b>${Number(product.stock || 0)}</b><small>在庫</small></span>
         <span><b>${product.minutes || 0}分</b><small>制作</small></span>
       </div>
       ${product.description ? `<p class="brand-note">${escapeHtml(product.description)}</p>` : '<p class="brand-note">説明はまだありません。</p>'}
-    </article>`).join('') || empty()}</div>`;
+    </article>`;
+  const customCard = product => `<article class="brand-card brand-product-card">
+      <div class="brand-product-head">
+        ${productTitleHtml(product)}
+        <div class="brand-product-actions">
+          <button class="btn btn-ghost btn-small" data-action="edit-custom-channel" data-id="${product.id}">編集</button>
+          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
+        </div>
+      </div>
+      <div class="brand-product-metrics">
+        <span><b>${yen(product.basePrice)}</b><small>基本価格（目安）</small></span>
+        <span><b>${yen(product.cost)}</b><small>原価</small></span>
+        <span><b>${product.minutes || 0}分</b><small>制作</small></span>
+      </div>
+      ${product.description ? `<p class="brand-note">${escapeHtml(product.description)}</p>` : '<p class="brand-note">説明はまだありません。</p>'}
+    </article>`;
+  const listingCard = ({listing, product}) => `<article class="brand-card brand-product-card">
+      <div class="brand-product-head">
+        ${listingTitleHtml(listing, product)}
+        <div class="brand-product-actions">
+          <button class="btn btn-ghost btn-small" data-action="edit-listing" data-id="${product.id}" data-listing="${listing.id}">編集</button>
+          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-listing" data-id="${product.id}" data-listing="${listing.id}">削除</button>
+        </div>
+      </div>
+      ${listing.status ? `<span class="brand-wholesale-store">${escapeHtml(listing.status)}</span>` : ''}
+      <div class="brand-product-metrics">
+        <span><b>${yen(listing.wholesalePrice)}</b><small>卸し価格</small></span>
+        <span><b>${yen(product.cost)}</b><small>原価</small></span>
+        <span><b>${productDelivered(listing)}</b><small>累計卸し数</small></span>
+        <span><b>${product.minutes || 0}分</b><small>制作</small></span>
+      </div>
+      ${product.description ? `<p class="brand-note">${escapeHtml(product.description)}</p>` : ''}
+      ${listing.memo ? `<p class="brand-note">${escapeHtml(listing.memo)}</p>` : ''}
+      <details class="brand-delivery-panel">
+        <summary><span>卸し実績（${asArray(listing.deliveries).length}件）</span><b>${latestDeliveryLabel(listing)}</b></summary>
+        <div class="brand-mini-head"><button class="btn btn-ghost btn-small" data-action="new-delivery" data-id="${product.id}" data-listing="${listing.id}">記録追加</button></div>
+        <div class="brand-market-product-list">${asArray(listing.deliveries).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(d => `<div class="brand-market-product-row"><div><strong>${d.date || '日付未設定'}</strong><span>${d.qty || 0}個</span>${d.memo ? `<p>${escapeHtml(d.memo)}</p>` : ''}</div><button class="btn btn-ghost btn-small brand-danger" data-action="delete-delivery" data-id="${product.id}" data-listing="${listing.id}" data-delivery="${d.id}">削除</button></div>`).join('') || empty('まだ卸し実績がありません。記録追加から入力できます。')}</div>
+      </details>
+      <div class="brand-toolbar" style="margin-bottom:0;"><button class="btn btn-ghost btn-small" data-action="new-listing" data-id="${product.id}">他の店舗にも卸し先を追加</button></div>
+    </article>`;
+  const unassignedCard = product => `<article class="brand-card brand-product-card">
+      <div class="brand-product-head">
+        ${productTitleHtml(product)}
+        <div class="brand-product-actions">
+          <button class="btn btn-ghost btn-small" data-action="edit-product" data-id="${product.id}">編集</button>
+          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
+        </div>
+      </div>
+      <div class="brand-product-metrics">
+        <span><b>${yen(product.cost)}</b><small>原価</small></span>
+        <span><b>${product.minutes || 0}分</b><small>制作</small></span>
+      </div>
+      ${product.description ? `<p class="brand-note">${escapeHtml(product.description)}</p>` : ''}
+      <div class="brand-toolbar" style="margin-bottom:0;"><button class="btn btn-sage btn-small" data-action="new-listing" data-id="${product.id}">卸し先を追加</button></div>
+    </article>`;
+  const currentCount = activeProductTab === 'wholesale' ? listings.length : activeProductTab === 'online' ? onlineProducts.length : state.products.length;
+  const totalStock = activeProductTab === 'wholesale'
+    ? listings.reduce((sum, x) => sum + productDelivered(x.listing), 0)
+    : onlineProducts.reduce((sum, p) => sum + Number(p.stock || 0), 0);
+  const totalValue = activeProductTab === 'wholesale'
+    ? listings.reduce((sum, x) => sum + productDelivered(x.listing) * Number(x.listing.wholesalePrice || 0), 0)
+    : onlineProducts.reduce((sum, p) => sum + Number(p.stock || 0) * Number(p.price || 0), 0);
+  const tabs = `<div class="brand-product-tabs">
+    <button class="brand-filter ${activeProductTab === 'manage' ? 'active' : ''}" data-action="set-product-tab" data-value="manage">商品管理 <span>${state.products.length}</span></button>
+    <button class="brand-filter ${activeProductTab === 'online' ? 'active' : ''}" data-action="set-product-tab" data-value="online">ネット販売在庫 <span>${onlineProducts.length}</span></button>
+    <button class="brand-filter ${activeProductTab === 'wholesale' ? 'active' : ''}" data-action="set-product-tab" data-value="wholesale">卸し商品 <span>${wholesaleProducts.length}</span></button>
+    <button class="brand-filter ${activeProductTab === 'custom' ? 'active' : ''}" data-action="set-product-tab" data-value="custom">オーダーメイド <span>${customProducts.length}</span></button>
+  </div>`;
+  const summary = activeProductTab === 'manage' ? `<div class="brand-status-summary">
+    <div class="brand-status-tile"><strong>${state.products.length}</strong><span>商品数</span></div>
+    <div class="brand-status-tile"><strong>${onlineProducts.length}</strong><span>ネット販売</span></div>
+    <div class="brand-status-tile"><strong>${wholesaleProducts.length}</strong><span>卸し商品</span></div>
+    <div class="brand-status-tile"><strong>${customProducts.length}</strong><span>オーダーメイド</span></div>
+  </div>` : activeProductTab === 'custom' ? `<div class="brand-status-summary">
+    <div class="brand-status-tile"><strong>${customProducts.length}</strong><span>商品数</span></div>
+    <div class="brand-status-tile"><strong>${yen(customProducts.reduce((sum,p) => sum + Number(p.basePrice || 0), 0))}</strong><span>基本価格合計（目安）</span></div>
+  </div>` : `<div class="brand-status-summary">
+    <div class="brand-status-tile"><strong>${currentCount}</strong><span>${activeProductTab === 'wholesale' ? '卸し先数' : '商品数'}</span></div>
+    <div class="brand-status-tile"><strong>${totalStock}</strong><span>${activeProductTab === 'wholesale' ? '累計卸し数' : '在庫合計'}</span></div>
+    <div class="brand-status-tile"><strong>${activeProductTab === 'wholesale' ? storeNames.length : onlineProducts.length}</strong><span>${activeProductTab === 'wholesale' ? '店舗数' : 'ネット販売商品'}</span></div>
+    <div class="brand-status-tile"><strong>${yen(totalValue)}</strong><span>${activeProductTab === 'wholesale' ? '累計卸し金額' : '在庫金額目安'}</span></div>
+  </div>`;
+  const wholesaleToolbar = activeProductTab === 'wholesale' ? `<div class="brand-toolbar"><button class="btn btn-ghost btn-small" data-action="export-deliveries-csv">卸し実績をCSV出力</button></div>` : '';
+  const colorSection = `<details class="brand-archive brand-color-palette section-gap">
+    <summary><span>カラー管理</span><b>${state.colorPalette.length}色</b></summary>
+    <div class="brand-archive-body">
+      <div class="brand-color-list">${state.colorPalette.map(c => `<div class="brand-color-chip"><span class="brand-color-swatch" style="background:${escapeHtml(c.hex || '#ccc')}"></span><strong>${escapeHtml(c.code)}</strong><span>${escapeHtml(c.name)}${c.abbr ? `（${escapeHtml(c.abbr)}）` : ''}</span><button class="btn btn-ghost btn-small" data-action="edit-color" data-id="${c.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-color" data-id="${c.id}">削除</button></div>`).join('') || empty('カラーがまだありません。')}</div>
+      <button class="btn btn-sage btn-small" data-action="new-color" style="margin-top:10px;">カラー追加</button>
+    </div>
+  </details>`;
+  const groupedByStore = storeNames.map(store => {
+    const items = listings.filter(x => listingLeadName(x.listing) === store);
+    const stock = items.reduce((sum, x) => sum + productDelivered(x.listing), 0);
+    return `<details class="brand-archive brand-wholesale-group" open><summary><span>${escapeHtml(store)}</span><b>${items.length}商品 / 累計卸し${stock}</b></summary><div class="brand-product-grid">${items.map(listingCard).join('')}</div></details>`;
+  }).join('');
+  const unassignedSection = unassignedProducts.length ? `<section class="brand-wholesale-group"><div class="brand-mini-head"><h3>卸し先未設定</h3></div><div class="brand-product-grid">${unassignedProducts.map(unassignedCard).join('')}</div></section>` : '';
+  const content = activeProductTab === 'manage'
+    ? `<div class="brand-product-grid">${state.products.map(manageCard).join('') || empty('まだ商品がありません。「追加」から登録してください。')}</div>`
+    : activeProductTab === 'wholesale'
+    ? (groupedByStore + unassignedSection || empty('卸し商品はまだありません。商品管理から管理区分を「卸し商品」にして登録できます。'))
+    : activeProductTab === 'custom'
+    ? `<div class="brand-product-grid">${customProducts.map(customCard).join('') || empty('オーダーメイド商品はまだありません。商品管理から管理区分を「オーダーメイド」にして登録できます。')}</div>`
+    : `<div class="brand-product-grid">${onlineProducts.map(onlineCard).join('') || empty('ネット販売在庫はまだありません。')}</div>`;
+  root.innerHTML = `${pageHead('商品管理','商品情報・ネット販売・卸し商品・オーダーメイドを分けて管理します。', '<button class="btn btn-primary" data-action="new-product">追加</button>')}${tabs}${summary}${wholesaleToolbar}${activeProductTab === 'manage' ? colorSection : ''}${content}`;
 }
 
 function renderIdeas(){
   const root = document.getElementById('brandIdeas');
   if(!root) return;
-  root.innerHTML = `${pageHead('アイデア帳','思いついたことをすぐ保存し、後からタスク化できます。', '<button class="btn btn-primary" data-action="new-brand-idea">アイデア追加</button>')}
-    <div class="brand-grid">${state.ideas.map(idea => `<div class="brand-card"><div class="brand-row"><div><span class="brand-chip">${escapeHtml(idea.priority || '中')}</span><h3>${escapeHtml(idea.title)}</h3></div><div class="brand-row"><button class="btn btn-sage btn-small" data-action="idea-to-task" data-id="${idea.id}">タスク化</button><button class="btn btn-ghost btn-small" data-action="edit-brand-idea" data-id="${idea.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-idea" data-id="${idea.id}">削除</button></div></div><p class="brand-note">${escapeHtml(idea.memo || '')}</p><p class="brand-note">${escapeHtml(idea.tags || '')} / ${idea.createdAt || ''}</p></div>`).join('') || empty()}</div>`;
+  root.innerHTML = `${pageHead('アイデア帳','思いついたことをすぐ保存し、後からタスク化できます。', '<button class="btn btn-primary" data-action="new-brand-idea">追加</button>')}
+    <div class="brand-grid">${state.ideas.map(idea => `<div class="brand-card"><div class="brand-card-head"><div class="brand-card-title"><span class="brand-chip">${escapeHtml(idea.priority || '中')}</span><h3>${escapeHtml(idea.title)}</h3></div><div class="brand-card-actions"><button class="btn btn-sage btn-small" data-action="idea-to-task" data-id="${idea.id}">タスク化</button><button class="btn btn-ghost btn-small" data-action="edit-brand-idea" data-id="${idea.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-idea" data-id="${idea.id}">削除</button></div></div><p class="brand-note">${escapeHtml(idea.memo || '')}</p><p class="brand-note">${escapeHtml(idea.tags || '')} / ${idea.createdAt || ''}</p></div>`).join('') || empty()}</div>`;
 }
 
-function renderAll(){ renderHome(); renderTasks(); renderGoals(); renderMarkets(); renderSales(); renderCrm(); renderLeads(); renderProducts(); renderIdeas(); }
+function invoiceHistoryCard(invoice){
+  const totals = invoiceTotals(invoice.items, invoice.taxRate, invoice.shippingFee);
+  const type = invoice.documentType || '請求書';
+  const canMakeReceipt = type === '請求書' || type === '納品書';
+  return `<div class="brand-card"><div class="brand-card-head"><div class="brand-card-title"><span class="brand-chip">${escapeHtml(type)}</span><strong>${escapeHtml(invoice.number)}</strong><p class="brand-note">${invoice.date || '-'}</p></div><div class="brand-card-actions">${canMakeReceipt ? `<button class="btn btn-sage btn-small" data-action="create-receipt-from-invoice" data-id="${invoice.id}">領収書を作成</button>` : ''}<button class="btn btn-ghost btn-small" data-action="load-invoice-history" data-id="${invoice.id}">呼び出す</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-invoice-history" data-id="${invoice.id}">削除</button></div></div><p class="brand-note">合計 ${yen(totals.total)}（税込）</p></div>`;
+}
+function invoiceHistoryByStore(history){
+  const storeNames = [...new Set(history.map(inv => inv.store || inv.billTo || '店舗未設定'))].sort((a,b) => a.localeCompare(b, 'ja'));
+  return storeNames.map(store => {
+    const items = history.filter(inv => (inv.store || inv.billTo || '店舗未設定') === store);
+    return `<details class="brand-archive brand-invoice-history-group"><summary><span>${escapeHtml(store)}</span><b>${items.length}件</b></summary><div class="brand-archive-body">${items.map(invoiceHistoryCard).join('')}</div></details>`;
+  }).join('');
+}
+function bankInfoHtml(profile){
+  const rows = [];
+  if(profile.bankName || profile.branchName) rows.push(['銀行', [profile.bankName, profile.branchName].filter(Boolean).map(escapeHtml).join(' ')]);
+  if(profile.accountType || profile.accountNumber) rows.push(['口座', [profile.accountType, profile.accountNumber].filter(Boolean).map(escapeHtml).join(' ')]);
+  if(profile.accountHolder) rows.push(['名義', escapeHtml(profile.accountHolder)]);
+  if(!rows.length) return '';
+  return `<div class="invoice-bank"><p>お振込先</p><table class="invoice-bank-table">${rows.map(([label, value]) => `<tr><th>${label}</th><td>${value}</td></tr>`).join('')}</table></div>`;
+}
+function invoiceGreeting(docType){
+  if(docType === '納品書') return 'この度はご注文ありがとうございます。<br>下記のとおり納品申し上げます。';
+  if(docType === '見積書') return 'いつもお世話になっております。<br>下記のとおりお見積り申し上げます。';
+  if(docType === '領収書') return '上記金額を正に領収いたしました。';
+  return 'いつもお世話になっております。<br>下記のとおりご請求申し上げます。';
+}
+function invoiceDueDateLabel(docType){
+  if(docType === '納品書') return '納品日';
+  if(docType === '見積書') return '有効期限';
+  if(docType === '領収書') return '領収日';
+  return '支払期限';
+}
+function invoiceTotalLabel(docType){
+  if(docType === '納品書') return '合計金額';
+  if(docType === '見積書') return 'お見積り金額';
+  if(docType === '領収書') return '領収金額';
+  return 'ご請求金額';
+}
+function receiptCopyHtml(draft, profile, totals, copyLabel){
+  const { subtotal, tax, total } = totals;
+  return `<div class="receipt-copy">
+    <div class="receipt-copy-head">
+      <h1>領収書</h1>
+      <span class="receipt-copy-badge">${escapeHtml(copyLabel)}</span>
+    </div>
+    <div class="receipt-meta-row"><span>発行日</span><strong>${draft.date || '-'}</strong><span>領収書番号</span><strong>${escapeHtml(draft.number || '-')}</strong></div>
+    <div class="receipt-billto">${escapeHtml(draft.billTo || draft.store || 'お客様')} 様</div>
+    <div class="receipt-amount">${yen(total)}<small>（税込）</small></div>
+    <p class="receipt-note-line">上記金額を正に領収いたしました。</p>
+    <div class="receipt-description">但し　${draft.notes ? escapeHtml(draft.notes) : '　　　　　　　　　　　　　　　　'}として</div>
+    <table class="receipt-breakdown">
+      <tr><td>小計（税抜）</td><td>${yen(subtotal)}</td></tr>
+      <tr><td>消費税（${draft.taxRate || 0}%）</td><td>${yen(tax)}</td></tr>
+    </table>
+    <div class="receipt-seller">
+      <p class="receipt-seller-name">${escapeHtml(profile.name || '（発行者情報未設定）')}</p>
+      ${profile.postalCode ? `<p>〒${escapeHtml(profile.postalCode)}</p>` : ''}
+      ${profile.address ? `<p>${escapeHtml(profile.address)}</p>` : ''}
+      ${profile.phone ? `<p>TEL: ${escapeHtml(profile.phone)}</p>` : ''}
+      ${profile.invoiceRegistrationNumber ? `<p>登録番号：${escapeHtml(profile.invoiceRegistrationNumber)}</p>` : ''}
+    </div>
+  </div>`;
+}
+const INVOICE_TABLE_MIN_ROWS = 4;
+function receiptItemsManageHtml(items){
+  const rows = items.map((item, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(item.name)}</td><td>${item.qty}</td><td>${yen(item.price)}</td><td>${yen(Number(item.qty || 0) * Number(item.price || 0))}</td><td><button class="btn btn-ghost btn-small" data-action="edit-invoice-item" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-invoice-item" data-id="${item.id}">削除</button></td></tr>`).join('');
+  return `<div class="brand-card no-print section-gap">
+    <div class="brand-card-head">
+      <div class="brand-card-title"><strong>内訳（画面確認用・印刷には出ません）</strong><p class="brand-note">複数の商品をまとめて1件の領収書にできます。</p></div>
+      <div class="brand-card-actions"><button class="btn btn-ghost btn-small" data-action="add-invoice-item">明細を追加</button></div>
+    </div>
+    <table class="invoice-table">
+      <thead><tr><th>No.</th><th>品目</th><th>数量</th><th>単価</th><th>金額</th><th></th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="6">明細がありません。「明細を追加」から入力してください。</td></tr>'}</tbody>
+    </table>
+  </div>`;
+}
+function renderInvoice(){
+  const root = document.getElementById('brandInvoice');
+  if(!root) return;
+  const draft = state.invoiceDraft;
+  const profile = state.sellerProfile || {};
+  const history = asArray(state.invoices).slice().sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const historySection = history.length ? `<div class="no-print section-gap"><h3>書類履歴</h3>${invoiceHistoryByStore(history)}</div>` : '';
+  const actions = `<button class="btn btn-ghost btn-small" data-action="edit-seller-profile">発行者情報</button><button class="btn btn-primary" data-action="${draft ? 'edit-invoice-header' : 'generate-invoice'}">${draft ? '書類情報を編集' : '書類を作成'}</button>`;
+  if(!draft){
+    root.innerHTML = `${pageHead('帳票','請求書・見積書・納品書・領収書を、卸し実績から自動で作成できます。', actions)}${empty('まだ書類がありません。「書類を作成」から種類・店舗・期間を選んでください。')}${historySection}`;
+    return;
+  }
+  const docType = draft.documentType || '請求書';
+  const isInvoice = docType === '請求書';
+  const isReceipt = docType === '領収書';
+  const showRegistrationNumber = docType === '請求書' || docType === '領収書';
+  const items = asArray(draft.items);
+  const totals = invoiceTotals(items, draft.taxRate, draft.shippingFee);
+  const { subtotal, shipping, tax, total } = totals;
+  const periodLabel = draft.periodFrom || draft.periodTo ? `対象期間: ${draft.periodFrom || '-'} 〜 ${draft.periodTo || '-'}` : '';
+  const blankRows = Math.max(0, INVOICE_TABLE_MIN_ROWS - items.length);
+  const itemRows = items.map((item, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(item.name)}</td><td>${item.qty}</td><td>${yen(item.price)}</td><td>${yen(Number(item.qty || 0) * Number(item.price || 0))}</td><td class="no-print"><button class="btn btn-ghost btn-small" data-action="edit-invoice-item" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-invoice-item" data-id="${item.id}">削除</button></td></tr>`).join('');
+  const emptyRows = Array.from({ length: blankRows }, (_, i) => `<tr class="no-print"><td>${items.length + i + 1}</td><td></td><td></td><td></td><td></td><td class="no-print"></td></tr>`).join('');
+  const sheetBody = isReceipt
+    ? `${receiptCopyHtml(draft, profile, totals, '領収書')}<div class="receipt-cut-line"><span>✂ きりとり線</span></div>${receiptCopyHtml(draft, profile, totals, '控え')}`
+    : `<div class="invoice-head">
+          <h1>${escapeHtml(docType)}</h1>
+          <div class="invoice-meta">
+            <div class="invoice-meta-row"><span>発行日</span><strong>${draft.date || '-'}</strong><span>${escapeHtml(docType)}番号</span><strong>${escapeHtml(draft.number || '-')}</strong></div>
+            <div class="invoice-meta-row"><span>${invoiceDueDateLabel(docType)}</span><strong>${draft.dueDate || '-'}</strong><span>注文番号</span><strong>${escapeHtml(draft.orderNumber || '-')}</strong></div>
+          </div>
+        </div>
+        <div class="invoice-parties">
+          <div class="invoice-billto-block">
+            <div class="invoice-billto"><strong>${escapeHtml(draft.billTo || draft.store || 'お客様')} 御中</strong></div>
+            ${draft.billToContact ? `<p>お受取人：${escapeHtml(draft.billToContact)} 様</p>` : ''}
+            ${draft.billToPostalCode ? `<p>〒${escapeHtml(draft.billToPostalCode)}</p>` : ''}
+            ${draft.billToAddress ? `<p>${escapeHtml(draft.billToAddress)}</p>` : ''}
+            ${draft.billToPhone ? `<p>TEL: ${escapeHtml(draft.billToPhone)}</p>` : ''}
+            ${draft.billToEmail ? `<p>${escapeHtml(draft.billToEmail)}</p>` : ''}
+          </div>
+          <div class="invoice-seller">
+            <img class="invoice-logo" src="./assets/mofyla-logo.png" alt="MofYla logo">
+            <p class="invoice-seller-name">${escapeHtml(profile.name || '（発行者情報未設定）')}</p>
+            ${profile.contactPerson ? `<p>担当者：${escapeHtml(profile.contactPerson)}</p>` : ''}
+            ${profile.postalCode ? `<p>〒${escapeHtml(profile.postalCode)}</p>` : ''}
+            ${profile.address ? `<p>${escapeHtml(profile.address)}</p>` : ''}
+            ${profile.phone ? `<p>TEL: ${escapeHtml(profile.phone)}</p>` : ''}
+            ${profile.email ? `<p>${escapeHtml(profile.email)}</p>` : ''}
+            ${showRegistrationNumber && profile.invoiceRegistrationNumber ? `<p>登録番号：${escapeHtml(profile.invoiceRegistrationNumber)}</p>` : ''}
+          </div>
+        </div>
+        <p class="invoice-greeting">${invoiceGreeting(docType)}</p>
+        ${periodLabel ? `<p class="brand-note">${periodLabel}</p>` : ''}
+        <div class="invoice-total-highlight">${invoiceTotalLabel(docType)}　${yen(total)}（税込）</div>
+        <table class="invoice-table">
+          <thead><tr><th>No.</th><th>品目・商品名</th><th>数量</th><th>単価（税抜）</th><th>金額（税抜）</th><th class="no-print"></th></tr></thead>
+          <tbody>${itemRows || emptyRows ? itemRows + emptyRows : `<tr><td colspan="6">明細がありません。「明細を追加」から入力するか、卸し実績のある店舗で作り直してください。</td></tr>`}</tbody>
+        </table>
+        <div class="invoice-bottom">
+          <div class="invoice-notes"><p>備考</p><p class="invoice-notes-text">${draft.notes ? escapeHtml(draft.notes) : ''}</p></div>
+          <table class="invoice-summary-table">
+            <tr><td>小計（税抜）</td><td>${yen(subtotal)}</td></tr>
+            <tr><td>送料（税抜）</td><td>${yen(shipping)}</td></tr>
+            <tr><td>消費税（${draft.taxRate || 0}%）</td><td>${yen(tax)}</td></tr>
+            <tr class="invoice-grand-total"><td>合計（税込）</td><td>${yen(total)}</td></tr>
+          </table>
+        </div>
+        ${isInvoice ? bankInfoHtml(profile) : ''}
+        <div class="invoice-footer">
+          <span>${escapeHtml(profile.name || '')}</span>
+        </div>`;
+  root.innerHTML = `${pageHead('帳票','請求書・見積書・納品書・領収書を、卸し実績から自動で作成できます。', actions)}
+    <div class="invoice-toolbar no-print">
+      ${isReceipt ? '' : '<button class="btn btn-ghost btn-small" data-action="add-invoice-item">明細を追加</button>'}
+      <button class="btn btn-ghost btn-small brand-danger" data-action="clear-invoice">${escapeHtml(docType)}をクリア</button>
+      <button class="btn btn-sage btn-small" data-action="save-invoice-history">履歴に保存</button>
+      <button class="btn btn-primary btn-small" data-action="print-invoice">A4で印刷する</button>
+    </div>
+    ${isReceipt ? receiptItemsManageHtml(items) : ''}
+    <details class="brand-archive invoice-archive" id="invoiceArchive" open>
+      <summary class="no-print"><span>${escapeHtml(docType)}プレビュー</span><b>${escapeHtml(draft.number || '-')}</b></summary>
+      <div class="invoice-sheet${isReceipt ? ' receipt-sheet' : ''}" id="invoiceSheet">
+        ${sheetBody}
+      </div>
+    </details>
+    ${historySection}`;
+}
+
+function renderAll(){ renderHome(); renderTasks(); renderGoals(); renderMarkets(); renderSales(); renderCrm(); renderLeads(); renderNegotiations(); renderProducts(); renderIdeas(); renderInvoice(); renderCoupons(); }
+
+function negotiationOccurrence(negotiation){
+  const sameLeadSorted = asArray(state.negotiations).filter(n => n.leadId === negotiation.leadId).slice().sort((a,b) => (a.date||'').localeCompare(b.date||'') || (a.createdAt||'').localeCompare(b.createdAt||''));
+  const index = sameLeadSorted.findIndex(n => n.id === negotiation.id);
+  return index >= 0 ? index + 1 : sameLeadSorted.length + 1;
+}
+function negotiationResultClass(result){
+  if(result === '前向き') return 'ok';
+  if(result === '見送り') return 'warn';
+  if(result === '保留' || result === '要検討') return 'warm';
+  return '';
+}
+function renderNegotiations(){
+  const root = document.getElementById('brandNegotiations');
+  if(!root) return;
+  const allRecords = asArray(state.negotiations).slice().sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  const filterLeads = [...new Set(allRecords.map(n => n.leadId))]
+    .map(id => findBy('leads', id)).filter(Boolean)
+    .sort((a,b) => (a.shopName || '').localeCompare(b.shopName || '', 'ja'));
+  if(activeNegotiationLead !== 'all' && !filterLeads.some(l => l.id === activeNegotiationLead)) activeNegotiationLead = 'all';
+  const records = activeNegotiationLead === 'all' ? allRecords : allRecords.filter(n => n.leadId === activeNegotiationLead);
+  const filters = filterLeads.length ? `<div class="brand-toolbar"><div class="brand-filters">
+    <button class="brand-filter ${activeNegotiationLead === 'all' ? 'active' : ''}" data-action="filter-negotiation" data-value="all">すべて <span>${allRecords.length}</span></button>
+    ${filterLeads.map(l => `<button class="brand-filter ${activeNegotiationLead === l.id ? 'active' : ''}" data-action="filter-negotiation" data-value="${l.id}">${escapeHtml(l.shopName || '店舗未設定')} <span>${allRecords.filter(n => n.leadId === l.id).length}</span></button>`).join('')}
+  </div></div>` : '';
+  const cards = records.map(n => {
+    const lead = findBy('leads', n.leadId);
+    const preview = n.requestSummary || n.reaction || n.nextAction || '';
+    return `<article class="brand-card brand-negotiation-card" data-action="view-negotiation" data-id="${n.id}">
+      <div class="brand-negotiation-card-head">
+        <span class="brand-chip ${negotiationResultClass(n.result)}">${escapeHtml(n.result || '結果未記入')}</span>
+        <span class="brand-note">${n.date || '日付未設定'}${n.visitType ? ` / ${escapeHtml(n.visitType)}` : ''}</span>
+      </div>
+      <h3>${escapeHtml(lead?.shopName || '店舗未設定')}</h3>
+      ${preview ? `<p class="brand-negotiation-preview">${escapeHtml(preview)}</p>` : ''}
+      <div class="brand-negotiation-card-foot">
+        <button class="btn btn-sage btn-small" data-action="view-negotiation" data-id="${n.id}">詳細を見る</button>
+        <div class="brand-card-actions">
+          <button class="btn btn-ghost btn-small" data-action="edit-negotiation" data-id="${n.id}">編集</button>
+          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-negotiation" data-id="${n.id}">削除</button>
+        </div>
+      </div>
+    </article>`;
+  }).join('');
+  root.innerHTML = `${pageHead('商談記録','店舗ごとの商談ややり取りを、時系列で記録します。', '<button class="btn btn-primary" data-action="new-negotiation">追加</button>')}
+    ${filters}
+    <div class="brand-grid">${cards || empty(activeNegotiationLead === 'all' ? 'まだ商談記録がありません。「追加」から記録してください。営業先が未登録の場合は先に営業先を追加してください。' : 'この店舗の商談記録はまだありません。')}</div>`;
+}
+function negotiationDetailOverlay(negotiation){
+  const lead = findBy('leads', negotiation.leadId);
+  const bullets = text => asArray((text || '').split('\n').map(line => line.trim()).filter(Boolean)).map(line => `<li>${escapeHtml(line)}</li>`).join('');
+  const overlay = document.createElement('div');
+  overlay.className = 'brand-modal-overlay';
+  overlay.innerHTML = `<div class="brand-modal">
+    <div class="brand-modal-head"><h3>商談記録詳細</h3><button class="modal-close" type="button" data-close-brand>×</button></div>
+    <div class="brand-modal-body brand-negotiation-detail">
+      <div class="brand-negotiation-summary-row">
+        <div><small>商談概要</small><p>${negotiation.date || '-'}（${negotiationOccurrence(negotiation)}回目） / ${escapeHtml(lead?.shopName || '店舗未設定')}${negotiation.contactPerson ? `（${escapeHtml(negotiation.contactPerson)}）` : ''} / ${escapeHtml(negotiation.visitType || '種別未設定')}${negotiation.importance ? ` / 重要度${escapeHtml(negotiation.importance)}` : ''}</p></div>
+      </div>
+      <div class="brand-negotiation-section"><h4>1. 相手が求めていたこと</h4><p>${escapeHtml(negotiation.requestSummary || '未記入')}</p></div>
+      <div class="brand-negotiation-section"><h4>2. MofYlaからの提案</h4><p>${escapeHtml(negotiation.proposal || '未記入')}</p></div>
+      <div class="brand-negotiation-section"><h4>3. 相手の反応</h4><p>${escapeHtml(negotiation.reaction || '未記入')}</p></div>
+      <div class="brand-negotiation-section"><h4>4. 決定事項・保留事項</h4><p>${escapeHtml(negotiation.decisions || '未記入')}</p>${negotiation.pending ? `<p class="brand-note">保留・課題: ${escapeHtml(negotiation.pending)}</p>` : ''}</div>
+      <div class="brand-negotiation-section"><h4>5. 次の対応</h4><label class="brand-checkline"><input type="checkbox" disabled><span>${escapeHtml(negotiation.nextAction || '未記入')}</span></label>${negotiation.nextActionAssignee ? `<p class="brand-note">担当 / ${escapeHtml(negotiation.nextActionAssignee)}</p>` : ''}</div>
+      <div class="brand-negotiation-section"><h4>6. 次回連絡日</h4><p>${negotiation.nextContactDate || '未設定'}</p></div>
+      <div class="brand-negotiation-section"><h4>7. その他メモ</h4>${negotiation.memo ? `<ul class="brand-negotiation-memo-list">${bullets(negotiation.memo)}</ul>` : '<p>未記入</p>'}</div>
+      <div class="toolbar" style="margin-top:16px;justify-content:flex-end;"><button class="btn btn-primary" type="button" data-action="edit-negotiation-from-detail" data-id="${negotiation.id}">編集</button></div>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', event => {
+    if(event.target.closest('[data-close-brand]')) overlay.remove();
+    if(event.target.closest('[data-action="edit-negotiation-from-detail"]')){ overlay.remove(); negotiationForm(negotiation); }
+  });
+}
 
 function openForm(title, fields, values, onSubmit){
   const overlay = document.createElement('div');
   overlay.className = 'brand-modal-overlay';
   overlay.innerHTML = `<div class="brand-modal"><div class="brand-modal-head"><h3>${title}</h3><button class="modal-close" type="button" data-close-brand>×</button></div><form class="brand-modal-body"><div class="brand-form-grid">${fields.map(fieldHtml).join('')}</div><div class="toolbar" style="margin-top:16px;"><button class="btn btn-primary" type="submit">保存</button><button class="btn btn-ghost" type="button" data-close-brand>キャンセル</button></div></form></div>`;
   document.body.appendChild(overlay);
-  fields.forEach(field => { const el = overlay.querySelector(`[name="${field.name}"]`); if(el) el.value = values[field.name] ?? field.default ?? ''; });
+  fields.forEach(field => {
+    if(field.type === 'checkboxGroup'){
+      const selected = asArray(values[field.name]);
+      const boxes = [...overlay.querySelectorAll(`input[name="${field.name}"]`)];
+      boxes.forEach(box => { box.checked = selected.includes(box.value); });
+      if(field.max){
+        const enforce = () => {
+          const checkedCount = boxes.filter(box => box.checked).length;
+          boxes.forEach(box => { if(!box.checked) box.disabled = checkedCount >= field.max; });
+        };
+        boxes.forEach(box => box.addEventListener('change', enforce));
+        enforce();
+      }
+      return;
+    }
+    const el = overlay.querySelector(`[name="${field.name}"]`);
+    if(el) el.value = values[field.name] ?? field.default ?? '';
+  });
   overlay.addEventListener('click', event => { if(event.target.closest('[data-close-brand]')) overlay.remove(); });
   overlay.querySelector('form').addEventListener('submit', async event => {
     event.preventDefault();
-    await onSubmit(Object.fromEntries(new FormData(event.currentTarget).entries()));
+    const formData = new FormData(event.currentTarget);
+    const data = {};
+    fields.forEach(field => {
+      if(field.type === 'section') return;
+      data[field.name] = field.type === 'checkboxGroup' ? formData.getAll(field.name) : formData.get(field.name);
+    });
+    await onSubmit(data);
     overlay.remove();
     renderAll();
   });
+  return overlay;
 }
 function fieldHtml(field){
   if(field.type === 'section') return `<div class="brand-form-section">${field.label}</div>`;
   const cls = `brand-field ${field.full ? 'full' : ''}`;
   if(field.type === 'textarea') return `<div class="${cls}"><label>${field.label}</label><textarea name="${field.name}"></textarea></div>`;
   if(field.type === 'select') return `<div class="${cls}"><label>${field.label}</label><select name="${field.name}">${field.options.map(option => `<option value="${escapeHtml(option.value ?? option)}">${escapeHtml(option.label ?? option)}</option>`).join('')}</select></div>`;
+  if(field.type === 'checkboxGroup') return `<div class="${cls} full"><label>${field.label}</label><div class="brand-checkbox-group">${field.options.map(option => `<label class="brand-checkbox-pill"><input type="checkbox" name="${field.name}" value="${escapeHtml(option.value ?? option)}"><span>${escapeHtml(option.label ?? option)}</span></label>`).join('')}</div></div>`;
   return `<div class="${cls}"><label>${field.label}</label><input name="${field.name}" type="${field.type || 'text'}"></div>`;
 }
 function optionsFrom(items, labelKey){ return [{value:'', label:'なし'}, ...items.map(item => ({ value:item.id, label:item[labelKey] || item.title || item.name || item.id }))]; }
@@ -496,9 +1203,9 @@ async function removeBy(type, id, label){
 function taskForm(task = {}){ openForm(task.id ? 'タスク編集' : 'タスク追加', [
   {name:'title',label:'タイトル',full:true},{name:'memo',label:'メモ',type:'textarea',full:true},{name:'dueDate',label:'期限',type:'date'},{name:'priority',label:'優先度',type:'select',options:['高','中','低']},{name:'goalId',label:'所属目標',type:'select',options:optionsFrom(state.goals,'title')},{name:'marketId',label:'所属マルシェ',type:'select',options:optionsFrom(state.markets,'name')},{name:'minutes',label:'作業時間目安',type:'number'},{name:'energy',label:'体力レベル',type:'select',options:['軽い','普通','重い']},{name:'category',label:'カテゴリ',type:'select',options:['制作','SNS','事務作業','マルシェ関連']},{name:'decomposition',label:'分解メモ',type:'textarea',full:true}
 ], task, async data => { upsert('tasks', {...task, ...data, id:task.id || uid('task'), done:!!task.done}); await save(); }); }
-function goalForm(goal = {}){ openForm(goal.id ? '目標編集' : '目標追加', [{name:'type',label:'種類',type:'select',options:['大目標','中目標','小タスク']},{name:'title',label:'タイトル',full:true},{name:'parentId',label:'親目標',type:'select',options:optionsFrom(state.goals.filter(g => g.id !== goal.id),'title')},{name:'dueDate',label:'期限',type:'date'},{name:'progress',label:'進捗率（空欄なら自動）',type:'number'},{name:'memo',label:'メモ',type:'textarea',full:true}], goal, async data => { upsert('goals', {...goal, ...data, id:goal.id || uid('goal'), progress:data.progress === '' ? null : Number(data.progress)}); await save(); }); }
+function goalForm(goal = {}){ openForm(goal.id ? '目標編集' : '目標追加', [{name:'type',label:'種類',type:'select',options:['大目標','中目標','小タスク']},{name:'title',label:'タイトル',full:true},{name:'parentId',label:'親目標（大目標のみ）',type:'select',options:optionsFrom(state.goals.filter(g => g.type === '大目標' && g.id !== goal.id),'title')},{name:'dueDate',label:'期限',type:'date'},{name:'progress',label:'進捗率（空欄なら自動）',type:'number'},{name:'memo',label:'メモ',type:'textarea',full:true}], goal, async data => { upsert('goals', {...goal, ...data, id:goal.id || uid('goal'), progress:data.progress === '' ? null : Number(data.progress)}); await save(); }); }
 function marketForm(market = {}){ openForm(market.id ? 'マルシェ編集' : 'マルシェ追加', [
-  {name:'name',label:'マルシェ名'},{name:'date',label:'日付',type:'date'},{name:'place',label:'場所'},{name:'salesGoal',label:'目標売上',type:'number'},{name:'actualSales',label:'実績売上',type:'number'},
+  {name:'name',label:'マルシェ名'},{name:'date',label:'日付',type:'date'},{name:'place',label:'場所'},{name:'participationFee',label:'参加費',type:'number'},{name:'salesGoal',label:'目標売上',type:'number'},{name:'actualSales',label:'実績売上',type:'number'},
   {name:'carryInTime',label:'搬入時間'},{name:'carryOutTime',label:'搬出時間'},{name:'transportMethod',label:'持ち運び方法',full:true},
   {name:'deskStatus',label:'机',type:'select',options:['未確認','主催者用意','自分で用意','不要']},{name:'chairStatus',label:'椅子',type:'select',options:['未確認','主催者用意','自分で用意','不要']},{name:'tentStatus',label:'テント',type:'select',options:['未確認','主催者用意','自分で用意','不要']},
   {name:'suppliesMemo',label:'備品メモ',type:'textarea',full:true}
@@ -530,37 +1237,503 @@ function marketProductForm(marketId, item = {}){
 }
 function saleForm(){ openForm('売上追加', [{name:'date',label:'日付',type:'date'},{name:'category',label:'カテゴリ',type:'select',options:CATEGORIES},{name:'amount',label:'金額',type:'number'},{name:'memo',label:'メモ',type:'textarea',full:true}], {date:todayKey()}, async data => { state.sales.push({...data, id:uid('sale')}); await save(); }); }
 function salesGoalForm(){ openForm('月間売上目標', [{name:'salesMonth',label:'対象月',type:'month'},{name:'monthlySalesGoal',label:'月間目標',type:'number'}], state, async data => { state.salesMonth = data.salesMonth; state.monthlySalesGoal = Number(data.monthlySalesGoal || 0); await save(); }); }
-function customerForm(customer = {}){ openForm(customer.id ? '注文編集' : '注文追加', [
-  {type:'section',label:'基本情報'},
-  {name:'customerName',label:'お客様名'},{name:'sns',label:'SNSアカウント'},{name:'line',label:'LINE'},{name:'email',label:'メール'},
-  {type:'section',label:'ペット情報'},
-  {name:'petName',label:'ペット名'},{name:'petType',label:'種類'},{name:'petNote',label:'ペット備考',type:'textarea',full:true},
-  {type:'section',label:'注文と進捗'},
-  {name:'orderNo',label:'受付番号'},{name:'productName',label:'商品名'},{name:'quantity',label:'数量',type:'number'},{name:'amount',label:'金額',type:'number'},
-  {name:'paid',label:'入金状況',type:'select',options:['未入金','入金済','一部入金']},{name:'dueDate',label:'納期',type:'date'},{name:'status',label:'制作状況',type:'select',options:CUSTOMER_STATUSES},
-  {name:'nextAction',label:'次に確認すること',full:true},{name:'memo',label:'メモ',type:'textarea',full:true}
-], customer, async data => {
-  const completedAt = data.status === '完了' ? (customer.completedAt || todayKey()) : customer.completedAt;
-  upsert('customers', {...customer, ...data, completedAt, id:customer.id || uid('customer')});
-  await save();
-}); }
+function customerProfileForm(profile = {}){
+  openForm(profile.id ? 'お客様編集' : 'お客様追加', [
+    {name:'name',label:'お客様名'},
+    {name:'sns',label:'SNSアカウント'},
+    {name:'line',label:'LINE'},
+    {name:'email',label:'メール'},
+    {name:'memo',label:'メモ',type:'textarea',full:true}
+  ], profile, async data => {
+    upsert('customerProfiles', {...profile, ...data, id:profile.id || uid('customerProfile')});
+    await save();
+  });
+}
+function orderForm(customerId, order = {}){
+  const profile = state.customerProfiles.find(p => p.id === customerId);
+  if(!profile) return;
+  openForm(order.id ? '注文編集' : '注文追加', [
+    {type:'section',label:'オーダーシート'},
+    {name:'collectedDate',label:'シート回収日',type:'date'},
+    {type:'section',label:'ペット情報'},
+    {name:'petName',label:'ペット名'},{name:'petType',label:'種類'},{name:'petNote',label:'ペット備考',type:'textarea',full:true},
+    {type:'section',label:'注文と進捗'},
+    {name:'orderNo',label:'受付番号'},{name:'productName',label:'商品名',type:'select',options:[{value:'',label:'選択してください'}, ...state.products.map(p => ({value:p.name || '商品名未設定', label:`${p.name || '商品名未設定'}${p.sku ? `（${p.sku}）` : ''}`}))]},{name:'quantity',label:'数量',type:'number'},{name:'amount',label:'金額',type:'number'},
+    {name:'paid',label:'入金状況',type:'select',options:['未入金','入金済','一部入金']},{name:'dueDate',label:'納期',type:'date'},{name:'status',label:'制作状況',type:'select',options:CUSTOMER_STATUSES},
+    {name:'nextAction',label:'次に確認すること',full:true},{name:'memo',label:'メモ',type:'textarea',full:true}
+  ], {collectedDate:todayKey(), ...order}, async data => {
+    const completedAt = data.status === '完了' ? (order.completedAt || todayKey()) : order.completedAt;
+    upsert('customers', {...order, ...data, completedAt, customerId:profile.id, id:order.id || uid('customer')});
+    await save();
+  });
+}
+function generateCouponCode(){
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let code;
+  do {
+    code = 'MOF-' + Array.from({ length:6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  } while(state.coupons.some(c => c.code === code));
+  return code;
+}
+function couponStatus(coupon){
+  if(coupon.usedAt) return '使用済み';
+  if(coupon.expiryDate && coupon.expiryDate < todayKey()) return '失効';
+  return '未使用';
+}
+function couponStatusClass(status){ return status === '使用済み' ? '' : status === '失効' ? 'warn' : 'ok'; }
+function couponForm(coupon = {}){
+  openForm(coupon.id ? 'クーポン編集' : 'クーポン追加', [
+    {name:'discountType',label:'割引タイプ',type:'select',options:[{value:'percent',label:'割引率（%）'},{value:'amount',label:'金額（円）'}]},
+    {name:'discountValue',label:'割引の値',type:'number'},
+    {name:'expiryDate',label:'有効期限（空欄なら無期限）',type:'date'},
+    {name:'customerId',label:'対象のお客様（任意）',type:'select',options:optionsFrom(state.customerProfiles,'name')},
+    {name:'memo',label:'メモ',type:'textarea',full:true}
+  ], { discountType:'percent', ...coupon }, async data => {
+    upsert('coupons', {
+      ...coupon, ...data,
+      id:coupon.id || uid('coupon'),
+      code:coupon.code || generateCouponCode(),
+      discountValue:Number(data.discountValue || 0),
+      usedAt:coupon.usedAt || null,
+      createdAt:coupon.createdAt || new Date().toISOString()
+    });
+    await save();
+  });
+}
+function couponCard(coupon){
+  const status = couponStatus(coupon);
+  const customer = state.customerProfiles.find(p => p.id === coupon.customerId);
+  const discountLabel = coupon.discountType === 'amount' ? `${yen(coupon.discountValue)}引き` : `${coupon.discountValue || 0}%引き`;
+  return `<div class="brand-card coupon-card">
+      <div class="brand-card-head">
+        <div class="brand-card-title">
+          <span class="brand-chip ${couponStatusClass(status)}">${status}</span>
+          <h3 class="coupon-code">${escapeHtml(coupon.code)}</h3>
+          <p class="brand-note">${discountLabel}${coupon.expiryDate ? ` / 期限 ${coupon.expiryDate}` : ' / 無期限'}${customer ? ` / ${escapeHtml(customer.name)}` : ''}</p>
+        </div>
+        <div class="brand-card-actions">
+          ${status === '未使用' ? `<button class="btn btn-sage btn-small" data-action="mark-coupon-used" data-id="${coupon.id}">使用済みにする</button>` : ''}
+          <button class="btn btn-ghost btn-small" data-action="edit-coupon" data-id="${coupon.id}">編集</button>
+          <button class="btn btn-ghost btn-small brand-danger" data-action="delete-coupon" data-id="${coupon.id}">削除</button>
+        </div>
+      </div>
+      ${coupon.memo ? `<p class="brand-note">${escapeHtml(coupon.memo)}</p>` : ''}
+    </div>`;
+}
+function renderCouponLookupResult(){
+  const box = document.getElementById('couponLookupResult');
+  if(!box) return;
+  const query = couponQuery.trim().toLowerCase();
+  if(!query){ box.innerHTML = ''; return; }
+  const matches = asArray(state.coupons).filter(c => c.code.toLowerCase().includes(query));
+  box.innerHTML = matches.length ? matches.map(couponCard).join('') : `<p class="brand-note">一致するクーポンが見つかりません。</p>`;
+}
+function renderCoupons(){
+  const root = document.getElementById('brandCoupons');
+  if(!root) return;
+  const coupons = asArray(state.coupons).slice().sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const active = coupons.filter(c => couponStatus(c) === '未使用');
+  const inactive = coupons.filter(c => couponStatus(c) !== '未使用');
+  const usedCount = coupons.filter(c => couponStatus(c) === '使用済み').length;
+  const expiredCount = coupons.filter(c => couponStatus(c) === '失効').length;
+  root.innerHTML = `${pageHead('クーポン管理','コードを発行し、番号照会でその場ですぐに確認・使用済みにできます。', '<button class="btn btn-primary" data-action="new-coupon">追加</button>')}
+    <div class="brand-card coupon-lookup section-gap">
+      <p class="label-eyebrow">番号照会</p>
+      <input type="text" id="couponLookupInput" class="coupon-lookup-input" placeholder="コードを入力（例: MOF-AB12CD）" value="${escapeHtml(couponQuery)}" autocomplete="off">
+      <div id="couponLookupResult"></div>
+    </div>
+    <div class="brand-status-summary">
+      <div class="brand-status-tile"><strong>${active.length}</strong><span>未使用</span></div>
+      <div class="brand-status-tile"><strong>${usedCount}</strong><span>使用済み</span></div>
+      <div class="brand-status-tile"><strong>${expiredCount}</strong><span>失効</span></div>
+    </div>
+    <div class="brand-grid">${active.map(couponCard).join('') || empty('未使用のクーポンはまだありません。「追加」から発行してください。')}</div>
+    ${archiveDetails('使用済み・失効クーポン', inactive, couponCard)}`;
+  renderCouponLookupResult();
+}
 function leadForm(lead = {}){ openForm(lead.id ? '営業先編集' : '営業先追加', [
   {type:'section',label:'店舗情報'},
   {name:'shopName',label:'店舗名'},{name:'area',label:'地域'},{name:'hp',label:'HP'},{name:'instagram',label:'Instagram'},
   {type:'section',label:'連絡先'},
   {name:'person',label:'担当者'},{name:'phone',label:'電話'},{name:'email',label:'メール'},
+  {name:'postalCode',label:'郵便番号（帳票に自動入力）'},{name:'address',label:'住所（帳票に自動入力）',type:'textarea',full:true},
   {type:'section',label:'営業の進み具合'},
   {name:'status',label:'営業状況',type:'select',options:LEAD_STATUSES},{name:'potential',label:'見込み度',type:'select',options:LEAD_POTENTIALS},
   {name:'lastContactDate',label:'最終連絡日',type:'date'},{name:'nextContactDate',label:'次回連絡予定日',type:'date'},
   {name:'nextAction',label:'次にやること',full:true},{name:'memo',label:'メモ',type:'textarea',full:true}
 ], {potential:'未設定', ...lead}, async data => { upsert('leads', {...lead, ...data, id:lead.id || uid('lead')}); await save(); }); }
-function productForm(product = {}){ openForm(product.id ? '商品編集' : '商品追加', [{name:'name',label:'商品名'},{name:'category',label:'商品カテゴリ',type:'select',options:CATEGORIES},{name:'price',label:'販売価格',type:'number'},{name:'cost',label:'原価',type:'number'},{name:'minutes',label:'制作時間目安',type:'number'},{name:'stock',label:'在庫数',type:'number'},{name:'image',label:'サンプル画像URL'},{name:'status',label:'販売状態',type:'select',options:['販売中','非公開']},{name:'sold',label:'販売数',type:'number'},{name:'lastSoldDate',label:'最終販売日',type:'date'},{name:'description',label:'商品説明',type:'textarea',full:true}], product, async data => { upsert('products', {...product, ...data, id:product.id || uid('product')}); await save(); }); }
+function productForm(product = {}){
+  const channelFallback = ['wholesale', 'custom'].includes(activeProductTab) ? activeProductTab : 'online';
+  const channel = product.salesChannel || (product.isWholesale ? 'wholesale' : channelFallback);
+  const commonFields = [
+    {name:'salesChannel',label:'管理区分',type:'select',options:[{value:'online',label:'ネット販売在庫'},{value:'wholesale',label:'卸し商品'},{value:'custom',label:'オーダーメイド'}]},
+    {name:'name',label:'商品名'},
+    {name:'category',label:'商品カテゴリ',type:'select',options:CATEGORIES},
+    {name:'breed',label:'兎種',type:'select',options:RABBIT_BREEDS.map(b => b.name)},
+    {name:'sku',label:'商品番号（自動採番・編集可）'},
+    {name:'dimensionsW',label:'幅 W（mm）',type:'number'},
+    {name:'dimensionsD',label:'奥行 D（mm）',type:'number'},
+    {name:'dimensionsH',label:'高さ H（mm）',type:'number'},
+    {name:'colorIds',label:'カラー（最大4色まで選択可）',type:'checkboxGroup',max:4,options:state.colorPalette.map(c => ({value:c.id, label:`${c.code} ${c.name}`}))},
+    {name:'cost',label:'原価',type:'number'},
+    {name:'minutes',label:'制作時間目安',type:'number'},
+    {name:'description',label:'商品説明',type:'textarea',full:true}
+  ];
+  const onlineFields = [
+    {name:'price',label:'販売価格',type:'number'},
+    {name:'stock',label:'ネット販売在庫数',type:'number'},
+    {name:'status',label:'販売状態',type:'select',options:['販売中','非公開','準備中','在庫少']},
+    {name:'sold',label:'販売数',type:'number'},
+    {name:'lastSoldDate',label:'最終販売日',type:'date'}
+  ];
+  const customCreateFields = [
+    {name:'basePrice',label:'基本価格（目安）',type:'number'}
+  ];
+  const channelFieldsByType = { wholesale:[], custom:customCreateFields, online:onlineFields };
+  const fields = product.id ? commonFields : [...commonFields, ...(channelFieldsByType[channel] || onlineFields)];
+  const defaultCategory = product.category || CATEGORIES[0];
+  const defaultBreed = product.breed || RABBIT_BREEDS[0].name;
+  const initialValues = {
+    salesChannel:channel, category:defaultCategory, breed:defaultBreed,
+    sku:product.sku || (product.id ? '' : nextProductSku(defaultCategory, defaultBreed)),
+    colorIds:asArray(product.colorIds).length ? product.colorIds : (product.colorId ? [product.colorId] : []),
+    ...product
+  };
+  openForm(product.id ? '商品編集' : '商品追加', fields, initialValues, async data => {
+    const salesChannel = data.salesChannel || 'online';
+    upsert('products', {
+      ...product, ...data, id:product.id || uid('product'), salesChannel,
+      colorIds:asArray(data.colorIds).slice(0, 4), colorId:undefined,
+      dimensionsW:Number(data.dimensionsW || 0), dimensionsD:Number(data.dimensionsD || 0), dimensionsH:Number(data.dimensionsH || 0), dimensions:undefined,
+      price:Number(data.price ?? product.price ?? 0),
+      basePrice:Number(data.basePrice ?? product.basePrice ?? 0),
+      cost:Number(data.cost || 0),
+      minutes:Number(data.minutes || 0),
+      stock:Number(data.stock ?? product.stock ?? 0),
+      sold:Number(data.sold ?? product.sold ?? 0),
+      wholesaleListings:asArray(product.wholesaleListings)
+    });
+    activeProductTab = 'manage';
+    await save();
+  });
+  if(!product.id) wireProductSkuAutoFill();
+}
+function wireProductSkuAutoFill(){
+  const overlay = document.querySelector('.brand-modal-overlay');
+  if(!overlay) return;
+  const categorySelect = overlay.querySelector('[name="category"]');
+  const breedSelect = overlay.querySelector('[name="breed"]');
+  const skuInput = overlay.querySelector('[name="sku"]');
+  if(!categorySelect || !breedSelect || !skuInput) return;
+  skuInput.dataset.autofilled = 'true';
+  skuInput.addEventListener('input', () => { skuInput.dataset.autofilled = 'false'; });
+  const recompute = () => {
+    if(skuInput.dataset.autofilled !== 'true') return;
+    skuInput.value = nextProductSku(categorySelect.value, breedSelect.value);
+  };
+  categorySelect.addEventListener('change', recompute);
+  breedSelect.addEventListener('change', recompute);
+}
+function productDeliveryForm(productId, listingId){
+  const product = findBy('products', productId);
+  const listing = product && asArray(product.wholesaleListings).find(l => l.id === listingId);
+  if(!listing) return;
+  openForm('卸し実績を記録', [
+    {name:'date',label:'卸した日',type:'date'},
+    {name:'qty',label:'数量',type:'number'},
+    {name:'memo',label:'メモ',type:'textarea',full:true}
+  ], {date:todayKey()}, async data => {
+    listing.deliveries = asArray(listing.deliveries);
+    listing.deliveries.push({id:uid('delivery'), date:data.date || todayKey(), qty:Number(data.qty || 0), memo:data.memo || ''});
+    await save();
+  });
+}
+function listingForm(productId, listing = {}){
+  const product = findBy('products', productId);
+  if(!product) return;
+  openForm(listing.id ? '卸し条件を編集' : '卸し先を追加', [
+    {name:'leadId',label:'卸し先店舗',type:'select',options:optionsFrom(state.leads, 'shopName')},
+    {type:'section', label:'この店舗向けの表示（空欄なら商品の設定を使用）'},
+    {name:'name',label:'この店舗向けの名前'},
+    {name:'colorIds',label:'この店舗向けのカラー（最大4色）',type:'checkboxGroup',max:4,options:state.colorPalette.map(c => ({value:c.id, label:`${c.code} ${c.name}`}))},
+    {type:'section', label:'取引条件'},
+    {name:'wholesalePrice',label:'卸し価格',type:'number'},
+    {name:'status',label:'取引状態',type:'select',options:WHOLESALE_STATUSES},
+    {name:'printQty',label:'印刷が必要な数量',type:'number'},
+    {name:'memo',label:'メモ',type:'textarea',full:true}
+  ], listing, async data => {
+    product.wholesaleListings = asArray(product.wholesaleListings);
+    const newListing = {...listing, ...data, id:listing.id || uid('listing'), wholesalePrice:Number(data.wholesalePrice || 0), printQty:Number(data.printQty || 0), colorIds:asArray(data.colorIds).slice(0, 4), deliveries:asArray(listing.deliveries)};
+    const idx = product.wholesaleListings.findIndex(l => l.id === newListing.id);
+    if(idx >= 0) product.wholesaleListings[idx] = newListing; else product.wholesaleListings.push(newListing);
+    await save();
+  });
+}
+function onlineChannelForm(productId){
+  const product = findBy('products', productId);
+  if(!product) return;
+  openForm('ネット販売情報を編集', [
+    {name:'price',label:'販売価格',type:'number'},
+    {name:'stock',label:'ネット販売在庫数',type:'number'},
+    {name:'status',label:'販売状態',type:'select',options:['販売中','非公開','準備中','在庫少']},
+    {name:'sold',label:'販売数',type:'number'},
+    {name:'lastSoldDate',label:'最終販売日',type:'date'}
+  ], product, async data => {
+    Object.assign(product, {
+      price:Number(data.price || 0), stock:Number(data.stock || 0), status:data.status,
+      sold:Number(data.sold || 0), lastSoldDate:data.lastSoldDate
+    });
+    await save();
+  });
+}
+function customChannelForm(productId){
+  const product = findBy('products', productId);
+  if(!product) return;
+  openForm('オーダーメイド情報を編集', [
+    {name:'basePrice',label:'基本価格（目安）',type:'number'}
+  ], product, async data => {
+    Object.assign(product, { basePrice:Number(data.basePrice || 0) });
+    await save();
+  });
+}
+function negotiationForm(negotiation = {}){
+  openForm(negotiation.id ? '商談記録編集' : '商談記録追加', [
+    {type:'section', label:'基本情報'},
+    {name:'leadId',label:'対象店舗',type:'select',options:optionsFrom(state.leads, 'shopName')},
+    {name:'contactPerson',label:'先方担当者'},
+    {name:'date',label:'商談日',type:'date'},
+    {name:'visitType',label:'種別',type:'select',options:['訪問','電話','メール','DM','その他']},
+    {name:'importance',label:'重要度',type:'select',options:['高','中','低']},
+    {name:'result',label:'結果',type:'select',options:['前向き','保留','要検討','見送り','その他']},
+    {type:'section', label:'商談内容'},
+    {name:'requestSummary',label:'相手が求めていたこと',type:'textarea',full:true},
+    {name:'proposal',label:'MofYlaからの提案',type:'textarea',full:true},
+    {name:'reaction',label:'相手の反応',type:'textarea',full:true},
+    {type:'section', label:'決定・対応'},
+    {name:'decisions',label:'決定事項',type:'textarea',full:true},
+    {name:'pending',label:'保留・課題',type:'textarea',full:true},
+    {name:'nextAction',label:'次の対応'},
+    {name:'nextActionAssignee',label:'次の対応の担当'},
+    {name:'nextContactDate',label:'次回連絡日',type:'date'},
+    {type:'section', label:'メモ'},
+    {name:'memo',label:'その他メモ（改行で箇条書き）',type:'textarea',full:true}
+  ], {date:todayKey(), ...negotiation}, async data => {
+    upsert('negotiations', {...negotiation, ...data, id:negotiation.id || uid('negotiation'), createdAt:negotiation.createdAt || todayKey()});
+    await save();
+  });
+}
 function ideaForm(idea = {}){ openForm(idea.id ? 'アイデア編集' : 'アイデア追加', [{name:'title',label:'タイトル',full:true},{name:'memo',label:'メモ',type:'textarea',full:true},{name:'tags',label:'タグ'},{name:'priority',label:'優先度',type:'select',options:['高','中','低']}], idea, async data => { upsert('ideas', {...idea, ...data, id:idea.id || uid('idea'), createdAt:idea.createdAt || todayKey()}); await save(); }); }
+
+function sellerProfileForm(){
+  openForm('発行者情報', [
+    {name:'name',label:'事業者名／屋号'},
+    {name:'contactPerson',label:'担当者名'},
+    {name:'postalCode',label:'郵便番号（〒）'},
+    {name:'address',label:'住所（改行で行を分けられます）',type:'textarea',full:true},
+    {name:'phone',label:'電話番号'},
+    {name:'email',label:'メールアドレス'},
+    {name:'invoiceRegistrationNumber',label:'インボイス登録番号（T+13桁）'},
+    {type:'section',label:'振込先'},
+    {name:'bankName',label:'銀行名'},
+    {name:'branchName',label:'支店名'},
+    {name:'accountType',label:'口座種別',type:'select',options:['普通','当座']},
+    {name:'accountNumber',label:'口座番号'},
+    {name:'accountHolder',label:'口座名義'}
+  ], state.sellerProfile, async data => {
+    state.sellerProfile = { ...state.sellerProfile, ...data };
+    await save();
+  });
+}
+function nextDocumentNumber(type){
+  const prefix = type === '納品書' ? 'DN' : type === '見積書' ? 'EST' : type === '領収書' ? 'RCT' : 'INV';
+  const nums = asArray(state.invoices)
+    .filter(inv => (inv.documentType || '請求書') === type)
+    .map(inv => { const m = /(\d+)\s*$/.exec(inv.number || ''); return m ? Number(m[1]) : 0; });
+  const max = nums.length ? Math.max(...nums) : 0;
+  return `${prefix}-${String(max + 1).padStart(4, '0')}`;
+}
+function nextOrderNumber(){
+  const nums = asArray(state.invoices)
+    .map(inv => { const m = /ORD-(\d+)\s*$/.exec(inv.orderNumber || ''); return m ? Number(m[1]) : 0; });
+  const max = nums.length ? Math.max(...nums) : 0;
+  return `ORD-${String(max + 1).padStart(4, '0')}`;
+}
+function invoiceTotals(items, taxRate, shippingFee){
+  const subtotal = asArray(items).reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.price || 0), 0);
+  const shipping = Number(shippingFee || 0);
+  const tax = Math.round((subtotal + shipping) * Number(taxRate || 0) / 100);
+  return { subtotal, shipping, tax, total: subtotal + shipping + tax };
+}
+async function saveInvoiceToHistory(){
+  const draft = state.invoiceDraft;
+  if(!draft) return;
+  if(!draft.number){ showToast('書類番号を入力してください'); return; }
+  state.invoices = asArray(state.invoices);
+  const index = state.invoices.findIndex(inv => inv.number === draft.number);
+  if(index >= 0){
+    state.invoices[index] = { ...state.invoices[index], ...draft, id:state.invoices[index].id };
+    showToast(`書類番号 ${draft.number} の履歴を更新しました`);
+  } else {
+    state.invoices.push({ ...draft, id:uid('invoice'), createdAt:new Date().toISOString() });
+    showToast('書類を履歴に保存しました');
+  }
+  await save();
+  renderAll();
+}
+function loadInvoiceFromHistory(id){
+  const invoice = asArray(state.invoices).find(inv => inv.id === id);
+  if(!invoice) return;
+  const { id: _drop, createdAt: _drop2, ...draft } = invoice;
+  state.invoiceDraft = draft;
+  save();
+  renderAll();
+}
+function createReceiptFromInvoice(id){
+  const source = asArray(state.invoices).find(inv => inv.id === id);
+  if(!source) return;
+  const sourceType = source.documentType || '請求書';
+  state.invoiceDraft = {
+    documentType: '領収書',
+    number: nextDocumentNumber('領収書'),
+    orderNumber: source.orderNumber || '',
+    date: todayKey(),
+    dueDate: todayKey(),
+    store: source.store || '',
+    billTo: source.billTo || source.store || '',
+    billToContact: source.billToContact || '',
+    billToPostalCode: source.billToPostalCode || '',
+    billToAddress: source.billToAddress || '',
+    billToPhone: source.billToPhone || '',
+    billToEmail: source.billToEmail || '',
+    taxRate: source.taxRate ?? 10,
+    shippingFee: source.shippingFee || 0,
+    items: asArray(source.items).map(item => ({ ...item, id: uid('invoiceItem') })),
+    notes: `${sourceType} ${source.number || ''} のお支払いとして`
+  };
+  save();
+  showToast(`${sourceType} ${source.number || ''} をもとに領収書を作成しました`);
+  renderAll();
+}
+function exportDeliveriesCsv(){
+  const rows = [['店舗名','商品番号','商品名','日付','数量','単価','金額','メモ']];
+  allWholesaleListings()
+    .slice()
+    .sort((a,b) => listingLeadName(a.listing).localeCompare(listingLeadName(b.listing), 'ja'))
+    .forEach(({listing, product}) => {
+      asArray(listing.deliveries).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(d => {
+        const price = Number(listing.wholesalePrice || 0);
+        const qty = Number(d.qty || 0);
+        rows.push([listingLeadName(listing), product.sku || '', listingDisplayName(listing, product), d.date || '', qty, price, qty * price, d.memo || '']);
+      });
+    });
+  if(rows.length === 1){ showToast('卸し実績がまだありません'); return; }
+  const csv = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const bom = String.fromCharCode(0xFEFF);
+  const blob = new Blob([bom + csv], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `卸し実績_${todayKey()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+function invoiceItemsFromDeliveries(store, from, to){
+  return allWholesaleListings()
+    .filter(x => listingLeadName(x.listing) === store)
+    .map(({listing, product}) => ({
+      id:uid('invoiceItem'),
+      name:listingDisplayName(listing, product),
+      qty:productDelivered(listing, from, to),
+      price:Number(listing.wholesalePrice || 0)
+    }))
+    .filter(item => item.qty > 0);
+}
+function invoiceHeaderForm(){
+  const draft = state.invoiceDraft;
+  const stores = wholesaleStoreNames();
+  const defaultType = (draft && draft.documentType) || '請求書';
+  const overlay = openForm(draft ? '書類情報を編集' : '書類を作成', [
+    {type:'section',label:'書類情報'},
+    {name:'documentType',label:'書類の種類',type:'select',options:['請求書','見積書','納品書','領収書']},
+    {name:'store',label:'宛先の店舗',type:'select',options:stores.map(s => ({value:s, label:s}))},
+    {name:'number',label:'書類番号'},
+    {name:'orderNumber',label:'注文番号（自動採番・編集可）'},
+    {name:'date',label:'発行日',type:'date'},
+    {name:'dueDate',label:'納品日／支払期限',type:'date'},
+    {name:'periodFrom',label:'対象期間（開始）',type:'date'},
+    {name:'periodTo',label:'対象期間（終了）',type:'date'},
+    {type:'section',label:'宛先情報'},
+    {name:'billTo',label:'宛名（空欄なら店舗名を使用）'},
+    {name:'billToContact',label:'お受取人／担当者名'},
+    {name:'billToPostalCode',label:'郵便番号（〒）'},
+    {name:'billToAddress',label:'住所（改行で行を分けられます）',type:'textarea',full:true},
+    {name:'billToPhone',label:'電話番号'},
+    {name:'billToEmail',label:'メールアドレス'},
+    {type:'section',label:'金額・備考'},
+    {name:'taxRate',label:'消費税率（%）',type:'number'},
+    {name:'shippingFee',label:'送料（税抜・任意）',type:'number'},
+    {name:'notes',label:'備考',type:'textarea',full:true}
+  ], draft || {documentType:defaultType, number:nextDocumentNumber(defaultType), orderNumber:nextOrderNumber(), date:todayKey(), taxRate:10, store:stores[0] || ''}, async data => {
+    const isNew = !draft;
+    const store = data.store || (draft && draft.store) || '';
+    const items = isNew ? (data.documentType === '領収書' ? [] : invoiceItemsFromDeliveries(store, data.periodFrom, data.periodTo)) : draft.items;
+    state.invoiceDraft = {
+      ...(draft || {}),
+      ...data,
+      documentType: data.documentType || defaultType,
+      store,
+      billTo: data.billTo || store,
+      taxRate: Number(data.taxRate || 0),
+      shippingFee: Number(data.shippingFee || 0),
+      items
+    };
+    await save();
+  });
+  if(!draft){
+    const typeSelect = overlay.querySelector('[name="documentType"]');
+    const numberInput = overlay.querySelector('[name="number"]');
+    if(typeSelect && numberInput){
+      typeSelect.addEventListener('change', () => { numberInput.value = nextDocumentNumber(typeSelect.value); });
+    }
+  }
+  const storeSelect = overlay.querySelector('[name="store"]');
+  if(storeSelect){
+    const applyStoreAutofill = name => {
+      const lead = state.leads.find(l => l.shopName === name);
+      if(!lead) return;
+      const setVal = (field, value) => { const el = overlay.querySelector(`[name="${field}"]`); if(el && value) el.value = value; };
+      setVal('billTo', lead.shopName);
+      setVal('billToContact', lead.person);
+      setVal('billToPostalCode', lead.postalCode);
+      setVal('billToAddress', lead.address);
+      setVal('billToPhone', lead.phone);
+      setVal('billToEmail', lead.email);
+    };
+    storeSelect.addEventListener('change', () => applyStoreAutofill(storeSelect.value));
+    if(!draft && storeSelect.value) applyStoreAutofill(storeSelect.value);
+  }
+}
+function invoiceItemForm(item = {}){
+  openForm(item.id ? '明細を編集' : '明細を追加', [
+    {name:'name',label:'品名'},
+    {name:'qty',label:'数量',type:'number'},
+    {name:'price',label:'単価',type:'number'}
+  ], item, async data => {
+    if(!state.invoiceDraft) return;
+    state.invoiceDraft.items = asArray(state.invoiceDraft.items);
+    const next = { id:item.id || uid('invoiceItem'), name:data.name || '品名未設定', qty:Number(data.qty || 0), price:Number(data.price || 0) };
+    const index = state.invoiceDraft.items.findIndex(old => old.id === next.id);
+    if(index >= 0) state.invoiceDraft.items[index] = next; else state.invoiceDraft.items.push(next);
+    await save();
+  });
+}
 
 async function handleClick(event){
   const el = event.target.closest('[data-action]');
   if(!el) return;
-  const { action, id, value, market, daily } = el.dataset;
+  const { action, id, value, market, daily, delivery, listing } = el.dataset;
   if(action === 'set-energy'){ state.energy = value; await save(false); renderAll(); }
   if(action === 'focus-next'){ const task = nextTask(); if(task) showToast(`次は「${task.title}」です`); }
   if(action === 'filter-task'){ activeTaskFilter = value; renderTasks(); }
@@ -573,6 +1746,22 @@ async function handleClick(event){
   if(action === 'toggle-market-check'){ const m = findBy('markets', market); const check = m?.checklist.find(item => item.id === id); if(check){ check.done = el.checked; await save(); renderAll(); } }
   if(action === 'set-customer-status'){ const c = findBy('customers', id); if(c){ c.status = value; if(value === '完了' && !c.completedAt) c.completedAt = todayKey(); await save(); renderAll(); } }
   if(action === 'set-lead-status'){ const lead = findBy('leads', id); if(lead){ lead.status = value; await save(); renderAll(); } }
+  if(action === 'advance-customer-print'){ const c = findBy('customers', id); if(c){ c.status = '塗装'; await save(); showToast('印刷完了にしました'); renderAll(); } }
+  if(action === 'advance-customer-ship'){ const c = findBy('customers', id); if(c){ c.status = '完了'; if(!c.completedAt) c.completedAt = todayKey(); await save(); showToast('発送完了にしました'); renderAll(); } }
+  if(action === 'advance-listing-print'){
+    const product = findBy('products', id);
+    const targetListing = product && asArray(product.wholesaleListings).find(l => l.id === listing);
+    if(targetListing){ targetListing.status = '納品準備中'; await save(); showToast('印刷完了にしました'); renderAll(); }
+  }
+  if(action === 'advance-listing-delivery'){
+    const product = findBy('products', id);
+    const targetListing = product && asArray(product.wholesaleListings).find(l => l.id === listing);
+    if(targetListing){ targetListing.status = '納品済み'; await save(); showToast('納品済みにしました'); renderAll(); }
+  }
+  if(action === 'set-product-tab'){ activeProductTab = ['manage', 'online', 'wholesale', 'custom'].includes(value) ? value : 'manage'; renderProducts(); }
+  if(action === 'edit-online-channel') onlineChannelForm(id);
+  if(action === 'edit-custom-channel') customChannelForm(id);
+  if(action === 'filter-negotiation'){ activeNegotiationLead = value; renderNegotiations(); }
   if(action === 'new-task') taskForm();
   if(action === 'edit-task') taskForm(findBy('tasks', id));
   if(action === 'new-goal') goalForm();
@@ -591,12 +1780,47 @@ async function handleClick(event){
   }
   if(action === 'new-sale') saleForm();
   if(action === 'edit-sales-goal') salesGoalForm();
-  if(action === 'new-customer') customerForm();
-  if(action === 'edit-customer') customerForm(findBy('customers', id));
+  if(action === 'new-customer-profile') customerProfileForm();
+  if(action === 'edit-customer-profile') customerProfileForm(findBy('customerProfiles', id));
+  if(action === 'delete-customer-profile'){
+    const hasOrders = state.customers.some(o => o.customerId === id);
+    const message = hasOrders ? 'このお客様を削除します。紐づく注文は「未分類の注文」に残ります。よろしいですか？' : 'このお客様を削除します。よろしいですか？';
+    if(confirm(message)){
+      state.customerProfiles = state.customerProfiles.filter(p => p.id !== id);
+      await save();
+      renderAll();
+    }
+  }
+  if(action === 'new-order') orderForm(id);
+  if(action === 'edit-order') orderForm(findBy('customers', id)?.customerId, findBy('customers', id));
   if(action === 'new-lead') leadForm();
   if(action === 'edit-lead') leadForm(findBy('leads', id));
+  if(action === 'new-negotiation') negotiationForm();
+  if(action === 'edit-negotiation') negotiationForm(findBy('negotiations', id));
+  if(action === 'delete-negotiation') removeBy('negotiations', id, '商談記録');
+  if(action === 'view-negotiation'){ const negotiation = findBy('negotiations', id); if(negotiation) negotiationDetailOverlay(negotiation); }
   if(action === 'new-product') productForm();
   if(action === 'edit-product') productForm(findBy('products', id));
+  if(action === 'new-listing') listingForm(id);
+  if(action === 'edit-listing'){ const product = findBy('products', id); if(product) listingForm(id, asArray(product.wholesaleListings).find(l => l.id === listing)); }
+  if(action === 'delete-listing'){
+    const product = findBy('products', id);
+    if(product && confirm('この卸し先を削除します。よろしいですか？')){
+      product.wholesaleListings = asArray(product.wholesaleListings).filter(l => l.id !== listing);
+      await save();
+      renderAll();
+    }
+  }
+  if(action === 'new-delivery') productDeliveryForm(id, listing);
+  if(action === 'delete-delivery'){
+    const product = findBy('products', id);
+    const targetListing = product && asArray(product.wholesaleListings).find(l => l.id === listing);
+    if(targetListing && confirm('この卸し実績を削除します。よろしいですか？')){
+      targetListing.deliveries = asArray(targetListing.deliveries).filter(d => d.id !== delivery);
+      await save();
+      renderAll();
+    }
+  }
   if(action === 'new-brand-idea') ideaForm();
   if(action === 'edit-brand-idea') ideaForm(findBy('ideas', id));
   if(action === 'idea-to-task'){ const idea = findBy('ideas', id); if(idea){ state.tasks.push({ id:uid('task'), title:idea.title, memo:idea.memo, dueDate:todayKey(), priority:idea.priority || '中', goalId:'', marketId:'', minutes:15, energy:'軽い', category:'制作', done:false, decomposition:'' }); await save(); showToast('タスクにしました'); renderAll(); } }
@@ -604,14 +1828,80 @@ async function handleClick(event){
   if(action === 'delete-goal') removeBy('goals', id, '目標');
   if(action === 'delete-market') removeBy('markets', id, 'マルシェ');
   if(action === 'delete-sale') removeBy('sales', id, '売上');
-  if(action === 'delete-customer') removeBy('customers', id, 'お客様');
+  if(action === 'delete-order') removeBy('customers', id, '注文');
   if(action === 'delete-lead') removeBy('leads', id, '営業先');
   if(action === 'delete-product') removeBy('products', id, '商品');
   if(action === 'delete-idea') removeBy('ideas', id, 'アイデア');
+  if(action === 'new-coupon') couponForm();
+  if(action === 'edit-coupon') couponForm(findBy('coupons', id));
+  if(action === 'delete-coupon') removeBy('coupons', id, 'クーポン');
+  if(action === 'mark-coupon-used'){
+    const coupon = findBy('coupons', id);
+    if(coupon){ coupon.usedAt = new Date().toISOString(); await save(); renderAll(); }
+  }
+  if(action === 'edit-seller-profile') sellerProfileForm();
+  if(action === 'generate-invoice') invoiceHeaderForm();
+  if(action === 'edit-invoice-header') invoiceHeaderForm();
+  if(action === 'add-invoice-item') invoiceItemForm();
+  if(action === 'edit-invoice-item'){ const item = asArray(state.invoiceDraft?.items).find(i => i.id === id); if(item) invoiceItemForm(item); }
+  if(action === 'delete-invoice-item'){
+    if(state.invoiceDraft && confirm('この明細を削除します。よろしいですか？')){
+      state.invoiceDraft.items = asArray(state.invoiceDraft.items).filter(i => i.id !== id);
+      await save();
+      renderAll();
+    }
+  }
+  if(action === 'clear-invoice'){
+    if(confirm('作成中の書類をクリアします。よろしいですか？')){
+      state.invoiceDraft = null;
+      await save();
+      renderAll();
+    }
+  }
+  if(action === 'print-invoice'){ const archive = document.getElementById('invoiceArchive'); if(archive) archive.open = true; window.print(); }
+  if(action === 'save-invoice-history') await saveInvoiceToHistory();
+  if(action === 'load-invoice-history') loadInvoiceFromHistory(id);
+  if(action === 'create-receipt-from-invoice') createReceiptFromInvoice(id);
+  if(action === 'delete-invoice-history'){
+    if(confirm('この書類の履歴を削除します。よろしいですか？')){
+      state.invoices = asArray(state.invoices).filter(inv => inv.id !== id);
+      await save();
+      renderAll();
+    }
+  }
+  if(action === 'export-deliveries-csv') exportDeliveriesCsv();
+  if(action === 'new-color') colorPaletteForm();
+  if(action === 'edit-color') colorPaletteForm(findBy('colorPalette', id));
+  if(action === 'delete-color'){
+    const inUse = state.products.some(p => asArray(p.colorIds).includes(id) || p.colorId === id);
+    if(confirm(inUse ? 'このカラーは商品で使用中です。削除します。よろしいですか？' : 'このカラーを削除します。よろしいですか？')){
+      state.colorPalette = state.colorPalette.filter(c => c.id !== id);
+      await save();
+      renderAll();
+    }
+  }
 }
+let titleBeforePrint = '';
+window.addEventListener('beforeprint', () => {
+  const archive = document.getElementById('invoiceArchive');
+  if(archive) archive.open = true;
+  if(state?.invoiceDraft){
+    titleBeforePrint = document.title;
+    document.title = `${state.invoiceDraft.documentType || '請求書'}_${state.invoiceDraft.number || ''}`;
+  }
+});
+window.addEventListener('afterprint', () => {
+  if(titleBeforePrint) document.title = titleBeforePrint;
+});
 
 export async function initBrandDashboard(){
   await load();
   document.addEventListener('click', handleClick);
+  document.addEventListener('input', event => {
+    if(event.target.id === 'couponLookupInput'){
+      couponQuery = event.target.value;
+      renderCouponLookupResult();
+    }
+  });
   renderAll();
 }
