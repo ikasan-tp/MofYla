@@ -6,7 +6,7 @@
 <title>MofYla Studio | Brand Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800;900&family=Zen+Maru+Gothic:wght@400;500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Klee+One:wght@500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=Zen+Maru+Gothic:wght@400;500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Klee+One:wght@500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./styles/main.css">
 <link rel="stylesheet" href="./styles/components.css">
 <link rel="stylesheet" href="./styles/calendar.css">
@@ -52,8 +52,6 @@
 <symbol id="ic-draft" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 3.2"/></symbol>
 <symbol id="ic-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="1" fill="currentColor"/></symbol>
 <symbol id="ic-lightbulb" viewBox="0 0 24 24"><path d="M9 18.5h6M9.6 21h4.8M8 15.2A5.5 5.5 0 1116 15.2c-.8.9-1.3 1.6-1.3 2.8H9.3c0-1.2-.5-1.9-1.3-2.8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></symbol>
-<symbol id="ic-receipt" viewBox="0 0 24 24"><path d="M6 3h12v18l-2.3-1.5L14 21l-1.5-1.5L11 21l-1.5-1.5L8 21l-2-1.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 8h7M8.5 11.5h7M8.5 15h4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
-<symbol id="ic-coupon" viewBox="0 0 24 24"><path d="M3.5 9.5a2 2 0 0 0 0-3.8V5a1 1 0 0 1 1-1h15a1 1 0 0 1 1 1v.7a2 2 0 0 0 0 3.8v1.6a2 2 0 0 0 0 3.8V19a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-.7a2 2 0 0 0 0-3.8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9.5 4.5v15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="1.8 2.4"/></symbol>
 </defs>
 </svg>
 
@@ -85,11 +83,8 @@
       <button data-page="brand-markets"><svg class="ic svgic"><use href="#ic-flag"/></svg>マルシェ</button>
       <button data-page="brand-sales"><svg class="ic svgic"><use href="#ic-chart"/></svg>売上</button>
       <button data-page="brand-crm"><svg class="ic svgic"><use href="#ic-chat"/></svg>お客様</button>
-      <button data-page="brand-coupons"><svg class="ic svgic"><use href="#ic-coupon"/></svg>クーポン</button>
       <button data-page="brand-leads"><svg class="ic svgic"><use href="#ic-pin"/></svg>営業先</button>
-      <button data-page="brand-negotiations"><svg class="ic svgic"><use href="#ic-chat"/></svg>商談記録</button>
       <button data-page="brand-products"><svg class="ic svgic"><use href="#ic-gift"/></svg>商品</button>
-      <button data-page="brand-invoice"><svg class="ic svgic"><use href="#ic-receipt"/></svg>帳票</button>
       <button data-page="brand-ideas"><svg class="ic svgic"><use href="#ic-lightbulb"/></svg>アイデア</button>
 
       <p class="side-nav-label">SNS運用</p>
@@ -218,24 +213,12 @@
       <div class="brand-page" id="brandCrm"></div>
     </section>
 
-    <section class="page" id="page-brand-coupons">
-      <div class="brand-page" id="brandCoupons"></div>
-    </section>
-
     <section class="page" id="page-brand-leads">
       <div class="brand-page" id="brandLeads"></div>
     </section>
 
-    <section class="page" id="page-brand-negotiations">
-      <div class="brand-page" id="brandNegotiations"></div>
-    </section>
-
     <section class="page" id="page-brand-products">
       <div class="brand-page" id="brandProducts"></div>
-    </section>
-
-    <section class="page" id="page-brand-invoice">
-      <div class="brand-page" id="brandInvoice"></div>
     </section>
 
     <section class="page" id="page-brand-ideas">
@@ -474,8 +457,8 @@
       <div class="page-head"><div><p class="eyebrow">Backup</p><h2>エクスポート / 復元</h2><p>ローカル保存された秘書データをJSONで退避・復元できます。</p></div></div>
             <div class="panel section-gap">
         <div class="toolbar"><button class="btn btn-primary" id="backupJsonBtn">JSONバックアップ</button><button class="btn btn-sage" id="restoreJsonBtn">JSON復元</button><button class="btn btn-ghost" id="exportSettingsBtn">設定エクスポート</button><button class="btn btn-ghost" id="exportHistoryBtn">投稿履歴エクスポート</button></div>
-        <p class="hint">バックアップ・エクスポートはJSONファイルとしてダウンロードされます。復元はファイルを選んで読み込みます。</p>
         <input type="file" id="restoreFileInput" accept="application/json" hidden>
+        <textarea id="exportPreview" class="result" rows="12" placeholder="ここにエクスポート内容が表示されます"></textarea>
       </div>
       <div class="panel section-gap">
         <div class="page-head"><div><p class="eyebrow">Cloud Sync</p><h2>半自動共有</h2><p>Google Apps Script経由でJSONをクラウド保存し、別デバイスへ復元できます。</p></div></div>
@@ -486,12 +469,9 @@
         <label class="metric-check" style="margin:8px 0 12px;"><input type="checkbox" id="cloudAutoUploadToggle"> 入力変更後に自動アップロード</label>
         <div class="toolbar"><button class="btn btn-primary" id="cloudUploadBtn">クラウドに保存</button><button class="btn btn-sage" id="cloudDownloadBtn">クラウドから取得</button><button class="btn btn-ghost" id="cloudInstallBtn">取得データをインストール</button></div>
         <p class="hint" id="cloudSyncStatus">未設定です。Apps Script URLと同期キーを入力してください。</p>
-        <div class="export-preview-wrap is-hidden">
-          <p class="hint">クラウドから取得した内容（確認用）</p>
-          <textarea id="exportPreview" class="result" rows="10" placeholder="ここにエクスポート内容が表示されます"></textarea>
-        </div>
       </div>
     </section>
+    <footer class="appfoot">MofYla Studio SNSmanager v2.0</footer>
   </main>
 </div>
 
