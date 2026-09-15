@@ -54,6 +54,10 @@ export const RABBIT_BREEDS = [
   {name:'トリアンタ', code:'TH', origin:'オランダ', length:'約30〜38cm', weight:'約2.0〜2.7kg', features:['鮮やかな赤茶色','コンパクト','温かみのある色']}
 ];
 
+export const PRODUCT_RABBIT_BREEDS = ['ホーランドロップ', 'ネザーランドドワーフ', 'ジャージーウーリー', 'アメリカンファジーロップ']
+  .map(name => RABBIT_BREEDS.find(b => b.name === name))
+  .filter(Boolean);
+
 export function breedByName(name){
   return RABBIT_BREEDS.find(b => b.name === name) || null;
 }

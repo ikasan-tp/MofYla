@@ -1,6 +1,6 @@
 import { Storage } from './storage.js';
 import { showToast } from './components/toast.js';
-import { RABBIT_BREEDS, breedCode } from './services/rabbitBreeds.js';
+import { PRODUCT_RABBIT_BREEDS, breedCode } from './services/rabbitBreeds.js';
 
 const STORE_KEY = 'brand:data';
 const SCHEMA_VERSION = 6;
@@ -737,10 +737,12 @@ function renderLeads(){
 function renderProducts(){
   const root = document.getElementById('brandProducts');
   if(!root) return;
-  const onlineProducts = state.products.filter(product => !isWholesaleProduct(product) && !isCustomProduct(product));
-  const wholesaleProducts = state.products.filter(isWholesaleProduct);
-  const customProducts = state.products.filter(isCustomProduct);
-  const listings = allWholesaleListings();
+  const bySku = (a, b) => (a.sku || '').localeCompare(b.sku || '', 'ja', {numeric:true});
+  const byListingSku = (a, b) => bySku(a.product, b.product);
+  const onlineProducts = state.products.filter(product => !isWholesaleProduct(product) && !isCustomProduct(product)).sort(bySku);
+  const wholesaleProducts = state.products.filter(isWholesaleProduct).sort(bySku);
+  const customProducts = state.products.filter(isCustomProduct).sort(bySku);
+  const listings = allWholesaleListings().sort(byListingSku);
   const unassignedProducts = wholesaleProducts.filter(product => !asArray(product.wholesaleListings).length);
   const storeNames = wholesaleStoreNames();
   const productTitleHtml = product => `<div class="brand-product-title">
@@ -762,6 +764,7 @@ function renderProducts(){
         ${productTitleHtml(product)}
         <div class="brand-product-actions">
           <button class="btn btn-ghost btn-small" data-action="edit-product" data-id="${product.id}">編集</button>
+          <button class="btn btn-ghost btn-small" data-action="duplicate-product" data-id="${product.id}">複製</button>
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
         </div>
       </div>
@@ -777,6 +780,7 @@ function renderProducts(){
         ${productTitleHtml(product)}
         <div class="brand-product-actions">
           <button class="btn btn-ghost btn-small" data-action="edit-online-channel" data-id="${product.id}">編集</button>
+          <button class="btn btn-ghost btn-small" data-action="duplicate-product" data-id="${product.id}">複製</button>
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
         </div>
       </div>
@@ -793,6 +797,7 @@ function renderProducts(){
         ${productTitleHtml(product)}
         <div class="brand-product-actions">
           <button class="btn btn-ghost btn-small" data-action="edit-custom-channel" data-id="${product.id}">編集</button>
+          <button class="btn btn-ghost btn-small" data-action="duplicate-product" data-id="${product.id}">複製</button>
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
         </div>
       </div>
@@ -832,6 +837,7 @@ function renderProducts(){
         ${productTitleHtml(product)}
         <div class="brand-product-actions">
           <button class="btn btn-ghost btn-small" data-action="edit-product" data-id="${product.id}">編集</button>
+          <button class="btn btn-ghost btn-small" data-action="duplicate-product" data-id="${product.id}">複製</button>
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
         </div>
       </div>
@@ -884,7 +890,7 @@ function renderProducts(){
   }).join('');
   const unassignedSection = unassignedProducts.length ? `<section class="brand-wholesale-group"><div class="brand-mini-head"><h3>卸し先未設定</h3></div><div class="brand-product-grid">${unassignedProducts.map(unassignedCard).join('')}</div></section>` : '';
   const content = activeProductTab === 'manage'
-    ? `<div class="brand-product-grid">${state.products.map(manageCard).join('') || empty('まだ商品がありません。「追加」から登録してください。')}</div>`
+    ? `<div class="brand-product-grid">${state.products.slice().sort(bySku).map(manageCard).join('') || empty('まだ商品がありません。「追加」から登録してください。')}</div>`
     : activeProductTab === 'wholesale'
     ? (groupedByStore + unassignedSection || empty('卸し商品はまだありません。商品管理から管理区分を「卸し商品」にして登録できます。'))
     : activeProductTab === 'custom'
@@ -1369,7 +1375,7 @@ function productForm(product = {}){
     {name:'salesChannel',label:'管理区分',type:'select',options:[{value:'online',label:'ネット販売在庫'},{value:'wholesale',label:'卸し商品'},{value:'custom',label:'オーダーメイド'}]},
     {name:'name',label:'商品名'},
     {name:'category',label:'商品カテゴリ',type:'select',options:CATEGORIES},
-    {name:'breed',label:'兎種',type:'select',options:RABBIT_BREEDS.map(b => b.name)},
+    {name:'breed',label:'兎種',type:'select',options:PRODUCT_RABBIT_BREEDS.map(b => b.name)},
     {name:'sku',label:'商品番号（自動採番・編集可）'},
     {name:'dimensionsW',label:'幅 W（mm）',type:'number'},
     {name:'dimensionsD',label:'奥行 D（mm）',type:'number'},
@@ -1392,7 +1398,7 @@ function productForm(product = {}){
   const channelFieldsByType = { wholesale:[], custom:customCreateFields, online:onlineFields };
   const fields = product.id ? commonFields : [...commonFields, ...(channelFieldsByType[channel] || onlineFields)];
   const defaultCategory = product.category || CATEGORIES[0];
-  const defaultBreed = product.breed || RABBIT_BREEDS[0].name;
+  const defaultBreed = product.breed || PRODUCT_RABBIT_BREEDS[0].name;
   const initialValues = {
     salesChannel:channel, category:defaultCategory, breed:defaultBreed,
     sku:product.sku || (product.id ? '' : nextProductSku(defaultCategory, defaultBreed)),
@@ -1417,6 +1423,23 @@ function productForm(product = {}){
     await save();
   });
   if(!product.id) wireProductSkuAutoFill();
+}
+function duplicateProduct(id){
+  const product = findBy('products', id);
+  if(!product) return;
+  const clone = {
+    ...product,
+    id: uid('product'),
+    name: `${product.name || '商品名未設定'}のコピー`,
+    sku: nextProductSku(product.category || CATEGORIES[0], product.breed || PRODUCT_RABBIT_BREEDS[0].name),
+    wholesaleListings: [],
+    sold: 0,
+    stock: 0
+  };
+  state.products.push(clone);
+  save();
+  showToast('商品を複製しました。内容を編集してください。');
+  renderAll();
 }
 function wireProductSkuAutoFill(){
   const overlay = document.querySelector('.brand-modal-overlay');
@@ -1831,6 +1854,7 @@ async function handleClick(event){
   if(action === 'delete-order') removeBy('customers', id, '注文');
   if(action === 'delete-lead') removeBy('leads', id, '営業先');
   if(action === 'delete-product') removeBy('products', id, '商品');
+  if(action === 'duplicate-product') duplicateProduct(id);
   if(action === 'delete-idea') removeBy('ideas', id, 'アイデア');
   if(action === 'new-coupon') couponForm();
   if(action === 'edit-coupon') couponForm(findBy('coupons', id));
