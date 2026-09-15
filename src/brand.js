@@ -764,7 +764,6 @@ function renderProducts(){
         ${productTitleHtml(product)}
         <div class="brand-product-actions">
           <button class="btn btn-ghost btn-small" data-action="edit-product" data-id="${product.id}">編集</button>
-          <button class="btn btn-ghost btn-small" data-action="duplicate-product" data-id="${product.id}">複製</button>
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
         </div>
       </div>
@@ -837,7 +836,6 @@ function renderProducts(){
         ${productTitleHtml(product)}
         <div class="brand-product-actions">
           <button class="btn btn-ghost btn-small" data-action="edit-product" data-id="${product.id}">編集</button>
-          <button class="btn btn-ghost btn-small" data-action="duplicate-product" data-id="${product.id}">複製</button>
           <button class="btn btn-ghost btn-small brand-danger" data-action="delete-product" data-id="${product.id}">削除</button>
         </div>
       </div>
@@ -1405,24 +1403,58 @@ function productForm(product = {}){
     colorIds:asArray(product.colorIds).length ? product.colorIds : (product.colorId ? [product.colorId] : []),
     ...product
   };
-  openForm(product.id ? '商品編集' : '商品追加', fields, initialValues, async data => {
-    const salesChannel = data.salesChannel || 'online';
-    upsert('products', {
-      ...product, ...data, id:product.id || uid('product'), salesChannel,
-      colorIds:asArray(data.colorIds).slice(0, 4), colorId:undefined,
-      dimensionsW:Number(data.dimensionsW || 0), dimensionsD:Number(data.dimensionsD || 0), dimensionsH:Number(data.dimensionsH || 0), dimensions:undefined,
-      price:Number(data.price ?? product.price ?? 0),
-      basePrice:Number(data.basePrice ?? product.basePrice ?? 0),
-      cost:Number(data.cost || 0),
-      minutes:Number(data.minutes || 0),
-      stock:Number(data.stock ?? product.stock ?? 0),
-      sold:Number(data.sold ?? product.sold ?? 0),
-      wholesaleListings:asArray(product.wholesaleListings)
+  const buildProductRecord = (data, overrides = {}) => ({
+    ...product, ...data, salesChannel:data.salesChannel || 'online',
+    colorIds:asArray(data.colorIds).slice(0, 4), colorId:undefined,
+    dimensionsW:Number(data.dimensionsW || 0), dimensionsD:Number(data.dimensionsD || 0), dimensionsH:Number(data.dimensionsH || 0), dimensions:undefined,
+    price:Number(data.price ?? product.price ?? 0),
+    basePrice:Number(data.basePrice ?? product.basePrice ?? 0),
+    cost:Number(data.cost || 0),
+    minutes:Number(data.minutes || 0),
+    stock:Number(data.stock ?? product.stock ?? 0),
+    sold:Number(data.sold ?? product.sold ?? 0),
+    wholesaleListings:asArray(product.wholesaleListings),
+    ...overrides
+  });
+  const readFormData = form => {
+    const formData = new FormData(form);
+    const data = {};
+    fields.forEach(field => {
+      if(field.type === 'section') return;
+      data[field.name] = field.type === 'checkboxGroup' ? formData.getAll(field.name) : formData.get(field.name);
     });
+    return data;
+  };
+  const overlay = openForm(product.id ? '商品編集' : '商品追加', fields, initialValues, async data => {
+    upsert('products', buildProductRecord(data, { id:product.id || uid('product') }));
     activeProductTab = 'manage';
     await save();
   });
   if(!product.id) wireProductSkuAutoFill();
+  if(product.id){
+    const toolbar = overlay.querySelector('.toolbar');
+    const dupBtn = document.createElement('button');
+    dupBtn.type = 'button';
+    dupBtn.className = 'btn btn-sage';
+    dupBtn.textContent = '複製として保存';
+    dupBtn.addEventListener('click', async () => {
+      const data = readFormData(overlay.querySelector('form'));
+      const clone = buildProductRecord(data, {
+        id: uid('product'),
+        sku: nextProductSku(data.category || product.category || CATEGORIES[0], data.breed || product.breed || PRODUCT_RABBIT_BREEDS[0].name),
+        stock: 0,
+        sold: 0,
+        wholesaleListings: []
+      });
+      state.products.push(clone);
+      activeProductTab = 'manage';
+      await save();
+      overlay.remove();
+      showToast('複製として保存しました');
+      renderAll();
+    });
+    toolbar.insertBefore(dupBtn, toolbar.firstChild);
+  }
 }
 function duplicateProduct(id){
   const product = findBy('products', id);
