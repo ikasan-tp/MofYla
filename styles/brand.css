@@ -563,7 +563,7 @@
 .receipt-seller-name{font-weight:800;color:var(--ink);font-size:.86rem;margin:0 0 3px;}
 .receipt-seller p{margin:1px 0;}
 .receipt-cut-line{position:relative;text-align:center;margin:10px 0;border-top:1px dashed var(--ink-soft);}
-.receipt-cut-line span{position:relative;top:-9px;background:#fffefb;padding:0 12px;color:var(--ink-soft);font-size:.7rem;}
+.receipt-cut-line span{position:relative;top:-9px;background:#fffefb;padding:0 8px;color:var(--ink-soft);font-size:.85rem;}
 
 @media print{
   .sidebar,.mobile-topbar,.nav-overlay,.page-head,.invoice-toolbar,.no-print{display:none !important;}

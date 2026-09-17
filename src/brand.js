@@ -1006,7 +1006,7 @@ function renderInvoice(){
   const itemRows = items.map((item, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(item.name)}</td><td>${item.qty}</td><td>${yen(item.price)}</td><td>${yen(Number(item.qty || 0) * Number(item.price || 0))}</td><td class="no-print"><button class="btn btn-ghost btn-small" data-action="edit-invoice-item" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-invoice-item" data-id="${item.id}">削除</button></td></tr>`).join('');
   const emptyRows = Array.from({ length: blankRows }, (_, i) => `<tr class="no-print"><td>${items.length + i + 1}</td><td></td><td></td><td></td><td></td><td class="no-print"></td></tr>`).join('');
   const sheetBody = isReceipt
-    ? `${receiptCopyHtml(draft, profile, totals, '領収書')}<div class="receipt-cut-line"><span>✂ きりとり線</span></div>${receiptCopyHtml(draft, profile, totals, '控え')}`
+    ? `${receiptCopyHtml(draft, profile, totals, '領収書')}<div class="receipt-cut-line"><span>✂</span></div>${receiptCopyHtml(draft, profile, totals, '控え')}`
     : `<div class="invoice-head">
           <h1>${escapeHtml(docType)}</h1>
           <div class="invoice-meta">
@@ -1217,8 +1217,8 @@ function marketForm(market = {}){ openForm(market.id ? 'マルシェ編集' : '�
 function marketProductForm(marketId, item = {}){
   const market = findBy('markets', marketId);
   if(!market) return;
-  openForm(item.id ? '持っていく商品を編集' : '持っていく商品を追加', [
-    {name:'productName',label:'商品名',full:true},
+  const overlay = openForm(item.id ? '持っていく商品を編集' : '持っていく商品を追加', [
+    {name:'productName',label:'商品名',type:'select',full:true,options:[{value:'',label:'選択してください'}, ...state.products.map(p => ({value:p.name || '商品名未設定', label:`${p.name || '商品名未設定'}${p.sku ? `（${p.sku}）` : ''}`}))]},
     {name:'category',label:'カテゴリ',type:'select',options:['',...CATEGORIES]},
     {name:'plannedQty',label:'予定数',type:'number'},
     {name:'packedQty',label:'持参数',type:'number'},
@@ -1238,6 +1238,16 @@ function marketProductForm(marketId, item = {}){
     if(index >= 0) market.productItems[index] = next; else market.productItems.push(next);
     await save();
   });
+  const nameSelect = overlay.querySelector('[name="productName"]');
+  if(nameSelect){
+    nameSelect.addEventListener('change', () => {
+      const product = state.products.find(p => p.name === nameSelect.value);
+      if(!product) return;
+      const setVal = (field, value) => { const el = overlay.querySelector(`[name="${field}"]`); if(el && value) el.value = value; };
+      setVal('category', product.category);
+      setVal('price', product.price || product.basePrice);
+    });
+  }
 }
 function saleForm(){ openForm('売上追加', [{name:'date',label:'日付',type:'date'},{name:'category',label:'カテゴリ',type:'select',options:CATEGORIES},{name:'amount',label:'金額',type:'number'},{name:'memo',label:'メモ',type:'textarea',full:true}], {date:todayKey()}, async data => { state.sales.push({...data, id:uid('sale')}); await save(); }); }
 function salesGoalForm(){ openForm('月間売上目標', [{name:'salesMonth',label:'対象月',type:'month'},{name:'monthlySalesGoal',label:'月間目標',type:'number'}], state, async data => { state.salesMonth = data.salesMonth; state.monthlySalesGoal = Number(data.monthlySalesGoal || 0); await save(); }); }
