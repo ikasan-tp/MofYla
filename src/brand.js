@@ -132,30 +132,9 @@ function todayTasks(){
 function dueSoonTasks(){
   return state.tasks.filter(task => !task.done && daysUntil(task.dueDate) !== null && daysUntil(task.dueDate) <= 7).sort(byDue).slice(0, 5);
 }
-function autoSalesEntries(month){
-  const targetMonth = month || state.salesMonth || new Date().toISOString().slice(0, 7);
-  const orderEntries = state.customers
-    .filter(c => String(c.completedAt || '').startsWith(targetMonth) && Number(c.amount || 0) > 0)
-    .map(c => {
-      const product = state.products.find(p => p.name === c.productName);
-      return { id:`order:${c.id}`, date:c.completedAt, category:(product && product.category) || 'その他', amount:Number(c.amount || 0), memo:`${customerDisplayName(c)} / ${c.productName || '商品未設定'}`, source:'order' };
-    });
-  const deliveryEntries = [];
-  allWholesaleListings().forEach(({listing, product}) => {
-    asArray(listing.deliveries).forEach(d => {
-      if(!String(d.date || '').startsWith(targetMonth)) return;
-      const amount = Number(d.qty || 0) * Number(listing.wholesalePrice || 0);
-      if(!amount) return;
-      deliveryEntries.push({ id:`delivery:${d.id}`, date:d.date, category:(product && product.category) || 'その他', amount, memo:`${listingLeadName(listing)} / ${listingDisplayName(listing, product)}`, source:'wholesale' });
-    });
-  });
-  return [...orderEntries, ...deliveryEntries];
-}
 function monthlySales(){
   const month = state.salesMonth || new Date().toISOString().slice(0, 7);
-  const manual = state.sales.filter(sale => (sale.date || '').startsWith(month)).reduce((sum, sale) => sum + Number(sale.amount || 0), 0);
-  const auto = autoSalesEntries(month).reduce((sum, entry) => sum + entry.amount, 0);
-  return manual + auto;
+  return state.sales.filter(sale => (sale.date || '').startsWith(month)).reduce((sum, sale) => sum + Number(sale.amount || 0), 0);
 }
 function nextMarket(){ return [...state.markets].filter(market => daysUntil(market.date) === null || daysUntil(market.date) >= -1).sort((a, b) => (a.date || '').localeCompare(b.date || ''))[0]; }
 function marketProgress(market){ const checks = asArray(market.checklist); return checks.length ? Math.round(checks.filter(item => item.done).length / checks.length * 100) : 0; }
@@ -571,9 +550,9 @@ function renderMarkets(){
         <div><small>持ち運び</small><strong>${escapeHtml(market.transportMethod || '-')}</strong><span>${escapeHtml(market.suppliesMemo || '備品メモなし')}</span></div>
       </div>
       <section class="brand-market-products">
-        <div class="brand-mini-head"><h3>持っていく商品</h3><button class="btn btn-ghost btn-small" data-action="new-market-product" data-market="${market.id}">商品追加</button></div>
+        <div class="brand-mini-head"><h3>持っていく商品</h3><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="bulk-add-market-product" data-market="${market.id}">まとめて追加</button><button class="btn btn-ghost btn-small" data-action="new-market-product" data-market="${market.id}">商品追加</button></div></div>
         <div class="brand-market-product-summary"><span>予定 ${productTotals.planned}点</span><span>持参 ${productTotals.packed}点</span><span>概算 ${yen(productTotals.value)}</span></div>
-        <div class="brand-market-product-list">${asArray(market.productItems).map(item => `<div class="brand-market-product-row"><div><strong>${escapeHtml(item.productName || '商品名未設定')}</strong><span>${escapeHtml(item.category || '-')} / 予定 ${item.plannedQty || 0} / 持参 ${item.packedQty || 0} / ${yen(item.price)}</span>${item.memo ? `<p>${escapeHtml(item.memo)}</p>` : ''}</div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="edit-market-product" data-market="${market.id}" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-market-product" data-market="${market.id}" data-id="${item.id}">削除</button></div></div>`).join('') || empty('持っていく商品はまだありません。')}</div>
+        <div class="brand-market-product-list">${asArray(market.productItems).map(item => { const matched = state.products.find(p => p.name === item.productName); return `<div class="brand-market-product-row"><div><strong>${escapeHtml(item.productName || '商品名未設定')}</strong><span>${matched && matched.sku ? `${escapeHtml(matched.sku)} / ` : ''}${escapeHtml(item.category || '-')} / 予定 ${item.plannedQty || 0} / 持参 ${item.packedQty || 0} / ${yen(item.price)}</span>${item.memo ? `<p>${escapeHtml(item.memo)}</p>` : ''}</div><div class="brand-row"><button class="btn btn-ghost btn-small" data-action="edit-market-product" data-market="${market.id}" data-id="${item.id}">編集</button><button class="btn btn-ghost btn-small brand-danger" data-action="delete-market-product" data-market="${market.id}" data-id="${item.id}">削除</button></div></div>`; }).join('') || empty('持っていく商品はまだありません。')}</div>
       </section>
       <div class="brand-list brand-check-grid">${asArray(market.checklist).map(item => `<label class="brand-checkline"><input type="checkbox" data-action="toggle-market-check" data-market="${market.id}" data-id="${item.id}" ${item.done ? 'checked' : ''}><span>${escapeHtml(item.title)}</span></label>`).join('')}</div></div>`;
     }).join('') || empty()}</div>`;
@@ -582,18 +561,14 @@ function renderMarkets(){
 function renderSales(){
   const root = document.getElementById('brandSales');
   if(!root) return;
-  const month = state.salesMonth || new Date().toISOString().slice(0, 7);
-  const manualSales = state.sales.filter(sale => (sale.date || '').startsWith(month));
-  const autoSales = autoSalesEntries(month);
   const total = monthlySales();
   const goal = Number(state.monthlySalesGoal || 0);
   const byCat = Object.fromEntries(CATEGORIES.map(cat => [cat, 0]));
-  [...manualSales, ...autoSales].forEach(sale => { byCat[sale.category] = (byCat[sale.category] || 0) + Number(sale.amount || 0); });
-  const combinedList = [...manualSales.map(s => ({...s, source:'manual'})), ...autoSales].sort((a,b) => (b.date || '').localeCompare(a.date || ''));
-  root.innerHTML = `${pageHead('売上管理','お客様注文（完了時）と卸しの納品実績は自動で合算されます。', '<button class="btn btn-primary" data-action="new-sale">その他の売上を追加</button>')}
+  state.sales.filter(sale => (sale.date || '').startsWith(state.salesMonth)).forEach(sale => { byCat[sale.category] = (byCat[sale.category] || 0) + Number(sale.amount || 0); });
+  root.innerHTML = `${pageHead('売上管理','月間目標とカテゴリ別の売上を見ます。', '<button class="btn btn-primary" data-action="new-sale">追加</button>')}
     <section class="brand-card brand-sales-hero">
       <div>
-        <span class="brand-chip ok">${month}</span>
+        <span class="brand-chip ok">${state.salesMonth || new Date().toISOString().slice(0, 7)}</span>
         <h3>${yen(total)}</h3>
         <p>目標 ${yen(goal)} / あと ${yen(Math.max(0, goal - total))}</p>
       </div>
@@ -606,11 +581,7 @@ function renderSales(){
     </section>
     <section class="brand-sales-section">
       <h3>売上履歴</h3>
-      <p class="brand-note">お客様注文が完了・卸しの納品実績を記録すると自動でここに表示されます。マルシェの現金販売など、他に記録がない売上だけ「その他の売上を追加」から入力してください。</p>
-      <div class="brand-sales-list">${combinedList.map(sale => sale.source === 'manual'
-        ? `<div class="brand-sales-row"><div><strong>${yen(sale.amount)}</strong><span>${sale.date || '-'} / ${escapeHtml(sale.category)}</span>${sale.memo ? `<p>${escapeHtml(sale.memo)}</p>` : ''}</div><button class="btn btn-ghost btn-small brand-danger" data-action="delete-sale" data-id="${sale.id}">削除</button></div>`
-        : `<div class="brand-sales-row"><div><strong>${yen(sale.amount)}</strong> <span class="brand-chip ok">自動</span><span>${sale.date || '-'} / ${escapeHtml(sale.category)}</span><p>${escapeHtml(sale.memo)}</p></div></div>`
-      ).join('') || empty()}</div>
+      <div class="brand-sales-list">${state.sales.slice().sort((a,b)=>(b.date || '').localeCompare(a.date || '')).map(sale => `<div class="brand-sales-row"><div><strong>${yen(sale.amount)}</strong><span>${sale.date || '-'} / ${escapeHtml(sale.category)}</span>${sale.memo ? `<p>${escapeHtml(sale.memo)}</p>` : ''}</div><button class="btn btn-ghost btn-small brand-danger" data-action="delete-sale" data-id="${sale.id}">削除</button></div>`).join('') || empty()}</div>
     </section>`;
 }
 
@@ -1249,6 +1220,34 @@ function marketProductForm(marketId, item = {}){
     });
   }
 }
+function marketBulkAddForm(marketId){
+  const market = findBy('markets', marketId);
+  if(!market) return;
+  const existingNames = new Set(asArray(market.productItems).map(item => item.productName));
+  const availableProducts = state.products.filter(p => !existingNames.has(p.name));
+  if(!availableProducts.length){ showToast('追加できる商品がありません'); return; }
+  openForm('商品をまとめて追加', [
+    {name:'productNames', label:'持っていく商品を選択', type:'checkboxGroup', options: availableProducts.map(p => ({value:p.name, label:`${p.name || '商品名未設定'}${p.sku ? `（${p.sku}）` : ''}`}))}
+  ], {}, async data => {
+    market.productItems = asArray(market.productItems);
+    const names = asArray(data.productNames);
+    names.forEach(name => {
+      const product = state.products.find(p => p.name === name);
+      if(!product) return;
+      market.productItems.push({
+        id: uid('marketProduct'),
+        productName: name,
+        category: product.category || '',
+        plannedQty: 0,
+        packedQty: 0,
+        price: Number(product.price || product.basePrice || 0),
+        memo: ''
+      });
+    });
+    await save();
+    showToast(`${names.length}件追加しました`);
+  });
+}
 function saleForm(){ openForm('売上追加', [{name:'date',label:'日付',type:'date'},{name:'category',label:'カテゴリ',type:'select',options:CATEGORIES},{name:'amount',label:'金額',type:'number'},{name:'memo',label:'メモ',type:'textarea',full:true}], {date:todayKey()}, async data => { state.sales.push({...data, id:uid('sale')}); await save(); }); }
 function salesGoalForm(){ openForm('月間売上目標', [{name:'salesMonth',label:'対象月',type:'month'},{name:'monthlySalesGoal',label:'月間目標',type:'number'}], state, async data => { state.salesMonth = data.salesMonth; state.monthlySalesGoal = Number(data.monthlySalesGoal || 0); await save(); }); }
 function customerProfileForm(profile = {}){
@@ -1834,6 +1833,7 @@ async function handleClick(event){
   if(action === 'new-market') marketForm();
   if(action === 'edit-market') marketForm(findBy('markets', id));
   if(action === 'new-market-product') marketProductForm(market);
+  if(action === 'bulk-add-market-product') marketBulkAddForm(market);
   if(action === 'edit-market-product'){ const m = findBy('markets', market); const item = m?.productItems?.find(product => product.id === id); if(m && item) marketProductForm(market, item); }
   if(action === 'delete-market-product'){
     const m = findBy('markets', market);
