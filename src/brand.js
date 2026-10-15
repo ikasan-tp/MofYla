@@ -800,7 +800,7 @@ function renderProducts(){
         <div class="brand-mini-head"><button class="btn btn-ghost btn-small" data-action="new-delivery" data-id="${product.id}" data-listing="${listing.id}">記録追加</button></div>
         <div class="brand-market-product-list">${asArray(listing.deliveries).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(d => `<div class="brand-market-product-row"><div><strong>${d.date || '日付未設定'}</strong><span>${d.qty || 0}個</span>${d.memo ? `<p>${escapeHtml(d.memo)}</p>` : ''}</div><button class="btn btn-ghost btn-small brand-danger" data-action="delete-delivery" data-id="${product.id}" data-listing="${listing.id}" data-delivery="${d.id}">削除</button></div>`).join('') || empty('まだ卸し実績がありません。記録追加から入力できます。')}</div>
       </details>
-      <div class="brand-toolbar" style="margin-bottom:0;"><button class="btn btn-ghost btn-small" data-action="new-listing" data-id="${product.id}">他の店舗にも卸し先を追加</button></div>
+      <div class="brand-toolbar" style="margin-bottom:0;"><button class="btn btn-sage btn-small" data-action="order-listing" data-id="${product.id}" data-listing="${listing.id}">受注</button><button class="btn btn-ghost btn-small" data-action="new-listing" data-id="${product.id}">他の店舗にも卸し先を追加</button></div>
     </article>`;
   const unassignedCard = product => `<article class="brand-card brand-product-card">
       <div class="brand-product-head">
@@ -1533,6 +1533,21 @@ function listingForm(productId, listing = {}){
     await save();
   });
 }
+function listingOrderForm(productId, listingId){
+  const product = findBy('products', productId);
+  const listing = product && asArray(product.wholesaleListings).find(l => l.id === listingId);
+  if(!listing) return;
+  openForm(`受注：${listingLeadName(listing)} / ${listingDisplayName(listing, product)}`, [
+    {name:'qty',label:'受注数',type:'number'}
+  ], {}, async data => {
+    const qty = Number(data.qty || 0);
+    if(qty <= 0) return;
+    listing.printQty = listing.status === '印刷待ち' ? Number(listing.printQty || 0) + qty : qty;
+    listing.status = '印刷待ち';
+    await save();
+    showToast('受注を登録しました');
+  });
+}
 function onlineChannelForm(productId){
   const product = findBy('products', productId);
   if(!product) return;
@@ -1867,6 +1882,7 @@ async function handleClick(event){
   if(action === 'new-product') productForm();
   if(action === 'edit-product') productForm(findBy('products', id));
   if(action === 'new-listing') listingForm(id);
+  if(action === 'order-listing') listingOrderForm(id, listing);
   if(action === 'edit-listing'){ const product = findBy('products', id); if(product) listingForm(id, asArray(product.wholesaleListings).find(l => l.id === listing)); }
   if(action === 'delete-listing'){
     const product = findBy('products', id);
