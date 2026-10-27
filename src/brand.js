@@ -144,7 +144,7 @@ function dueCustomers(){ return state.customers.filter(item => item.status !== '
 function shipReadyCustomers(){ return state.customers.filter(item => item.status === '発送').sort((a,b)=>(a.dueDate || '').localeCompare(b.dueDate || '')); }
 function shipReadyCard(customer){
   return `<div class="brand-item">
-    <div class="brand-row"><strong>${escapeHtml(customerDisplayName(customer))} / ${escapeHtml(customer.productName || '商品未設定')}</strong><span class="brand-chip">×${Number(customer.quantity || 0) || 1}</span></div>
+    <div class="brand-row"><strong>${escapeHtml(customerWithPet(customer))} / ${escapeHtml(customer.productName || '商品未設定')}</strong><span class="brand-chip">×${Number(customer.quantity || 0) || 1}</span></div>
     <p class="brand-note">${escapeHtml(customer.nextAction || customer.memo || '')}</p>
     <div class="brand-row" style="margin-top:8px;"><button class="btn btn-sage btn-small" data-action="advance-customer-ship" data-id="${customer.id}">発送完了</button></div>
   </div>`;
@@ -160,7 +160,7 @@ function printQueueItems(){
   const customerItems = state.customers
     .filter(c => c.status === '印刷')
     .sort((a,b) => (a.dueDate || '').localeCompare(b.dueDate || ''))
-    .map(c => ({ kind:'customer', id:c.id, group:customerDisplayName(c), title:c.productName || '商品未設定', qty:Number(c.quantity || 0) || 1, dueDate:c.dueDate }));
+    .map(c => ({ kind:'customer', id:c.id, group:customerDisplayName(c), title:`${c.productName || '商品未設定'}${c.petName ? `（${c.petName}）` : ''}`, qty:Number(c.quantity || 0) || 1, dueDate:c.dueDate }));
   const listingItems = allWholesaleListings()
     .filter(x => x.listing.status === '印刷待ち')
     .map(x => ({ kind:'listing', id:x.product.id, listingId:x.listing.id, group:listingLeadName(x.listing), title:listingDisplayName(x.listing, x.product), qty:Number(x.listing.printQty || 0) || 1, dueDate:null, colorsHtml:compactColorDots(x.product, x.listing.colorIds) }));
@@ -310,6 +310,10 @@ function customerDisplayName(order){
   const profile = state.customerProfiles.find(p => p.id === order.customerId);
   return profile?.name || order.customerName || '名前未設定';
 }
+function customerWithPet(order){
+  const name = customerDisplayName(order);
+  return order.petName ? `${name}（${order.petName}）` : name;
+}
 function customerProfile(order){
   return state.customerProfiles.find(p => p.id === order.customerId) || null;
 }
@@ -351,7 +355,7 @@ function taskItem(task, compact = false){
 function customerCard(customer){
   const d = daysUntil(customer.dueDate);
   return `<div class="brand-item">
-    <div class="brand-row"><strong>${escapeHtml(customerDisplayName(customer))} / ${escapeHtml(customer.productName || '商品未設定')}</strong><span class="brand-chip ${d !== null && d <= 3 ? 'warn' : ''}">納期まで${d ?? '-'}日</span></div>
+    <div class="brand-row"><strong>${escapeHtml(customerWithPet(customer))} / ${escapeHtml(customer.productName || '商品未設定')}</strong><span class="brand-chip ${d !== null && d <= 3 ? 'warn' : ''}">納期まで${d ?? '-'}日</span></div>
     <div class="brand-meter"><span>${escapeHtml(customer.status || '未設定')} / ${customerProgress(customer)}%</span>${progressBar(customerProgress(customer))}</div>
     <p class="brand-note">${escapeHtml(customer.nextAction || customer.memo || '')}</p>
   </div>`;
@@ -590,8 +594,8 @@ function customerOpsCard(customer){
       <div class="brand-ops-head">
         <div>
           <span class="brand-chip ok">${escapeHtml(customer.status || '未設定')}</span>
-          <h3>${escapeHtml(customerDisplayName(customer))}</h3>
-          <p>${escapeHtml(customer.orderNo || '-')} / ${escapeHtml(customer.productName || '-')} / ${yen(customer.amount)}</p>
+          <h3>${escapeHtml(customer.petName || customerDisplayName(customer))}</h3>
+          <p>${customer.petName ? `${escapeHtml(customerDisplayName(customer))} / ` : ''}${customer.petType ? `${escapeHtml(customer.petType)} / ` : ''}${escapeHtml(customer.orderNo || '-')} / ${escapeHtml(customer.productName || '-')} / ${yen(customer.amount)}</p>
         </div>
         <div class="brand-product-actions">
           <button class="btn btn-ghost btn-small" data-action="edit-order" data-id="${customer.id}">編集</button>
